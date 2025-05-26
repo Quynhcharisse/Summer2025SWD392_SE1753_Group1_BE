@@ -2,6 +2,7 @@ package com.swd392.group1.pes.models;
 
 import com.swd392.group1.pes.enums.Role;
 import jakarta.persistence.CascadeType;
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -10,6 +11,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
+import jakarta.persistence.OneToMany;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 import lombok.AccessLevel;
@@ -24,6 +26,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 
 import java.time.LocalDate;
 import java.util.Collection;
+import java.util.List;
 
 @Data
 @NoArgsConstructor
@@ -44,13 +47,42 @@ public class Account implements UserDetails {
     @Enumerated(EnumType.STRING)
     Role role;
 
-    @JoinColumn(name = "`created_at`")
+    String status;
+
+    @Column(name = "`created_at`")
     LocalDate createdAt;
 
-    @OneToOne(mappedBy = "account", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+    String name;
+
+    String phone;
+
+    String gender;
+
+    @Column(name = "avatar_url")
+    String avatarUrl;
+
+    @Column(name = "identity_number")
+    String identityNumber;
+
+    @OneToMany(mappedBy = "account", fetch = FetchType.LAZY)
     @EqualsAndHashCode.Exclude
     @ToString.Exclude
-    User user;
+    List<TeacherEvent> teacherEventList;
+
+    @OneToOne(mappedBy = "account", fetch = FetchType.LAZY)
+    @EqualsAndHashCode.Exclude
+    @ToString.Exclude
+    Parent parent;
+
+    @OneToOne(mappedBy = "account", fetch = FetchType.LAZY)
+    @EqualsAndHashCode.Exclude
+    @ToString.Exclude
+    Manager manager;
+
+    @OneToOne(mappedBy = "account", fetch = FetchType.EAGER, cascade = CascadeType.ALL)
+    @EqualsAndHashCode.Exclude
+    @ToString.Exclude
+    Classes classes;
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {

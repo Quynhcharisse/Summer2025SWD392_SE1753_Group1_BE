@@ -7,11 +7,9 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public enum Status {
 
-    //============= Account =============//
     ACCOUNT_ACTIVE("active"),
     ACCOUNT_BAN("ban"),
     ACCOUNT_UNBAN("unban");
-    //=================================//
 
     private final String value;
 }
