@@ -1,4 +1,15 @@
 package com.swd392.group1.pes.services;
 
-public class AuthService {
+import com.swd392.group1.pes.requests.LoginRequest;
+import com.swd392.group1.pes.response.ResponseObject;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.http.ResponseEntity;
+
+public interface AuthService {
+    ResponseEntity<ResponseObject> login  (LoginRequest request, HttpServletResponse response);
+
+    ResponseEntity<ResponseObject> logout(HttpServletResponse response);
+
+    ResponseEntity<ResponseObject> refresh  (HttpServletRequest request, HttpServletResponse response);
 }

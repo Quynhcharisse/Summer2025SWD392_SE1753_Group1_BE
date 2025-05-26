@@ -1,4 +1,5 @@
 package com.swd392.group1.pes.services;
 
-public class TeacherService {
+public interface AccountService {
+
 }
