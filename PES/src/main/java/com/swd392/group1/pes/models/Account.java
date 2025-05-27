@@ -64,7 +64,7 @@ public class Account implements UserDetails {
     @Column(name = "identity_number")
     String identityNumber;
 
-    @OneToMany(mappedBy = "account", fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "teacher", fetch = FetchType.LAZY)
     @EqualsAndHashCode.Exclude
     @ToString.Exclude
     List<TeacherEvent> teacherEventList;
@@ -79,7 +79,7 @@ public class Account implements UserDetails {
     @ToString.Exclude
     Manager manager;
 
-    @OneToOne(mappedBy = "account", fetch = FetchType.EAGER, cascade = CascadeType.ALL)
+    @OneToOne(mappedBy = "teacher", fetch = FetchType.EAGER, cascade = CascadeType.ALL)
     @EqualsAndHashCode.Exclude
     @ToString.Exclude
     Classes classes;
