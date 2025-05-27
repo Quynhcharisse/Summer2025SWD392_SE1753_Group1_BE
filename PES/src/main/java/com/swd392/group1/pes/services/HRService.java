@@ -1,5 +1,5 @@
 package com.swd392.group1.pes.services;
 
-public interface AccountService {
+public interface HRService {
 
 }

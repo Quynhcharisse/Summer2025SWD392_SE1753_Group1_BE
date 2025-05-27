@@ -74,7 +74,7 @@ public class JWTServiceImpl implements JWTService {
                     .parserBuilder()
                     .setSigningKey(getSigningKey())
                     .build()
-                    .parseClaimsJwt(token)
+                    .parseClaimsJws(token)
                     .getBody();
         } catch (ExpiredJwtException e) {
             return null;

@@ -23,13 +23,15 @@ public class CookieUtil {
         access.setMaxAge((int) (accessExp / 1000));
         response.addCookie(access);
 
-        Cookie refresh = new Cookie("refresh", accessValue);
+        Cookie refresh = new Cookie("refresh", refreshValue);
         refresh.setPath("/");
         refresh.setMaxAge((int) (refreshExp / 1000));
+        refresh.setHttpOnly(true);
         response.addCookie(refresh);
 
         Cookie checkCookie = new Cookie("check", "true");
         checkCookie.setPath("/");
+        checkCookie.setMaxAge((int) (refreshExp / 1000));
         response.addCookie(checkCookie);
     }
 
@@ -43,5 +45,10 @@ public class CookieUtil {
         refresh.setPath("/");
         refresh.setMaxAge(0);
         response.addCookie(refresh);
+
+        Cookie check = new Cookie("check", "true");
+        refresh.setPath("/");
+        refresh.setMaxAge(0);
+        response.addCookie(check);
     }
 }
