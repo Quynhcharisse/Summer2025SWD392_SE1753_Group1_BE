@@ -10,11 +10,11 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
@@ -27,6 +27,7 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
+@Builder
 @Table(name = "`syllabus`")
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class Syllabus {
@@ -40,7 +41,7 @@ public class Syllabus {
     String description;
 
     @Column(name = "`max_number_of_week`")
-    String maxNumberOfWeek;
+    int maxNumberOfWeek;
 
     @Enumerated(EnumType.STRING)
     Grade grade;
