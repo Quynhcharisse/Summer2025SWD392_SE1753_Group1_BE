@@ -1,0 +1,16 @@
+package com.swd392.group1.pes.requests;
+
+import lombok.*;
+import lombok.experimental.FieldDefaults;
+
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+@FieldDefaults(level = AccessLevel.PRIVATE)
+public class RenewPasswordRequest {
+    String email;
+    String oldPassword;
+    String newPassword;
+    String confirmPassword;
+}

@@ -1,14 +1,17 @@
 package com.swd392.group1.pes.services.implementors;
 
+import com.swd392.group1.pes.enums.Role;
 import com.swd392.group1.pes.enums.Status;
 import com.swd392.group1.pes.models.Account;
 import com.swd392.group1.pes.repositories.AccountRepo;
-import com.swd392.group1.pes.requests.LoginRequest;
+import com.swd392.group1.pes.requests.*;
 import com.swd392.group1.pes.response.ResponseObject;
 import com.swd392.group1.pes.services.AuthService;
 import com.swd392.group1.pes.services.JWTService;
 import com.swd392.group1.pes.utils.CookieUtil;
 import com.swd392.group1.pes.validations.AuthValidation.LoginValidation;
+import com.swd392.group1.pes.validations.AuthValidation.RegisterValidation;
+import com.swd392.group1.pes.validations.AuthValidation.ForgotPasswordValidation;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -114,6 +117,70 @@ public class AuthServiceImpl implements AuthService {
                         .message("Refresh invalid")
                         .success(false)
                         .data(null)
+                        .build()
+        );
+    }
+
+    @Override
+    public ResponseEntity<ResponseObject> register(RegisterRequest request) {
+
+        String error = RegisterValidation.validate(request, accountRepo);
+        if(!error.isEmpty()){
+            return ResponseEntity.ok().body(
+                ResponseObject.builder()
+                        .message(error)
+                        .success(false)
+                        .data(null)
+                        .build()
+            );
+        }
+
+        Account account = new Account();
+        account.setEmail(request.getEmail());
+        account.setPassword(request.getPassword());
+        account.setConfirmPassword(request.getConfirmPassword());
+        account.setName(request.getName());
+        account.setPhone(request.getPhone());
+        account.setGender(request.getGender());
+        account.setIdentityNumber(request.getIdentityNumber());
+        account.setRole(Role.PARENT);
+        account.setStatus(Status.ACCOUNT_ACTIVE.getValue());
+
+        accountRepo.save(account);
+
+        return ResponseEntity.ok().body(
+                ResponseObject.builder()
+                        .message("Register Successfully")
+                        .success(true)
+                        .data(account)
+                        .build()
+        );
+    }
+
+    @Override
+    public ResponseEntity<ResponseObject> forgotPassword(ForgotPasswordRequest request) {
+        String error = ForgotPasswordValidation.validate(request, accountRepo);
+        if(!error.isEmpty()){
+            return ResponseEntity.ok().body(
+                    ResponseObject.builder()
+                            .message(error)
+                            .success(false)
+                            .data(null)
+                            .build()
+            );
+        }
+
+        Account account = accountRepo.findByEmail(request.getEmail()).orElse(null);
+        assert account != null;
+        account.setPassword(request.getPassword());
+        account.setConfirmPassword(request.getConfirmPassword());
+        accountRepo.save(account);
+
+        return ResponseEntity.ok().body(
+                ResponseObject.builder()
+                        .message("Change Password Successfully")
+                        .success(true)
+                        .data(account)
                         .build()
         );
     }
