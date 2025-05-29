@@ -12,6 +12,6 @@ import lombok.experimental.FieldDefaults;
 @AllArgsConstructor
 @Builder
 @FieldDefaults(level = AccessLevel.PRIVATE)
-public class ProcessAccountRequest {
-    String email;
+public class SubmitAdmissionFormRequest {
+    int id;
 }

@@ -1,7 +1,6 @@
 package com.swd392.group1.pes.models;
 
 import com.swd392.group1.pes.enums.Role;
-import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -83,7 +82,7 @@ public class Account implements UserDetails {
     @ToString.Exclude
     Manager manager;
 
-    @OneToOne(mappedBy = "teacher", fetch = FetchType.EAGER, cascade = CascadeType.ALL)
+    @OneToOne(mappedBy = "teacher", fetch = FetchType.LAZY)
     @EqualsAndHashCode.Exclude
     @ToString.Exclude
     Classes classes;

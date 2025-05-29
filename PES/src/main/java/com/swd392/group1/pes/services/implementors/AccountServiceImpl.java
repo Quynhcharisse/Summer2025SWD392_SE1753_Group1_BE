@@ -1,15 +1,14 @@
 package com.swd392.group1.pes.services.implementors;
 
-import com.swd392.group1.pes.enums.Action;
 import com.swd392.group1.pes.enums.Status;
 import com.swd392.group1.pes.models.Account;
 import com.swd392.group1.pes.repositories.AccountRepo;
-import com.swd392.group1.pes.requests.ProcessAccountRequest;
 import com.swd392.group1.pes.requests.RenewPasswordRequest;
+import com.swd392.group1.pes.requests.UpdateProfileRequest;
 import com.swd392.group1.pes.response.ResponseObject;
 import com.swd392.group1.pes.services.AccountService;
-import com.swd392.group1.pes.validations.AccountValidation.ProcessAccountValidation;
 import com.swd392.group1.pes.validations.AccountValidation.RenewPasswordValidation;
+import com.swd392.group1.pes.validations.AccountValidation.UpdateProfileValidation;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -83,42 +82,9 @@ public class AccountServiceImpl implements AccountService {
         return body;
     }
 
-//    @Override
-//    public ResponseEntity<ResponseObject> updateProfile(UpdateProfileRequest request) {
-//        String error = UpdateProfileValidation.validate(request, accountRepo);
-//        if(!error.isEmpty()){
-//            return ResponseEntity.ok().body(
-//                    ResponseObject.builder()
-//                            .message(error)
-//                            .success(false)
-//                            .data(null)
-//                            .build()
-//            );
-//        }
-//
-//        Account account = accountRepo.findByEmailAndStatus(request.getEmail(), Status.ACCOUNT_ACTIVE.getValue()).orElse(null);
-//
-//
-//
-//        account.setName(request.getName());
-//        account.setPhone(request.getPhone());
-//        account.setGender(request.getGender());
-//        account.setIdentityNumber(request.getIdentityNumber());
-//
-//        account = accountRepo.save(account);
-//
-//        return ResponseEntity.ok().body(
-//                ResponseObject.builder()
-//                        .message("Update Profile Successfully")
-//                        .success(true)
-//                        .data(null)
-//                        .build()
-//        );
-//    }
-
     @Override
-    public ResponseEntity<ResponseObject> processAccount(ProcessAccountRequest request) {
-        String error = ProcessAccountValidation.processAccountValidate(request, accountRepo);
+    public ResponseEntity<ResponseObject> updateProfile(UpdateProfileRequest request) {
+        String error = UpdateProfileValidation.validate(request, accountRepo);
         if(!error.isEmpty()){
             return ResponseEntity.ok().body(
                     ResponseObject.builder()
@@ -131,41 +97,22 @@ public class AccountServiceImpl implements AccountService {
 
         Account account = accountRepo.findByEmailAndStatus(request.getEmail(), Status.ACCOUNT_ACTIVE.getValue()).orElse(null);
 
-        if(account == null) {
-            return ResponseEntity.ok().body(
-                    ResponseObject.builder()
-                            .message("Account not found or already banned")
-                            .success(false)
-                            .data(null)
-                            .build()
-            );
-        }
 
-        String newStatus = Action.getNewStatus(request.getAction());
 
-        if(newStatus == null) {
-            return ResponseEntity.ok().body(
-                    ResponseObject.builder()
-                            .message("Invalid action")
-                            .success(false)
-                            .data(null)
-                            .build()
-            );
-        }
+        account.setName(request.getName());
+        account.setPhone(request.getPhone());
+        account.setGender(request.getGender());
+        account.setIdentityNumber(request.getIdentityNumber());
 
-        account.setStatus(newStatus);
-        accountRepo.save(account);
-
-        String message = request.getAction().equalsIgnoreCase("ban") ? "Account banned successfully" : "Account unbanned successfully";
+        account = accountRepo.save(account);
 
         return ResponseEntity.ok().body(
                 ResponseObject.builder()
-                        .message(message)
+                        .message("Update Profile Successfully")
                         .success(true)
                         .data(null)
                         .build()
         );
     }
-
 
 }

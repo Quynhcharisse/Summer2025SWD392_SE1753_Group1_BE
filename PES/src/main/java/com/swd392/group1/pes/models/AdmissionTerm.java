@@ -54,12 +54,12 @@ public class AdmissionTerm {
     @Enumerated(EnumType.STRING)
     Grade grade;
 
-    @OneToMany(mappedBy = "admissionTerm", fetch = FetchType.EAGER, cascade = CascadeType.ALL)
+    @OneToMany(mappedBy = "admissionTerm", fetch = FetchType.LAZY)
     @EqualsAndHashCode.Exclude
     @ToString.Exclude
     List<AdmissionForm> admissionFormList;
 
-    @OneToOne(mappedBy = "admissionTerm", fetch = FetchType.EAGER, cascade = CascadeType.ALL)
+    @OneToOne(mappedBy = "admissionTerm", fetch = FetchType.LAZY)
     @EqualsAndHashCode.Exclude
     @ToString.Exclude
     AdmissionFee admissionFee;
