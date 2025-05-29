@@ -140,7 +140,6 @@ public class AuthServiceImpl implements AuthService {
         Account account = new Account();
         account.setEmail(request.getEmail());
         account.setPassword(request.getPassword());
-        account.setConfirmPassword(request.getConfirmPassword());
         account.setName(request.getName());
         account.setPhone(request.getPhone());
         account.setGender(request.getGender());
@@ -175,7 +174,6 @@ public class AuthServiceImpl implements AuthService {
         Account account = accountRepo.findByEmail(request.getEmail()).orElse(null);
         assert account != null;
         account.setPassword(request.getPassword());
-        account.setConfirmPassword(request.getConfirmPassword());
         accountRepo.save(account);
 
         return ResponseEntity.ok().body(
