@@ -31,11 +31,16 @@ public class CreateSyllabusValidation {
             return "Number of weeks must be greater than 0";
         }
 
-            // Grade khong ton tai
+        // Cần chọn Grade
+        if (request.getGrade() == null || request.getGrade().trim().isEmpty()) {
+            return "Grade is required";
+        }
+
+        // Grade được chọn không tồn tại
         boolean isExistGrade = Arrays.stream(Grade.values())
                 .anyMatch(grade -> grade.getName().equalsIgnoreCase(request.getGrade()));
         if (!isExistGrade) {
-            return "Grade must exist";
+            return "Selected grade does not exist.";
         }
 
         return "";

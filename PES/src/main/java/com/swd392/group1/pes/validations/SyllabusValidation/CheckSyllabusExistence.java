@@ -11,10 +11,8 @@ public class CheckSyllabusExistence {
 
         // ID wrong format
         try {
-            int identityNumber = Integer.parseInt(id);
-
             // Syllabus không tồn tại hoặc bị xóa
-            if(syllabusRepo.findById(identityNumber).isEmpty())
+            if(syllabusRepo.findById(Integer.parseInt(id)).isEmpty())
             {
                 return "Syllabus with id " + id + " does not exist or be deleted";
             }

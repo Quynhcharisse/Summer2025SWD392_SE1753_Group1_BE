@@ -42,7 +42,7 @@ public class EducationServiceImpl implements EducationService {
                         .subject(request.getSubject())
                         .description(request.getDescription())
                         .maxNumberOfWeek(request.getMaxNumberOfWeek())
-                        .grade(fromName(request.getGrade()))
+                        .grade(getGradeFromName(request.getGrade()))
                         .build()
         );
 
@@ -76,7 +76,7 @@ public class EducationServiceImpl implements EducationService {
                         .subject(request.getSubject())
                         .description(request.getDescription())
                         .maxNumberOfWeek(request.getMaxNumberOfWeek())
-                        .grade(fromName(request.getGrade()))
+                        .grade(getGradeFromName(request.getGrade()))
                         .build()
         );
 
@@ -119,7 +119,7 @@ public class EducationServiceImpl implements EducationService {
 
 
 
-    private Grade fromName(String name) {
+    private Grade getGradeFromName(String name) {
         for (Grade grade : Grade.values()) {
             if (grade.getName().equalsIgnoreCase(name)) {
                 return grade;

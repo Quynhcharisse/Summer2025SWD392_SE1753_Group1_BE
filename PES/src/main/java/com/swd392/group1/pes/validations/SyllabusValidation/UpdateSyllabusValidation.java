@@ -4,6 +4,8 @@ import com.swd392.group1.pes.enums.Grade;
 import com.swd392.group1.pes.repositories.SyllabusRepo;
 import com.swd392.group1.pes.requests.UpdateSyllabusRequest;
 
+import java.util.Arrays;
+
 public class UpdateSyllabusValidation {
 
     public static String validate(String id, UpdateSyllabusRequest request, SyllabusRepo syllabusRepo) {
@@ -25,21 +27,19 @@ public class UpdateSyllabusValidation {
             return "Number of weeks must be greater than 0";
         }
 
-        // Grade khong ton tai
-        if(fromName(request.getGrade()) == null)
-            return "Grade does not exist";
+        // Cần chọn Grade
+        if (request.getGrade() == null || request.getGrade().trim().isEmpty()) {
+            return "Grade is required";
+        }
+
+        // Grade được chọn không tồn tại
+        boolean isExistGrade = Arrays.stream(Grade.values())
+                .anyMatch(grade -> grade.getName().equalsIgnoreCase(request.getGrade()));
+        if (!isExistGrade) {
+            return "Selected grade does not exist.";
+        }
 
         return "";
-
-    }
-
-    private static Grade fromName(String name) {
-        for (Grade grade : Grade.values()) {
-            if (grade.getName().equalsIgnoreCase(name)) {
-                return grade;
-            }
-        }
-        return null;
     }
 
     }
