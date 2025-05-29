@@ -107,6 +107,8 @@ public class JWTServiceImpl implements JWTService {
                 .setClaims(extractClaims)
                 .setSubject(user.getUsername())
                 .setIssuedAt(new Date())
+                .setExpiration(new Date(System.currentTimeMillis() + expiredTime))
+                .signWith(getSigningKey())
                 .compact();
     }
 

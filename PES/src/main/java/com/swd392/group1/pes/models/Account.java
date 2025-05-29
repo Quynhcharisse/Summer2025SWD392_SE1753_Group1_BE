@@ -44,9 +44,6 @@ public class Account implements UserDetails {
 
     String password;
 
-    @Column(name = "`confirm_password`")
-    String confirmPassword;
-
     @Enumerated(EnumType.STRING)
     Role role;
 
