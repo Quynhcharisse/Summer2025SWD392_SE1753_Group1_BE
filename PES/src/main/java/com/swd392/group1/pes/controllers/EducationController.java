@@ -24,17 +24,19 @@ public class EducationController {
     private final EducationService educationService;
 
     @PostMapping("/syllabus")
-//    @PreAuthorize("hasRole('education')")
+    @PreAuthorize("hasRole('education')")
     public ResponseEntity<ResponseObject> createSyllabus(@RequestBody CreateSyllabusRequest request) {
         return educationService.createSyllabus(request);
     }
 
     @PutMapping("/syllabus")
+    @PreAuthorize("hasRole('education')")
     public ResponseEntity<ResponseObject> updateSyllabus(@RequestParam String id, @RequestBody UpdateSyllabusRequest request) {
         return educationService.updateSyllabus(id, request);
     }
 
     @GetMapping("/syllabus/detail")
+    @PreAuthorize("hasRole('education')")
     public ResponseEntity<ResponseObject> viewSyllabusDetail(@RequestParam String id) {
         return educationService.viewSyllabusDetail(id);
     }
