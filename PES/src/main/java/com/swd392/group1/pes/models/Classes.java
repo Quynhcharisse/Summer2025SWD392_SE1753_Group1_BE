@@ -70,12 +70,12 @@ public class Classes {
     @JoinColumn(name = "`teacher_id`")
     Account teacher;
 
-    @OneToMany(mappedBy = "classes", fetch = FetchType.EAGER, cascade = CascadeType.ALL)
+    @OneToMany(mappedBy = "classes", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
     @EqualsAndHashCode.Exclude
     @ToString.Exclude
     List<StudentClass> studentClassList;
 
-    @OneToMany(mappedBy = "classes", fetch = FetchType.EAGER, cascade = CascadeType.ALL)
+    @OneToMany(mappedBy = "classes", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
     @EqualsAndHashCode.Exclude
     @ToString.Exclude
     List<Schedule> scheduleList;

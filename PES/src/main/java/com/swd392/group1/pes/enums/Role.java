@@ -8,8 +8,8 @@ public enum Role {
     PARENT,
     TEACHER,
     HR,
-    ADMISSION_MANAGER,
-    EDUCATION_MANAGER;
+    ADMISSION,
+    EDUCATION;
 
     public List<SimpleGrantedAuthority> getAuthorities() {
         return List.of(new SimpleGrantedAuthority("ROLE_" + this.name().toLowerCase()));

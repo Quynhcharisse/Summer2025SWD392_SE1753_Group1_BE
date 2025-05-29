@@ -6,19 +6,23 @@ import com.swd392.group1.pes.repositories.AccountRepo;
 import com.swd392.group1.pes.requests.ProcessAccountRequest;
 
 public class ProcessAccountValidation {
-    public static String processAccountValidate(ProcessAccountRequest request, AccountRepo accountRepo) {
+    public static String processAccountValidate(ProcessAccountRequest request, String action, AccountRepo accountRepo) {
 
-        Account acc = accountRepo.findByEmailAndStatus(request.getEmail(), Status.ACCOUNT_ACTIVE.getValue()).orElse(null);
+        Account acc = null;
 
-        if (acc == null) {
-            return "Account not found";
-        }
-
-        // Check if the action is either "ban" or "unban"
-        if (!request.getAction().equalsIgnoreCase("ban") && !request.getAction().equalsIgnoreCase("unban")) {
+        if (action.equalsIgnoreCase("ban")) {
+            // Chỉ ban tài khoản đang hoạt động
+            acc = accountRepo.findByEmailAndStatus(request.getEmail(), Status.ACCOUNT_ACTIVE.getValue()).orElse(null);
+        } else if (action.equalsIgnoreCase("unban")) {
+            // Chỉ unban tài khoản bị ban
+            acc = accountRepo.findByEmailAndStatus(request.getEmail(), Status.ACCOUNT_BAN.getValue()).orElse(null);
+        } else {
             return "Invalid action";
         }
 
+        if (acc == null) {
+            return "Account not found or in invalid state for action: " + action;
+        }
         return "";
     }
 }
