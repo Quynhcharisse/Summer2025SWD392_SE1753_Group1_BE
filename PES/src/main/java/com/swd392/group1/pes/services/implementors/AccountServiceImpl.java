@@ -40,7 +40,6 @@ public class AccountServiceImpl implements AccountService {
 
         assert account != null;
         account.setPassword(request.getNewPassword());
-        account.setConfirmPassword(request.getConfirmPassword());
         accountRepo.save(account);
 
         return ResponseEntity.ok().body(
