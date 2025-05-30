@@ -7,9 +7,6 @@ import com.swd392.group1.pes.requests.CreateSyllabusRequest;
 import java.util.Arrays;
 
 public class CreateSyllabusValidation {
-
-
-
     public static String validate(CreateSyllabusRequest request, SyllabusRepo syllabusRepo){
 
         // Syllabus da ton tai
@@ -45,6 +42,4 @@ public class CreateSyllabusValidation {
 
         return "";
     }
-
-
 }
