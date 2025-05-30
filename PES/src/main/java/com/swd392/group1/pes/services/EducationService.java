@@ -6,11 +6,7 @@ import com.swd392.group1.pes.response.ResponseObject;
 import org.springframework.http.ResponseEntity;
 
 public interface EducationService {
-
     ResponseEntity<ResponseObject> createSyllabus(CreateSyllabusRequest request);
-
     ResponseEntity<ResponseObject> updateSyllabus(String id, UpdateSyllabusRequest request);
-
     ResponseEntity<ResponseObject> viewSyllabusDetail(String id);
-
 }
