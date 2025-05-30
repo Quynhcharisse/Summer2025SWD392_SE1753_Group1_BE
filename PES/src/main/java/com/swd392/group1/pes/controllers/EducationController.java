@@ -39,5 +39,4 @@ public class EducationController {
     public ResponseEntity<ResponseObject> viewSyllabusDetail(@RequestParam String id) {
         return educationService.viewSyllabusDetail(id);
     }
-
 }
