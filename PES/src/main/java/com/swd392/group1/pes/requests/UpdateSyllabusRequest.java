@@ -13,15 +13,8 @@ import lombok.experimental.FieldDefaults;
 @Builder
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class UpdateSyllabusRequest {
-
-
-
     String subject;
-
     String description;
-
     int maxNumberOfWeek;
-
     String grade;
-
 }
