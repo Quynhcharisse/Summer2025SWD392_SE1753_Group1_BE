@@ -7,7 +7,6 @@ import com.swd392.group1.pes.requests.UpdateSyllabusRequest;
 import java.util.Arrays;
 
 public class UpdateSyllabusValidation {
-
     public static String validate(String id, UpdateSyllabusRequest request, SyllabusRepo syllabusRepo) {
 
        CheckSyllabusExistence.validate(id, syllabusRepo);
@@ -41,5 +40,4 @@ public class UpdateSyllabusValidation {
 
         return "";
     }
-
-    }
+}
