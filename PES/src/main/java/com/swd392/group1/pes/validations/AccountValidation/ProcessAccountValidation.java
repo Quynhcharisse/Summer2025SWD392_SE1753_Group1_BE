@@ -25,4 +25,20 @@ public class ProcessAccountValidation {
         }
         return "";
     }
+
+    public static String validateRemove(ProcessAccountRequest request, AccountRepo accountRepo) {
+        if (request.getEmail().trim().isEmpty()) {
+            return "Email is required";
+        }
+
+        if (!request.getEmail().matches("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+$")) {
+            return "Invalid email format";
+        }
+
+        if (!accountRepo.existsByEmail(request.getEmail())) {
+            return "Email does not exist";
+        }
+
+        return "";
+    }
 }

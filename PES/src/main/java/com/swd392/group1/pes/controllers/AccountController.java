@@ -26,6 +26,12 @@ public class AccountController {
         return accountService.renewPassword(request);
     }
 
+    @PostMapping("/pass/renew/temp")
+    @PreAuthorize("hasAnyRole('hr', 'admission_manager', 'education_manager', 'teacher')")
+    public ResponseEntity<ResponseObject> changeFirstTimePassword (@RequestBody RenewPasswordRequest request){
+        return accountService.renewFirstTimePassword(request);
+    }
+
     @GetMapping("/profile")
     @PreAuthorize("hasAnyRole('parent', 'hr', 'admission_manager', 'education_manager', 'teacher')")
     public ResponseEntity<ResponseObject> viewProfile (){

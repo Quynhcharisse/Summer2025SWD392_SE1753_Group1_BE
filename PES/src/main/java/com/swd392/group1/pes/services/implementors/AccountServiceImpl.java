@@ -51,6 +51,34 @@ public class AccountServiceImpl implements AccountService {
         );
     }
 
+    public ResponseEntity<ResponseObject> renewFirstTimePassword(RenewPasswordRequest request) {
+        String error = RenewPasswordValidation.validate(request, accountRepo);
+        if(!error.isEmpty()){
+            return ResponseEntity.ok().body(
+                    ResponseObject.builder()
+                            .message(error)
+                            .success(false)
+                            .data(null)
+                            .build()
+            );
+        }
+
+        Account account = accountRepo.findByEmailAndPassword(request.getEmail(), request.getOldPassword()).orElse(null);
+
+        assert account != null;
+        account.setPassword(request.getNewPassword());
+        account.getManager().setPasswordChanged(true);
+        accountRepo.save(account);
+
+        return ResponseEntity.ok().body(
+                ResponseObject.builder()
+                        .message("Renew Password Successfully")
+                        .success(true)
+                        .data(account)
+                        .build()
+        );
+    }
+
     @Override
     public ResponseEntity<ResponseObject> viewProfile() {
         List<Map<String, Object>> userList = accountRepo.findAll().stream()
@@ -84,7 +112,7 @@ public class AccountServiceImpl implements AccountService {
     @Override
     public ResponseEntity<ResponseObject> updateProfile(UpdateProfileRequest request) {
         String error = UpdateProfileValidation.validate(request, accountRepo);
-        if(!error.isEmpty()){
+        if (!error.isEmpty()) {
             return ResponseEntity.ok().body(
                     ResponseObject.builder()
                             .message(error)
@@ -95,15 +123,22 @@ public class AccountServiceImpl implements AccountService {
         }
 
         Account account = accountRepo.findByEmailAndStatus(request.getEmail(), Status.ACCOUNT_ACTIVE.getValue()).orElse(null);
-
-
+        if (account == null) {
+            return ResponseEntity.ok().body(
+                    ResponseObject.builder()
+                            .message("Account not found or inactive")
+                            .success(false)
+                            .data(null)
+                            .build()
+            );
+        }
 
         account.setName(request.getName());
         account.setPhone(request.getPhone());
         account.setGender(request.getGender());
         account.setIdentityNumber(request.getIdentityNumber());
 
-        account = accountRepo.save(account);
+        accountRepo.save(account);
 
         return ResponseEntity.ok().body(
                 ResponseObject.builder()
@@ -113,5 +148,4 @@ public class AccountServiceImpl implements AccountService {
                         .build()
         );
     }
-
 }
