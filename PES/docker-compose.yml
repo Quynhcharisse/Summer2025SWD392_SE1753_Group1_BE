@@ -1,0 +1,26 @@
+version: '3.8'
+services:
+  mysql_container:
+    image: mysql:latest
+    container_name: mysql_container
+    environment:
+      MYSQL_ROOT_PASSWORD: 12345
+      MYSQL_DATABASE: pes_swd
+    ports:
+      - "3307:3306"
+    volumes:
+          - mysql_data:/var/lib/mysql
+
+  app:
+    image: huatri/pes_container
+    container_name: springboot_container
+    depends_on:
+      - mysql_container
+    ports:
+      - "8080:8080"
+    environment:
+      MYSQL_URL: jdbc:mysql://mysql_container:3306/pes_swd
+      MYSQL_USER: "root"
+      MYSQL_PASSWORD: "123456"
+volumes:
+  mysql_data:
