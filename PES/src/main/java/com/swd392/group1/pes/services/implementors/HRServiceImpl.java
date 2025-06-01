@@ -213,8 +213,7 @@ public class HRServiceImpl implements HRService {
             );
         }
 
-        account.setStatus(Status.ACCOUNT_BAN.getValue());
-        accountRepo.save(account);
+        accountRepo.deleteById(account.getId());
 
         return ResponseEntity.ok().body(
                 ResponseObject.builder()

@@ -1,6 +1,7 @@
 package com.swd392.group1.pes.controllers;
 
 import com.swd392.group1.pes.requests.RenewPasswordRequest;
+import com.swd392.group1.pes.requests.UpdateProfileRequest;
 import com.swd392.group1.pes.response.ResponseObject;
 import com.swd392.group1.pes.services.AccountService;
 import lombok.RequiredArgsConstructor;
@@ -29,7 +30,7 @@ public class AccountController {
     @PostMapping("/pass/renew/temp")
     @PreAuthorize("hasAnyRole('hr', 'admission_manager', 'education_manager', 'teacher')")
     public ResponseEntity<ResponseObject> changeFirstTimePassword (@RequestBody RenewPasswordRequest request){
-        return accountService.renewFirstTimePassword(request);
+        return accountService.changeFirstTimePassword(request);
     }
 
     @GetMapping("/profile")
@@ -40,7 +41,7 @@ public class AccountController {
 
     @PutMapping("/profile")
     @PreAuthorize("hasAnyRole('parent', 'hr', 'admission_manager', 'education_manager', 'teacher')")
-    public ResponseEntity<ResponseObject> updateProfile (){
-        return accountService.viewProfile();
+    public ResponseEntity<ResponseObject> updateProfile (@RequestBody UpdateProfileRequest request){
+        return accountService.updateProfile(request);
     }
 }

@@ -27,14 +27,17 @@ public class ProcessAccountValidation {
     }
 
     public static String validateRemove(ProcessAccountRequest request, AccountRepo accountRepo) {
+        // Kiểm tra email không được để trống
         if (request.getEmail().trim().isEmpty()) {
             return "Email is required";
         }
 
+        // Kiểm tra định dạng email
         if (!request.getEmail().matches("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+$")) {
             return "Invalid email format";
         }
 
+        // Kiểm tra email đã tồn tại trong hệ thống
         if (!accountRepo.existsByEmail(request.getEmail())) {
             return "Email does not exist";
         }

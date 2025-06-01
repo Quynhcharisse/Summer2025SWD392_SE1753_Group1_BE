@@ -11,10 +11,12 @@ public class ForgotPasswordValidation {
     public static String validate(ForgotPasswordRequest request, AccountRepo accountRepo) {
         Account acc = accountRepo.findByEmailAndStatus(request.getEmail(), Status.ACCOUNT_ACTIVE.getValue()).orElse(null);
 
+        //Account không tồn tại
         if (acc == null) {
             return "Account not available";
         }
 
+        //Email không được để trống
         if (request.getEmail().trim().isEmpty()) {
             return "Email is required";
         }

@@ -51,7 +51,7 @@ public class AccountServiceImpl implements AccountService {
         );
     }
 
-    public ResponseEntity<ResponseObject> renewFirstTimePassword(RenewPasswordRequest request) {
+    public ResponseEntity<ResponseObject> changeFirstTimePassword(RenewPasswordRequest request) {
         String error = RenewPasswordValidation.validate(request, accountRepo);
         if(!error.isEmpty()){
             return ResponseEntity.ok().body(
