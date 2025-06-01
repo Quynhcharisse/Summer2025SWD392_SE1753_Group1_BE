@@ -1,11 +1,15 @@
 package com.swd392.group1.pes.controllers;
 
+import com.swd392.group1.pes.requests.CreateTeacherRequest;
 import com.swd392.group1.pes.requests.ProcessAccountRequest;
+import com.swd392.group1.pes.requests.UpdateTeacherRequest;
 import com.swd392.group1.pes.response.ResponseObject;
 import com.swd392.group1.pes.services.HRService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -28,5 +32,35 @@ public class HRController {
     @PreAuthorize("hasRole('hr')")
     public ResponseEntity<ResponseObject> unbanAccount(@RequestBody ProcessAccountRequest request) {
         return hrService.processAccount(request, "unban");
+    }
+
+    @PostMapping("/teacher")
+    @PreAuthorize("hasRole('hr')")
+    public ResponseEntity<ResponseObject> createTeacher(@RequestBody CreateTeacherRequest request) {
+        return hrService.createTeacher(request);
+    }
+
+    @GetMapping("/teacher")
+    @PreAuthorize("hasRole('hr')")
+    public ResponseEntity<ResponseObject> viewTeacherList() {
+        return hrService.viewTeacherList();
+    }
+
+    @PutMapping("/teacher")
+    @PreAuthorize("hasRole('hr')")
+    public ResponseEntity<ResponseObject> updateTeacher(@RequestBody UpdateTeacherRequest request) {
+        return hrService.updateTeacher(request);
+    }
+
+    @PutMapping("/teacher/remove")
+    @PreAuthorize("hasRole('hr')")
+    public ResponseEntity<ResponseObject> removeTeacher(@RequestBody ProcessAccountRequest request) {
+        return hrService.removeTeacher(request);
+    }
+
+    @GetMapping("/parent")
+    @PreAuthorize("hasRole('hr')")
+    public ResponseEntity<ResponseObject> viewParentList() {
+        return hrService.viewParentList();
     }
 }

@@ -23,6 +23,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -146,6 +147,7 @@ public class AuthServiceImpl implements AuthService {
         account.setIdentityNumber(request.getIdentityNumber());
         account.setRole(Role.PARENT);
         account.setStatus(Status.ACCOUNT_ACTIVE.getValue());
+        account.setCreatedAt(LocalDate.now());
 
         accountRepo.save(account);
 

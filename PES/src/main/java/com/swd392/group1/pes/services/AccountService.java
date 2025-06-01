@@ -8,6 +8,8 @@ import org.springframework.http.ResponseEntity;
 public interface AccountService {
     ResponseEntity<ResponseObject> renewPassword(RenewPasswordRequest request);
 
+    ResponseEntity<ResponseObject> changeFirstTimePassword(RenewPasswordRequest request);
+
     ResponseEntity<ResponseObject> viewProfile();
 
     ResponseEntity<ResponseObject> updateProfile(UpdateProfileRequest request);
