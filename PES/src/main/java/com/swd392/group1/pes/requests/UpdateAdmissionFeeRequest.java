@@ -7,20 +7,11 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.experimental.FieldDefaults;
 
-import java.time.LocalDate;
-
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
 @FieldDefaults(level = AccessLevel.PRIVATE)
-public class AdmissionTermRequest {
+public class UpdateAdmissionFeeRequest {
     int id;
-    String name;
-    int year;
-    LocalDate startDate;
-    LocalDate endDate;
-    int maxNumberRegistration;
-    String grade;
-    String status;
 }
