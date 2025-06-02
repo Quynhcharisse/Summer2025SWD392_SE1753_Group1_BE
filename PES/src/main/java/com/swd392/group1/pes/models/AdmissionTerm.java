@@ -49,10 +49,12 @@ public class AdmissionTerm {
     int year;
 
     @Column(name = "`max_number_registration`")
-    LocalDate maxNumberRegistration;
+    int maxNumberRegistration;
 
     @Enumerated(EnumType.STRING)
     Grade grade;
+
+    String status;
 
     @OneToMany(mappedBy = "admissionTerm", fetch = FetchType.LAZY)
     @EqualsAndHashCode.Exclude
