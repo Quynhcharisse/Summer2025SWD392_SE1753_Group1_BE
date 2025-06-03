@@ -2,9 +2,13 @@ package com.swd392.group1.pes.services.implementors;
 
 
 import com.swd392.group1.pes.enums.Grade;
+import com.swd392.group1.pes.models.Lesson;
 import com.swd392.group1.pes.models.Syllabus;
+import com.swd392.group1.pes.repositories.LessonRepo;
 import com.swd392.group1.pes.repositories.SyllabusRepo;
+import com.swd392.group1.pes.requests.CreateLessonRequest;
 import com.swd392.group1.pes.requests.CreateSyllabusRequest;
+import com.swd392.group1.pes.requests.UpdateLessonRequest;
 import com.swd392.group1.pes.requests.UpdateSyllabusRequest;
 import com.swd392.group1.pes.response.ResponseObject;
 import com.swd392.group1.pes.services.EducationService;
@@ -15,11 +19,15 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
+
 @Service
 @RequiredArgsConstructor
 public class EducationServiceImpl implements EducationService {
 
     private final SyllabusRepo syllabusRepo;
+
+    private final LessonRepo lessonRepo;
 
 
     @Override
@@ -114,6 +122,115 @@ public class EducationServiceImpl implements EducationService {
                            .build()
         );
 
+    }
+
+    @Override
+    public ResponseEntity<ResponseObject> createLesson(CreateLessonRequest request) {
+        Lesson lesson = Lesson.builder()
+                .topic(request.getTitle())
+                .description(request.getDescription())
+                .build();
+        lessonRepo.save(lesson);
+        return ResponseEntity.ok().body(
+                ResponseObject.builder()
+                        .message("Lesson created successfully")
+                        .success(true)
+                        .data(lesson)
+                        .build()
+        );
+    }
+
+    @Override
+    public ResponseEntity<ResponseObject> updateLesson(String id, UpdateLessonRequest request) {
+        int lessonId;
+        try {
+            lessonId = Integer.parseInt(id);
+        } catch (NumberFormatException e) {
+            return ResponseEntity.ok().body(
+                    ResponseObject.builder()
+                            .message("Invalid lesson ID")
+                            .success(false)
+                            .data(null)
+                            .build()
+            );
+        }
+
+        Lesson lesson = lessonRepo.findById(lessonId).orElse(null);
+        if (lesson == null) {
+            return ResponseEntity.ok().body(
+                    ResponseObject.builder()
+                            .message("Lesson not found")
+                            .success(false)
+                            .data(null)
+                            .build()
+            );
+        }
+
+        lesson.setTopic(request.getTitle());
+        lesson.setDescription(request.getDescription());
+        lessonRepo.save(lesson);
+
+        return ResponseEntity.ok().body(
+                ResponseObject.builder()
+                        .message("Lesson updated successfully")
+                        .success(true)
+                        .data(lesson)
+                        .build()
+        );
+    }
+
+    @Override
+    public ResponseEntity<ResponseObject> viewLessonList() {
+        List<Lesson> lessons = lessonRepo.findAll();
+        if (lessons.isEmpty()) {
+            return ResponseEntity.ok().body(
+                    ResponseObject.builder()
+                            .message("No lessons found")
+                            .success(false)
+                            .data(null)
+                            .build()
+            );
+        }
+        return ResponseEntity.ok().body(
+                ResponseObject.builder()
+                        .message("Lesson list retrieved successfully")
+                        .success(true)
+                        .data(lessons)
+                        .build()
+        );
+    }
+
+    @Override
+    public ResponseEntity<ResponseObject> deleteLesson(String id) {
+        int lessonId;
+        try {
+            lessonId = Integer.parseInt(id);
+        } catch (NumberFormatException e) {
+            return ResponseEntity.ok().body(
+                    ResponseObject.builder()
+                            .message("Invalid lesson ID")
+                            .success(false)
+                            .data(null)
+                            .build()
+            );
+        }
+        if (!lessonRepo.existsById(lessonId)) {
+            return ResponseEntity.ok().body(
+                    ResponseObject.builder()
+                            .message("Lesson not found")
+                            .success(false)
+                            .data(null)
+                            .build()
+            );
+        }
+        lessonRepo.deleteById(lessonId);
+        return ResponseEntity.ok().body(
+                ResponseObject.builder()
+                        .message("Lesson deleted successfully")
+                        .success(true)
+                        .data(null)
+                        .build()
+        );
     }
 
     private Grade getGradeFromName(String name) {
