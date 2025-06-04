@@ -12,8 +12,6 @@ import lombok.experimental.FieldDefaults;
 @AllArgsConstructor
 @Builder
 @FieldDefaults(level = AccessLevel.PRIVATE)
-public class ProcessAdmissionFormRequest {
+public class CancelAdmissionForm {
     int id;
-    boolean isApproved; // true = approve, false = reject
-    String reason; // Lý do từ chối nếu rejected
 }

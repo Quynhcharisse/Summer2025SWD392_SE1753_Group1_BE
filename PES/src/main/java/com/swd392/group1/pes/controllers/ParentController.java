@@ -1,6 +1,6 @@
 package com.swd392.group1.pes.controllers;
 
-import com.swd392.group1.pes.requests.SaveDraftAdmissionFormRequest;
+import com.swd392.group1.pes.requests.CancelAdmissionForm;
 import com.swd392.group1.pes.requests.SubmitAdmissionFormRequest;
 import com.swd392.group1.pes.response.ResponseObject;
 import com.swd392.group1.pes.services.ParentService;
@@ -22,19 +22,13 @@ public class ParentController {
 
     private final ParentService parentService;
 
-    @PostMapping("/form/draft")
-    @PreAuthorize("hasRole('parent')")
-    public ResponseEntity<ResponseObject> saveDraftAdmissionForm (@RequestBody SaveDraftAdmissionFormRequest request, HttpServletRequest httpRequest) {
-        return parentService.saveDraftAdmissionForm(request, httpRequest);
-    }
-
     @GetMapping("/form/list")
     @PreAuthorize("hasRole('parent')")
     public ResponseEntity<ResponseObject> viewAdmissionFormList(HttpServletRequest request) {
         return parentService.viewAdmissionFormList(request);
     }
 
-    @PutMapping("/form/submit")
+    @PostMapping("/form/submit")
     @PreAuthorize("hasRole('parent')")
     public ResponseEntity<ResponseObject> submitAdmissionForm(@RequestBody SubmitAdmissionFormRequest request, HttpServletRequest httpRequest) {
         return parentService.submitAdmissionForm(request, httpRequest);
@@ -42,7 +36,15 @@ public class ParentController {
 
     @PutMapping("/form/cancel")
     @PreAuthorize("hasRole('parent')")
-    public ResponseEntity<ResponseObject> cancelAdmissionForm(@RequestBody int id, HttpServletRequest httpRequest) {
-        return parentService.cancelAdmissionForm(id, httpRequest);
+    public ResponseEntity<ResponseObject> cancelAdmissionForm(@RequestBody CancelAdmissionForm request, HttpServletRequest httpRequest) {
+        return parentService.cancelAdmissionForm(request, httpRequest);
+    }
+
+    //------- Child Management ---------//
+
+    @GetMapping("/children")
+    @PreAuthorize("hasRole('parent')")
+    public ResponseEntity<ResponseObject> getChildren(HttpServletRequest request) {
+        return parentService.getChildren(request);
     }
 }
