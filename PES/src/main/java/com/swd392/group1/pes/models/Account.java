@@ -64,6 +64,9 @@ public class Account implements UserDetails {
     @Column(name = "identity_number")
     String identityNumber;
 
+    @Column(name = "`first_login`")
+    boolean firstLogin;
+
     @OneToMany(mappedBy = "teacher", fetch = FetchType.LAZY)
     @EqualsAndHashCode.Exclude
     @ToString.Exclude
@@ -73,11 +76,6 @@ public class Account implements UserDetails {
     @EqualsAndHashCode.Exclude
     @ToString.Exclude
     Parent parent;
-
-    @OneToOne(mappedBy = "account", fetch = FetchType.LAZY)
-    @EqualsAndHashCode.Exclude
-    @ToString.Exclude
-    Manager manager;
 
     @OneToOne(mappedBy = "teacher", fetch = FetchType.LAZY)
     @EqualsAndHashCode.Exclude
