@@ -3,33 +3,29 @@ package com.swd392.group1.pes.validations.AccountValidation;
 import com.swd392.group1.pes.enums.Status;
 import com.swd392.group1.pes.models.Account;
 import com.swd392.group1.pes.repositories.AccountRepo;
-import com.swd392.group1.pes.requests.RenewPasswordRequest;
+import com.swd392.group1.pes.requests.RestPasswordRequest;
 
 import java.util.regex.Pattern;
 
-public class RenewPasswordValidation {
-    public static String validate(RenewPasswordRequest request, AccountRepo accountRepo) {
-        Account acc = accountRepo.findByEmailAndStatus(request.getEmail(), Status.ACCOUNT_ACTIVE.getValue()).orElse(null);
-
-        if (acc == null) {
-            return "Account not available";
-        }
-
+public class ResetPasswordValidation {
+    public static String validateResetPassword(RestPasswordRequest request, AccountRepo accountRepo) {
         if (request.getEmail().trim().isEmpty()) {
             return "Email is required";
         }
 
-        //Password ko de trong
+        Account acc = accountRepo.findByEmailAndStatus(request.getEmail(), Status.ACCOUNT_ACTIVE.getValue()).orElse(null);
+        if (acc == null) {
+            return "Account not available";
+        }
+
         if (request.getNewPassword().trim().isEmpty()) {
             return "Password is required";
         }
 
-        //Password ton tai
-        if (request.getNewPassword().equals(request.getOldPassword())){
-            return "New password is not the same as old password";
+        if (request.getNewPassword().equals(request.getOldPassword())) {
+            return "New password must be different from old password";
         }
 
-        //Password hop le
         if (request.getNewPassword().length() < 8) {
             return "Password must be at least 8 characters";
         }
@@ -55,14 +51,12 @@ public class RenewPasswordValidation {
             return "Password must contain at least one special character";
         }
 
-        //Confirm password ko duoc trong
         if (request.getConfirmPassword().trim().isEmpty()) {
             return "Confirm Password is required";
         }
 
-        //Confirm password = password
-        if (!request.getConfirmPassword().equals(request.getNewPassword())){
-            return "Confirm password must be the same as password";
+        if (!request.getConfirmPassword().equals(request.getNewPassword())) {
+            return "Confirm password must match the new password";
         }
 
         return "";

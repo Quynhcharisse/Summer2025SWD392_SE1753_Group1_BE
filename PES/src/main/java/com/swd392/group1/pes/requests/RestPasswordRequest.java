@@ -12,9 +12,10 @@ import lombok.experimental.FieldDefaults;
 @AllArgsConstructor
 @Builder
 @FieldDefaults(level = AccessLevel.PRIVATE)
-public class RenewPasswordRequest {
+public class RestPasswordRequest {
     String email;
     String oldPassword;
     String newPassword;
     String confirmPassword;
+    boolean isFirstLogin;
 }

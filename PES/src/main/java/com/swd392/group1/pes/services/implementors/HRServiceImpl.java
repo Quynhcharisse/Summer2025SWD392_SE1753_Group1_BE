@@ -110,7 +110,6 @@ public class HRServiceImpl implements HRService {
         account.setIdentityNumber(request.getIdentityNumber());
         account.setRole(Role.TEACHER);
         account.setStatus(Status.ACCOUNT_ACTIVE.getValue());
-        account.getManager().setPasswordChanged(false);
 
         accountRepo.save(account);
 

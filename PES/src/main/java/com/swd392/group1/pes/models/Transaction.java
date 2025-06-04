@@ -8,6 +8,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
@@ -39,11 +40,11 @@ public class Transaction {
     LocalDate paymentDate;
 
     @Column(name = "`receipt_number`")
-    LocalDate receiptNumber;
+    String receiptNumber; // Số biên lai
 
     String status;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "`form_id`")
     AdmissionForm admissionForm;
 }
