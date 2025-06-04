@@ -36,33 +36,11 @@ public class AdmissionForm {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     Integer id;
 
-    @Column(name = "`household_registration_address`")
-    String householdRegistrationAddress;
+    @Column(name = "`child_name`")
+    String childName;
 
-    @Column(name = "`household_registration_img`")
-    String householdRegistrationImg;
-
-    @Column(name = "`child_birth_certificate_img`")
-    String childBirthCertificateImg;
-
-    @Column(name = "`child_profile_image`")
-    String childProfileImage;
-
-    @Column(name = "`cancel_reason`")
-    String cancelReason;
-
-    @Column(name = "`submitted_at`")
-    LocalDate submittedAt;
-
-    @Column(name = "`modified_at`")
-    LocalDate modifiedAt;
-
-    String note;
-
-    @Column(name = "`student_name`")
-    String studentName;
-
-    String gender;
+    @Column(name = "`child_gender`")
+    String childGender;
 
     @Column(name = "`date_of_birth`")
     LocalDate dateOfBirth;
@@ -72,6 +50,26 @@ public class AdmissionForm {
 
     @Column(name = "`profile_image`")
     String profileImage;
+
+    @Column(name = "`household_registration_address`")
+    String householdRegistrationAddress;
+
+    @Column(name = "`birth_certificate_img`")
+    String birthCertificateImg;
+
+    @Column(name = "`household_registration_img`")
+    String householdRegistrationImg ;
+
+    @Column(name = "`commitment_img`")
+    String commitmentImg ;
+
+    @Column(name = "`cancel_reason`")
+    String cancelReason;
+
+    @Column(name = "`submitted_date`")
+    LocalDate submittedDate;
+
+    String note;
 
     String status;
 
