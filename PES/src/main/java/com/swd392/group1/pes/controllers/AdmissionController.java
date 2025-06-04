@@ -41,8 +41,8 @@ public class AdmissionController {
 
     @GetMapping("/form/list")
     @PreAuthorize("hasRole('admission')")
-    public ResponseEntity<ResponseObject> viewAdmissionFormList(@RequestBody int year) {
-        return admissionService.viewAdmissionFormList(year);
+    public ResponseEntity<ResponseObject> viewAdmissionFormList() {
+        return admissionService.viewAdmissionFormList();
     }
 
     @PutMapping("/form/process")

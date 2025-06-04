@@ -1,7 +1,6 @@
 package com.swd392.group1.pes.services;
 
 import com.swd392.group1.pes.requests.AdmissionTermRequest;
-import com.swd392.group1.pes.requests.CreateAdmissionFeeRequest;
 import com.swd392.group1.pes.requests.ProcessAdmissionFormRequest;
 import com.swd392.group1.pes.requests.UpdateAdmissionFeeRequest;
 import com.swd392.group1.pes.response.ResponseObject;
@@ -14,11 +13,9 @@ public interface AdmissionService {
 
     ResponseEntity<ResponseObject> updateAdmissionTerm(AdmissionTermRequest request);
 
-    ResponseEntity<ResponseObject> viewAdmissionFormList(int year);
+    ResponseEntity<ResponseObject> viewAdmissionFormList();
 
     ResponseEntity<ResponseObject> processAdmissionFormList(ProcessAdmissionFormRequest request);
-
-    ResponseEntity<ResponseObject> createAdmissionFee(CreateAdmissionFeeRequest request);
 
     ResponseEntity<ResponseObject> updateAdmissionFee(UpdateAdmissionFeeRequest request);
 
