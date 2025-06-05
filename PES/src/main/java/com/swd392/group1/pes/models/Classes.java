@@ -43,7 +43,7 @@ public class Classes {
     String name;
 
     @Column(name = "`number_student`")
-    String numberStudent;
+    int numberStudent;
 
     @Column(name = "`room_number`")
     String roomNumber;
