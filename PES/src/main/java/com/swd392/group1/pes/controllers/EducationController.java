@@ -1,6 +1,7 @@
 package com.swd392.group1.pes.controllers;
 
 import com.swd392.group1.pes.requests.CreateSyllabusRequest;
+import com.swd392.group1.pes.requests.GenerateClassesRequest;
 import com.swd392.group1.pes.requests.UpdateSyllabusRequest;
 import com.swd392.group1.pes.response.ResponseObject;
 import com.swd392.group1.pes.services.EducationService;
@@ -38,5 +39,17 @@ public class EducationController {
     @PreAuthorize("hasRole('education')")
     public ResponseEntity<ResponseObject> viewSyllabusDetail(@RequestParam String id) {
         return educationService.viewSyllabusDetail(id);
+    }
+
+    @GetMapping("/syllabus/list")
+    @PreAuthorize("hasRole('education')")
+    public ResponseEntity<ResponseObject> viewSyllabusList() {
+        return educationService.viewAllSyllabus();
+    }
+
+    @PostMapping("/classes")
+    @PreAuthorize("hasRole('education')")
+    public ResponseEntity<ResponseObject> generateClassesAuto(GenerateClassesRequest request){
+        return educationService.generateClassesAuto(request);
     }
 }
