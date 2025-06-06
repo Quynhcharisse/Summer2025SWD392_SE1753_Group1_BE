@@ -83,25 +83,25 @@ public class EducationController {
     }
 
     @PostMapping("/event")
-    //@PreAuthorize("hasRole('education')")
+    @PreAuthorize("hasRole('education')")
     public ResponseEntity<ResponseObject> createEvent(@RequestBody CreateEventRequest request) {
         return educationService.createEvent(request);
     }
 
     @PutMapping("/event")
-    //@PreAuthorize("hasRole('education')")
+    @PreAuthorize("hasRole('education')")
     public ResponseEntity<ResponseObject> updateEvent(@RequestParam String id, @RequestBody UpdateEventRequest request) {
         return educationService.updateEvent(id, request);
     }
 
     @GetMapping("/event/list")
-    //@PreAuthorize("hasRole('education')")
+    @PreAuthorize("hasRole('education')")
     public ResponseEntity<ResponseObject> viewEventList() {
         return educationService.viewEventList();
     }
 
     @GetMapping("/event/detail")
-    //@PreAuthorize("hasRole('education')")
+    @PreAuthorize("hasRole('education')")
     public ResponseEntity<ResponseObject> viewEventDetail(@RequestParam String id) {
         return educationService.viewEventDetail(id);
     }
