@@ -56,37 +56,41 @@ public class ApplicationConfig {
         return args -> {
 
             // Tạo sẵn HR Manager
-          Account hrAccount = Account.builder()
-                  .email("hrmanager@gmail.com")
-                  .password("123456")
-                  .firstLogin(true)
-                  .role(Role.HR)
-                  .status(Status.ACCOUNT_ACTIVE.getValue())
-                  .createdAt(LocalDate.now())
-                  .build();
-          accountRepo.save(hrAccount);
-
+            if (!accountRepo.existsByEmail("hrmanager@gmail.com")) {
+                Account hrAccount = Account.builder()
+                        .email("hrmanager@gmail.com")
+                        .password("123456")
+                        .firstLogin(true)
+                        .role(Role.HR)
+                        .status(Status.ACCOUNT_ACTIVE.getValue())
+                        .createdAt(LocalDate.now())
+                        .build();
+                accountRepo.save(hrAccount);
+            }
             // Tạo sẵn Educational Manager
-            Account educationalManagerAccount = Account.builder()
-                    .email("educationalmanager@gmail.com")
-                    .password("123456")
-                    .firstLogin(true)
-                    .role(Role.EDUCATION)
-                    .status(Status.ACCOUNT_ACTIVE.getValue())
-                    .createdAt(LocalDate.now())
-                    .build();
-            accountRepo.save(educationalManagerAccount);
-
+            if (!accountRepo.existsByEmail("educationalmanager@gmail.com")) {
+                Account educationalManagerAccount = Account.builder()
+                        .email("educationalmanager@gmail.com")
+                        .password("123456")
+                        .firstLogin(true)
+                        .role(Role.EDUCATION)
+                        .status(Status.ACCOUNT_ACTIVE.getValue())
+                        .createdAt(LocalDate.now())
+                        .build();
+                accountRepo.save(educationalManagerAccount);
+            }
             // Tạo sẵn admission Manager
-            Account admissionAccount = Account.builder()
-                    .email("admissionmanager@gmail.com")
-                    .password("123456")
-                    .firstLogin(true)
-                    .role(Role.ADMISSION)
-                    .status(Status.ACCOUNT_ACTIVE.getValue())
-                    .createdAt(LocalDate.now())
-                    .build();
-            accountRepo.save(admissionAccount);
+            if (!accountRepo.existsByEmail("admissionmanager@gmail.com")) {
+                Account admissionAccount = Account.builder()
+                        .email("admissionmanager@gmail.com")
+                        .password("123456")
+                        .firstLogin(true)
+                        .role(Role.ADMISSION)
+                        .status(Status.ACCOUNT_ACTIVE.getValue())
+                        .createdAt(LocalDate.now())
+                        .build();
+                accountRepo.save(admissionAccount);
+            }
         };
     }
 }
