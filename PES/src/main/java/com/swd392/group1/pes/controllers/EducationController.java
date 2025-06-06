@@ -1,7 +1,9 @@
 package com.swd392.group1.pes.controllers;
 
+import com.swd392.group1.pes.requests.CreateEventRequest;
 import com.swd392.group1.pes.requests.CreateLessonRequest;
 import com.swd392.group1.pes.requests.CreateSyllabusRequest;
+import com.swd392.group1.pes.requests.UpdateEventRequest;
 import com.swd392.group1.pes.requests.UpdateLessonRequest;
 import com.swd392.group1.pes.requests.GenerateClassesRequest;
 import com.swd392.group1.pes.requests.UpdateSyllabusRequest;
@@ -10,7 +12,6 @@ import com.swd392.group1.pes.services.EducationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -79,5 +80,29 @@ public class EducationController {
     @PreAuthorize("hasRole('education')")
     public ResponseEntity<ResponseObject> deleteLesson(@RequestParam String id) {
         return educationService.deleteLesson(id);
+    }
+
+    @PostMapping("/event")
+    //@PreAuthorize("hasRole('education')")
+    public ResponseEntity<ResponseObject> createEvent(@RequestBody CreateEventRequest request) {
+        return educationService.createEvent(request);
+    }
+
+    @PutMapping("/event")
+    //@PreAuthorize("hasRole('education')")
+    public ResponseEntity<ResponseObject> updateEvent(@RequestParam String id, @RequestBody UpdateEventRequest request) {
+        return educationService.updateEvent(id, request);
+    }
+
+    @GetMapping("/event/list")
+    //@PreAuthorize("hasRole('education')")
+    public ResponseEntity<ResponseObject> viewEventList() {
+        return educationService.viewEventList();
+    }
+
+    @GetMapping("/event/detail")
+    //@PreAuthorize("hasRole('education')")
+    public ResponseEntity<ResponseObject> viewEventDetail(@RequestParam String id) {
+        return educationService.viewEventDetail(id);
     }
 }
