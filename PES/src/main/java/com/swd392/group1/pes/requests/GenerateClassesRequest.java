@@ -7,14 +7,18 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.experimental.FieldDefaults;
 
+import java.time.LocalDate;
+
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
 @FieldDefaults(level = AccessLevel.PRIVATE)
-public class RenewPasswordRequest {
-    String email;
-    String oldPassword;
-    String newPassword;
-    String confirmPassword;
+public class GenerateClassesRequest {
+    private int numberStudentsOfEachClass;
+    private String grade;
+    private int academicYear;
+    private int syllabusId;
+    private LocalDate startDate;
+    private LocalDate endDate;
 }

@@ -1,13 +1,14 @@
 package com.swd392.group1.pes.services.implementors;
 
+import com.swd392.group1.pes.enums.Role;
 import com.swd392.group1.pes.enums.Status;
 import com.swd392.group1.pes.models.Account;
 import com.swd392.group1.pes.repositories.AccountRepo;
-import com.swd392.group1.pes.requests.RenewPasswordRequest;
+import com.swd392.group1.pes.requests.RestPasswordRequest;
 import com.swd392.group1.pes.requests.UpdateProfileRequest;
 import com.swd392.group1.pes.response.ResponseObject;
 import com.swd392.group1.pes.services.AccountService;
-import com.swd392.group1.pes.validations.AccountValidation.RenewPasswordValidation;
+import com.swd392.group1.pes.validations.AccountValidation.ResetPasswordValidation;
 import com.swd392.group1.pes.validations.AccountValidation.UpdateProfileValidation;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -24,9 +25,9 @@ public class AccountServiceImpl implements AccountService {
     private final AccountRepo accountRepo;
 
     @Override
-    public ResponseEntity<ResponseObject> renewPassword(RenewPasswordRequest request) {
-        String error = RenewPasswordValidation.validate(request, accountRepo);
-        if(!error.isEmpty()){
+    public ResponseEntity<ResponseObject> resetPassword(RestPasswordRequest request) {
+        String error = ResetPasswordValidation.validateResetPassword(request, accountRepo);
+        if (!error.isEmpty()) {
             return ResponseEntity.ok().body(
                     ResponseObject.builder()
                             .message(error)
@@ -38,46 +39,43 @@ public class AccountServiceImpl implements AccountService {
 
         Account account = accountRepo.findByEmailAndPassword(request.getEmail(), request.getOldPassword()).orElse(null);
 
-        assert account != null;
-        account.setPassword(request.getNewPassword());
-        accountRepo.save(account);
-
-        return ResponseEntity.ok().body(
-                ResponseObject.builder()
-                        .message("Renew Password Successfully")
-                        .success(true)
-                        .data(account)
-                        .build()
-        );
-    }
-
-    public ResponseEntity<ResponseObject> changeFirstTimePassword(RenewPasswordRequest request) {
-        String error = RenewPasswordValidation.validate(request, accountRepo);
-        if(!error.isEmpty()){
+        if (account == null) {
             return ResponseEntity.ok().body(
                     ResponseObject.builder()
-                            .message(error)
+                            .message("Invalid email or password.")
                             .success(false)
                             .data(null)
                             .build()
             );
         }
 
-        Account account = accountRepo.findByEmailAndPassword(request.getEmail(), request.getOldPassword()).orElse(null);
-
-        assert account != null;
         account.setPassword(request.getNewPassword());
-        account.getManager().setPasswordChanged(true);
+
+        // Nếu là role không cần reset lần đầu (PARENT, HR)
+        if (account.getRole().equals(Role.HR) || account.getRole().equals(Role.PARENT)) {
+            account.setFirstLogin(false);
+        }
+
+        // Nếu là các role cần reset lần đầu → mark đã đổi pass nếu đang trong lần đầu
+        if (request.isFirstLogin()) {
+            if (account.getRole().equals(Role.ADMISSION)
+                    || account.getRole().equals(Role.EDUCATION)
+                    || account.getRole().equals(Role.TEACHER)) {
+                account.setFirstLogin(false);
+            }
+        }
+
         accountRepo.save(account);
 
         return ResponseEntity.ok().body(
                 ResponseObject.builder()
-                        .message("Renew Password Successfully")
+                        .message("Password reset successfully.")
                         .success(true)
-                        .data(account)
+                        .data(null)
                         .build()
         );
     }
+
 
     @Override
     public ResponseEntity<ResponseObject> viewProfile() {

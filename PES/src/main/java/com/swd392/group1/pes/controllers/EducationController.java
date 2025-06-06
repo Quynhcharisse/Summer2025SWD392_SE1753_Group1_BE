@@ -3,12 +3,14 @@ package com.swd392.group1.pes.controllers;
 import com.swd392.group1.pes.requests.CreateLessonRequest;
 import com.swd392.group1.pes.requests.CreateSyllabusRequest;
 import com.swd392.group1.pes.requests.UpdateLessonRequest;
+import com.swd392.group1.pes.requests.GenerateClassesRequest;
 import com.swd392.group1.pes.requests.UpdateSyllabusRequest;
 import com.swd392.group1.pes.response.ResponseObject;
 import com.swd392.group1.pes.services.EducationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -41,6 +43,18 @@ public class EducationController {
     @PreAuthorize("hasRole('education')")
     public ResponseEntity<ResponseObject> viewSyllabusDetail(@RequestParam String id) {
         return educationService.viewSyllabusDetail(id);
+    }
+
+    @GetMapping("/syllabus/list")
+    @PreAuthorize("hasRole('education')")
+    public ResponseEntity<ResponseObject> viewSyllabusList() {
+        return educationService.viewAllSyllabus();
+    }
+
+    @PostMapping("/classes")
+    @PreAuthorize("hasRole('education')")
+    public ResponseEntity<ResponseObject> generateClassesAuto(GenerateClassesRequest request){
+        return educationService.generateClassesAuto(request);
     }
 
     @PostMapping("/lesson")

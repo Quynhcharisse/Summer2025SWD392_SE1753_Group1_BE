@@ -1,6 +1,6 @@
 package com.swd392.group1.pes.controllers;
 
-import com.swd392.group1.pes.requests.RenewPasswordRequest;
+import com.swd392.group1.pes.requests.RestPasswordRequest;
 import com.swd392.group1.pes.requests.UpdateProfileRequest;
 import com.swd392.group1.pes.response.ResponseObject;
 import com.swd392.group1.pes.services.AccountService;
@@ -21,26 +21,20 @@ public class AccountController {
 
     private final AccountService accountService;
 
-    @PostMapping("/pass/renew")
-    @PreAuthorize("hasAnyRole('parent', 'hr', 'admission_manager', 'education_manager', 'teacher')")
-    public ResponseEntity<ResponseObject> changePassword (@RequestBody RenewPasswordRequest request){
-        return accountService.renewPassword(request);
-    }
-
-    @PostMapping("/pass/renew/temp")
-    @PreAuthorize("hasAnyRole('hr', 'admission_manager', 'education_manager', 'teacher')")
-    public ResponseEntity<ResponseObject> changeFirstTimePassword (@RequestBody RenewPasswordRequest request){
-        return accountService.changeFirstTimePassword(request);
+    @PostMapping("/pass/reset")
+    @PreAuthorize("hasAnyRole('parent', 'hr', 'admission', 'education', 'teacher')")
+    public ResponseEntity<ResponseObject> resetPassword (@RequestBody RestPasswordRequest request){
+        return accountService.resetPassword(request);
     }
 
     @GetMapping("/profile")
-    @PreAuthorize("hasAnyRole('parent', 'hr', 'admission_manager', 'education_manager', 'teacher')")
+    @PreAuthorize("hasAnyRole('parent', 'hr', 'admission', 'education', 'teacher')")
     public ResponseEntity<ResponseObject> viewProfile (){
         return accountService.viewProfile();
     }
 
     @PutMapping("/profile")
-    @PreAuthorize("hasAnyRole('parent', 'hr', 'admission_manager', 'education_manager', 'teacher')")
+    @PreAuthorize("hasAnyRole('parent', 'hr', 'admission', 'education', 'teacher')")
     public ResponseEntity<ResponseObject> updateProfile (@RequestBody UpdateProfileRequest request){
         return accountService.updateProfile(request);
     }
