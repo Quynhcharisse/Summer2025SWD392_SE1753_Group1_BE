@@ -52,41 +52,74 @@ public class ApplicationConfig {
     }
 
     @Bean
-    public CommandLineRunner initData(AccountRepo accountRepo){
+    public CommandLineRunner initData(AccountRepo accountRepo) {
         return args -> {
 
             // Tạo sẵn HR Manager
-          Account hrAccount = Account.builder()
-                  .email("hrmanager@gmail.com")
-                  .password("123456")
-                  .firstLogin(true)
-                  .role(Role.HR)
-                  .status(Status.ACCOUNT_ACTIVE.getValue())
-                  .createdAt(LocalDate.now())
-                  .build();
-          accountRepo.save(hrAccount);
-
+            if (!accountRepo.existsByEmail("hrmanager@gmail.com")) {
+                Account hrAccount = Account.builder()
+                        .email("hrmanager@gmail.com")
+                        .password("123456")
+                        .name("HR Manager")
+                        .gender("female")
+                        .identityNumber("070425890001")
+                        .phone("09123450009")
+                        .firstLogin(true)
+                        .role(Role.HR)
+                        .status(Status.ACCOUNT_ACTIVE.getValue())
+                        .createdAt(LocalDate.now())
+                        .build();
+                accountRepo.save(hrAccount);
+            }
             // Tạo sẵn Educational Manager
-            Account educationalManagerAccount = Account.builder()
-                    .email("educationalmanager@gmail.com")
-                    .password("123456")
-                    .firstLogin(true)
-                    .role(Role.EDUCATION)
-                    .status(Status.ACCOUNT_ACTIVE.getValue())
-                    .createdAt(LocalDate.now())
-                    .build();
-            accountRepo.save(educationalManagerAccount);
-
+            if (!accountRepo.existsByEmail("educationalmanager@gmail.com")) {
+                Account educationalManagerAccount = Account.builder()
+                        .email("educationalmanager@gmail.com")
+                        .password("123456")
+                        .name("Educational Manager")
+                        .gender("male")
+                        .identityNumber("070425890003")
+                        .phone("09123456700")
+                        .firstLogin(true)
+                        .role(Role.EDUCATION)
+                        .status(Status.ACCOUNT_ACTIVE.getValue())
+                        .createdAt(LocalDate.now())
+                        .build();
+                accountRepo.save(educationalManagerAccount);
+            }
             // Tạo sẵn admission Manager
-            Account admissionAccount = Account.builder()
-                    .email("admissionmanager@gmail.com")
-                    .password("123456")
-                    .firstLogin(true)
-                    .role(Role.ADMISSION)
-                    .status(Status.ACCOUNT_ACTIVE.getValue())
-                    .createdAt(LocalDate.now())
-                    .build();
-            accountRepo.save(admissionAccount);
+            if (!accountRepo.existsByEmail("admissionmanager@gmail.com")) {
+                Account admissionAccount = Account.builder()
+                        .email("admissionmanager@gmail.com")
+                        .password("123456")
+                        .name("Admission Manager")
+                        .gender("female")
+                        .identityNumber("070425890002")
+                        .phone("09453456789")
+                        .firstLogin(true)
+                        .role(Role.ADMISSION)
+                        .status(Status.ACCOUNT_ACTIVE.getValue())
+                        .createdAt(LocalDate.now())
+                        .build();
+                accountRepo.save(admissionAccount);
+            }
+
+            //Tạo sẵn parent
+            if (!accountRepo.existsByEmail("parent1@gmail.com")) {
+                Account parent = Account.builder()
+                        .email("parent1@gmail.com")
+                        .password("123456")
+                        .name("Parent")
+                        .gender("male")
+                        .identityNumber("070404000033")
+                        .phone("0705646041")
+                        .firstLogin(true)
+                        .role(Role.PARENT)
+                        .status(Status.ACCOUNT_ACTIVE.getValue())
+                        .createdAt(LocalDate.now())
+                        .build();
+                accountRepo.save(parent);
+            }
         };
     }
 }
