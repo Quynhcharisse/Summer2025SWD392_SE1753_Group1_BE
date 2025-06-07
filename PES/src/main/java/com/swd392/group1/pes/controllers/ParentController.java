@@ -1,6 +1,5 @@
 package com.swd392.group1.pes.controllers;
 
-import com.swd392.group1.pes.requests.CancelAdmissionForm;
 import com.swd392.group1.pes.requests.SubmitAdmissionFormRequest;
 import com.swd392.group1.pes.response.ResponseObject;
 import com.swd392.group1.pes.services.ParentService;
@@ -36,15 +35,7 @@ public class ParentController {
 
     @PutMapping("/form/cancel")
     @PreAuthorize("hasRole('parent')")
-    public ResponseEntity<ResponseObject> cancelAdmissionForm(@RequestBody CancelAdmissionForm request, HttpServletRequest httpRequest) {
-        return parentService.cancelAdmissionForm(request, httpRequest);
-    }
-
-    //------- Child Management ---------//
-
-    @GetMapping("/children")
-    @PreAuthorize("hasRole('parent')")
-    public ResponseEntity<ResponseObject> getChildren(HttpServletRequest request) {
-        return parentService.getChildren(request);
+    public ResponseEntity<ResponseObject> cancelAdmissionForm(@RequestBody int id, HttpServletRequest httpRequest) {
+        return parentService.cancelAdmissionForm(id, httpRequest);
     }
 }

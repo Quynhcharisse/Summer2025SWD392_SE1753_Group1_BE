@@ -4,8 +4,10 @@ import com.swd392.group1.pes.enums.Grade;
 import com.swd392.group1.pes.enums.Status;
 import com.swd392.group1.pes.models.AdmissionForm;
 import com.swd392.group1.pes.models.AdmissionTerm;
+import com.swd392.group1.pes.models.Student;
 import com.swd392.group1.pes.repositories.AdmissionFormRepo;
 import com.swd392.group1.pes.repositories.AdmissionTermRepo;
+import com.swd392.group1.pes.repositories.StudentRepo;
 import com.swd392.group1.pes.requests.AdmissionTermRequest;
 import com.swd392.group1.pes.requests.ProcessAdmissionFormRequest;
 import com.swd392.group1.pes.requests.UpdateAdmissionFeeRequest;
@@ -17,6 +19,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -26,8 +29,8 @@ import java.util.Map;
 public class AdmissionServiceImpl implements AdmissionService {
 
     private final AdmissionTermRepo admissionTermRepo;
-
     private final AdmissionFormRepo admissionFormRepo;
+    private final StudentRepo studentRepo;
 
     //------------------------------\\ create admission term //------------------------------\\
 
@@ -166,16 +169,15 @@ public class AdmissionServiceImpl implements AdmissionService {
     @Override
     public ResponseEntity<ResponseObject> viewAdmissionFormList() {
         List<Map<String, Object>> formList = admissionFormRepo.findAll().stream()
-                .filter(form -> form.getAdmissionTerm() != null
-                        && form.getAdmissionTerm().getYear() == LocalDate.now().getYear())
-                .map(
-                        form -> {
+                .sorted(Comparator.comparing(AdmissionForm::getSubmittedDate).reversed()) // sort form theo ngày chỉnh sửa mới nhất
+                .map(form -> {
                             Map<String, Object> data = new HashMap<>();
                             data.put("id", form.getId());
-                            data.put("childName", form.getChildName());
-                            data.put("childGender", form.getChildGender());
-                            data.put("dateOfBirth", form.getDateOfBirth());
-                            data.put("placeOfBirth", form.getPlaceOfBirth());
+                            data.put("studentId", form.getStudent().getId());
+                            data.put("studentName", form.getStudent().getName());
+                            data.put("studentGender", form.getStudent().getGender());
+                            data.put("studentDateOfBirth", form.getStudent().getDateOfBirth());
+                            data.put("studentPlaceOfBirth", form.getStudent().getPlaceOfBirth());
                             data.put("profileImage", form.getProfileImage());
                             data.put("householdRegistrationAddress", form.getHouseholdRegistrationAddress());
                             data.put("householdRegistrationImg", form.getHouseholdRegistrationImg());
@@ -185,12 +187,6 @@ public class AdmissionServiceImpl implements AdmissionService {
                             data.put("cancelReason", form.getCancelReason());
                             data.put("note", form.getNote());
                             data.put("status", form.getStatus());
-
-                            Map<String, Object> admissionTermData = new HashMap<>();
-                            if (form.getAdmissionTerm() != null) {
-                                admissionTermData.put("admissionTermStatus", form.getAdmissionTerm().getStatus());
-                            }
-                            data.put("admissionTerm", admissionTermData);
                             return data;
                         }
                 )
@@ -220,6 +216,7 @@ public class AdmissionServiceImpl implements AdmissionService {
         }
 
         AdmissionForm form = admissionFormRepo.findById(request.getId()).orElse(null);
+
         if (form == null) {
             return ResponseEntity.ok().body(
                     ResponseObject.builder()
@@ -229,37 +226,14 @@ public class AdmissionServiceImpl implements AdmissionService {
                             .build()
             );
         }
-
-        AdmissionTerm term = form.getAdmissionTerm();
-        if (term == null) {
-            return ResponseEntity.ok().body(
-                    ResponseObject.builder()
-                            .message("Admission term is missing")
-                            .success(false)
-                            .data(null)
-                            .build()
-            );
-        }
-
-        //Cập nhật lại trạng thái term real-time
-        String updatedStatus = updateTermStatus(term, LocalDate.now());
-        if (!term.getStatus().equals(updatedStatus)) {
-            term.setStatus(updatedStatus);
-            admissionTermRepo.save(term);
-        }
-
-        if (!updatedStatus.equals(Status.LOCKED_TERM.getValue())) {
-            return ResponseEntity.ok().body(
-                    ResponseObject.builder()
-                            .message("You can only approve or reject forms after the admission term is locked.")
-                            .success(false)
-                            .data(null)
-                            .build()
-            );
-        }
-
         if (request.isApproved()) {
             form.setStatus(Status.APPROVED.getValue());
+
+            if(form.getStudent() != null) {
+                Student student = form.getStudent();
+                student.setStudent(true);
+                studentRepo.save(student);
+            }
         } else {
             form.setStatus(Status.REJECTED.getValue());
             form.setCancelReason(request.getReason());
