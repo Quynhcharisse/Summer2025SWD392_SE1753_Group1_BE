@@ -42,7 +42,7 @@ public class AuthController {
         return authService.register(request);
     }
 
-    @PostMapping("/password/reset")
+    @PostMapping("/password/forgot")
     public ResponseEntity<ResponseObject> forgotPassword (@RequestBody ForgotPasswordRequest request){
         return authService.forgotPassword(request);
     }
