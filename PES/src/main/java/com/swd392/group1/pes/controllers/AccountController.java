@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -29,8 +30,8 @@ public class AccountController {
 
     @GetMapping("/profile")
     @PreAuthorize("hasAnyRole('parent', 'hr', 'admission', 'education', 'teacher')")
-    public ResponseEntity<ResponseObject> viewProfile (){
-        return accountService.viewProfile();
+    public ResponseEntity<ResponseObject> viewProfile (@RequestParam String email){
+        return accountService.viewProfile(email);
     }
 
     @PutMapping("/profile")

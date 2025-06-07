@@ -15,7 +15,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 @Service
@@ -78,17 +77,24 @@ public class AccountServiceImpl implements AccountService {
 
 
     @Override
-    public ResponseEntity<ResponseObject> viewProfile() {
-        List<Map<String, Object>> userList = accountRepo.findAll().stream()
-                .map(this::buildProfileBodyDetail)
-                .toList();
+    public ResponseEntity<ResponseObject> viewProfile(String email) {
+        Account account = accountRepo.findByEmailAndStatus(email, Status.ACCOUNT_ACTIVE.getValue()).orElse(null);
 
+        if (account == null) {
+            return ResponseEntity.ok().body(
+                    ResponseObject.builder()
+                            .message("Account not found")
+                            .success(false)
+                            .data(null)
+                            .build()
+            );
+        }
 
         return ResponseEntity.ok().body(
                 ResponseObject.builder()
                         .message("Profile retrieved successfully")
                         .success(true)
-                        .data(userList)
+                        .data(buildProfileBodyDetail(account))
                         .build()
         );
     }
