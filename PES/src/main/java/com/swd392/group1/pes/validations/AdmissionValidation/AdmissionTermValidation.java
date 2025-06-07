@@ -51,7 +51,7 @@ public class AdmissionTermValidation {
         //bắt buộc phải nhap reason
         if(!request.isApproved()) {
             if(request.getReason().trim().isEmpty()) {
-                return "Reject reason is required when form is approved";
+                return "Reject reason is required when form is rejected";
             }
 
             if (request.getReason().length() > 100) {

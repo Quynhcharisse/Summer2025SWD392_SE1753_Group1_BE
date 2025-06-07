@@ -73,7 +73,7 @@ public class AccountServiceImpl implements AccountService {
                 ResponseObject.builder()
                         .message("Password reset successfully.")
                         .success(true)
-                        .data(null)
+                        .data(account)
                         .build()
         );
     }

@@ -50,6 +50,8 @@ public class Student {
     @Column(name = "`profile_image`")
     String profileImage;
 
+    boolean isStudent;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "`parent_id`")
     Parent parent;
@@ -58,10 +60,10 @@ public class Student {
     @JoinColumn(name = "`form_id`")
     AdmissionForm admissionForm;
 
-    @OneToMany(mappedBy = "student", fetch = FetchType.LAZY) // ko cần cascade
+    @OneToMany(mappedBy = "student", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
     @EqualsAndHashCode.Exclude
     @ToString.Exclude
-    List<StudentClass> studentClassList;
+    List<AdmissionForm> admissionFormList;
 
     @OneToMany(mappedBy = "student", fetch = FetchType.EAGER, cascade = CascadeType.ALL)
     @EqualsAndHashCode.Exclude
