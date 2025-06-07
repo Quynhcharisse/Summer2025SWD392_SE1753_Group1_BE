@@ -1,15 +1,16 @@
 package com.swd392.group1.pes.services.implementors;
 
 import com.swd392.group1.pes.enums.Role;
-import com.swd392.group1.pes.enums.Status;
 import com.swd392.group1.pes.models.Account;
 import com.swd392.group1.pes.repositories.AccountRepo;
 import com.swd392.group1.pes.requests.RestPasswordRequest;
 import com.swd392.group1.pes.requests.UpdateProfileRequest;
 import com.swd392.group1.pes.response.ResponseObject;
 import com.swd392.group1.pes.services.AccountService;
+import com.swd392.group1.pes.services.JWTService;
 import com.swd392.group1.pes.validations.AccountValidation.ResetPasswordValidation;
 import com.swd392.group1.pes.validations.AccountValidation.UpdateProfileValidation;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -22,6 +23,8 @@ import java.util.Map;
 public class AccountServiceImpl implements AccountService {
 
     private final AccountRepo accountRepo;
+
+    private final JWTService jwtService;
 
     @Override
     public ResponseEntity<ResponseObject> resetPassword(RestPasswordRequest request) {
@@ -77,45 +80,56 @@ public class AccountServiceImpl implements AccountService {
 
 
     @Override
-    public ResponseEntity<ResponseObject> viewProfile(String email) {
-        Account account = accountRepo.findByEmailAndStatus(email, Status.ACCOUNT_ACTIVE.getValue()).orElse(null);
+    public ResponseEntity<ResponseObject> viewProfile(HttpServletRequest request) {
+
+        Account account = jwtService.extractAccountFromCookie(request);
 
         if (account == null) {
             return ResponseEntity.ok().body(
                     ResponseObject.builder()
-                            .message("Account not found")
+                            .message("Cannot retrieve profile. Authentication token is missing or invalid")
                             .success(false)
                             .data(null)
                             .build()
             );
         }
 
-        return ResponseEntity.ok().body(
-                ResponseObject.builder()
-                        .message("Profile retrieved successfully")
-                        .success(true)
-                        .data(buildProfileBodyDetail(account))
-                        .build()
-        );
-    }
-
-    private Map<String, Object> buildProfileBodyDetail(Account account) {
         Map<String, Object> body = new HashMap<>();
         body.put("email", account.getEmail());
         body.put("name", account.getName());
         body.put("phone", account.getPhone());
         body.put("gender", account.getGender());
         body.put("identityNumber", account.getIdentityNumber());
-        body.put("createdAt", account.getCreatedAt());
         body.put("avatarUrl", account.getAvatarUrl());
         body.put("role", account.getRole());
+        body.put("createdAt", account.getCreatedAt());
         body.put("status", account.getStatus());
-        return body;
+
+        return ResponseEntity.ok().body(
+                ResponseObject.builder()
+                        .message("")
+                        .success(true)
+                        .data(body)
+                        .build()
+        );
     }
 
     @Override
-    public ResponseEntity<ResponseObject> updateProfile(UpdateProfileRequest request) {
-        String error = UpdateProfileValidation.validate(request, accountRepo);
+    public ResponseEntity<ResponseObject> updateProfile(UpdateProfileRequest request, HttpServletRequest httpRequest) {
+
+        Account account = jwtService.extractAccountFromCookie(httpRequest);
+
+        if (account == null) {
+            return ResponseEntity.ok().body(
+                    ResponseObject.builder()
+                            .message("Cannot retrieve profile. Authentication token is missing or invalid")
+                            .success(false)
+                            .data(null)
+                            .build()
+            );
+        }
+
+        String error = UpdateProfileValidation.validate(request);
         if (!error.isEmpty()) {
             return ResponseEntity.ok().body(
                     ResponseObject.builder()
@@ -126,21 +140,10 @@ public class AccountServiceImpl implements AccountService {
             );
         }
 
-        Account account = accountRepo.findByEmailAndStatus(request.getEmail(), Status.ACCOUNT_ACTIVE.getValue()).orElse(null);
-        if (account == null) {
-            return ResponseEntity.ok().body(
-                    ResponseObject.builder()
-                            .message("Account not found or inactive")
-                            .success(false)
-                            .data(null)
-                            .build()
-            );
-        }
-
         account.setName(request.getName());
         account.setPhone(request.getPhone());
         account.setGender(request.getGender());
-        account.setIdentityNumber(request.getIdentityNumber());
+        account.setAvatarUrl(request.getAvatarUrl());
 
         accountRepo.save(account);
 
