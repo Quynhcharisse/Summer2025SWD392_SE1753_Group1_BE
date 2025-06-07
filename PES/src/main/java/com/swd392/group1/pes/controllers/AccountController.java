@@ -4,6 +4,7 @@ import com.swd392.group1.pes.requests.RestPasswordRequest;
 import com.swd392.group1.pes.requests.UpdateProfileRequest;
 import com.swd392.group1.pes.response.ResponseObject;
 import com.swd392.group1.pes.services.AccountService;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -29,13 +30,13 @@ public class AccountController {
 
     @GetMapping("/profile")
     @PreAuthorize("hasAnyRole('parent', 'hr', 'admission', 'education', 'teacher')")
-    public ResponseEntity<ResponseObject> viewProfile (){
-        return accountService.viewProfile();
+    public ResponseEntity<ResponseObject> viewProfile (HttpServletRequest request){
+        return accountService.viewProfile(request);
     }
 
     @PutMapping("/profile")
     @PreAuthorize("hasAnyRole('parent', 'hr', 'admission', 'education', 'teacher')")
-    public ResponseEntity<ResponseObject> updateProfile (@RequestBody UpdateProfileRequest request){
-        return accountService.updateProfile(request);
+    public ResponseEntity<ResponseObject> updateProfile (@RequestBody UpdateProfileRequest request, HttpServletRequest httpRequest){
+        return accountService.updateProfile(request, httpRequest);
     }
 }
