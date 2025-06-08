@@ -22,7 +22,6 @@ public class CreateEventRequest {
     LocalDateTime endTime;
     String location;
     String description;
-    String createdBy;
     String status;
     String registrationDeadline;
     String attachmentImg;

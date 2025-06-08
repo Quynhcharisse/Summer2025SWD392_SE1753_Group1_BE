@@ -2,6 +2,7 @@ package com.swd392.group1.pes.services.implementors;
 
 
 import com.swd392.group1.pes.enums.Grade;
+import com.swd392.group1.pes.enums.Role;
 import com.swd392.group1.pes.models.Classes;
 import com.swd392.group1.pes.models.Event;
 import com.swd392.group1.pes.models.Lesson;
@@ -315,6 +316,7 @@ public class EducationServiceImpl implements EducationService {
 
     private Map<String,Object> buildLessonDetail(Lesson lesson){
         Map<String,Object> data = new HashMap<>();
+        data.put("id", lesson.getId());
         data.put("topic",lesson.getTopic());
         data.put("description",lesson.getDescription());
         return data;
@@ -339,7 +341,7 @@ public class EducationServiceImpl implements EducationService {
                 .endTime(request.getEndTime())
                 .location(request.getLocation())
                 .description(request.getDescription())
-                .createdBy(request.getCreatedBy())
+                .createdBy(Role.EDUCATION.toString())
                 .createdAt(LocalDate.now())
                 .status(request.getStatus())
                 .registrationDeadline(request.getRegistrationDeadline())
@@ -367,7 +369,16 @@ public class EducationServiceImpl implements EducationService {
             );
         }
         int eventId = Integer.parseInt(id);
-        Event event = eventRepo.findById(eventId).get();
+        Event event = eventRepo.findById(eventId).orElse(null);
+        if (event == null) {
+            return ResponseEntity.ok().body(
+                    ResponseObject.builder()
+                            .message("Event not found")
+                            .success(false)
+                            .data(null)
+                            .build()
+            );
+        }
         event.setName(request.getName());
         event.setDate(request.getDate());
         event.setStartTime(request.getStartTime());

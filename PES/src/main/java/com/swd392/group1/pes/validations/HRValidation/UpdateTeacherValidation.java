@@ -50,7 +50,7 @@ public class UpdateTeacherValidation {
             return "Gender is required";
         }
 
-        // Kiểm tra giới tính phải là
+        // Kiểm tra giới tính hợp lệ
         if (!request.getGender().equals("male") &&
                 !request.getGender().equals("female") &&
                 !request.getGender().equals("other")) {

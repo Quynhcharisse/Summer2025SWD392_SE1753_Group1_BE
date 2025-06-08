@@ -42,9 +42,6 @@ public class EventValidation {
         if (request.getLocation().length() > 200) {
             return "Location must not exceed 200 characters";
         }
-        if (request.getCreatedBy() == null || request.getCreatedBy().trim().isEmpty()) {
-            return "CreatedBy is required";
-        }
         return "";
     }
 
