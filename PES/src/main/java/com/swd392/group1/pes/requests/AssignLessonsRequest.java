@@ -7,17 +7,13 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.experimental.FieldDefaults;
 
-import java.time.LocalDate;
+import java.util.List;
 
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
 @FieldDefaults(level = AccessLevel.PRIVATE)
-public class GenerateClassesRequest {
-    private int numberStudentsOfEachClass;
-    private int termId;
-    private int syllabusId;
-    private LocalDate startDate;
-    private LocalDate endDate;
+public class AssignLessonsRequest {
+    private List<String> lessonNames;
 }

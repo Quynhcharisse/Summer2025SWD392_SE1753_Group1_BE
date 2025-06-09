@@ -1,5 +1,6 @@
 package com.swd392.group1.pes.services;
 
+import com.swd392.group1.pes.requests.AssignLessonsRequest;
 import com.swd392.group1.pes.requests.CreateSyllabusRequest;
 import com.swd392.group1.pes.requests.GenerateClassesRequest;
 import com.swd392.group1.pes.requests.UpdateSyllabusRequest;
@@ -12,4 +13,5 @@ public interface EducationService {
     ResponseEntity<ResponseObject> viewSyllabusDetail(String id);
     ResponseEntity<ResponseObject> viewAllSyllabus();
     ResponseEntity<ResponseObject> generateClassesAuto(GenerateClassesRequest request);
+    ResponseEntity<ResponseObject> assignLessonsToSyllabus(String id, AssignLessonsRequest request);
 }
