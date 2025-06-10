@@ -12,12 +12,7 @@ import lombok.experimental.FieldDefaults;
 @AllArgsConstructor
 @Builder
 @FieldDefaults(level = AccessLevel.PRIVATE)
-public class CreateTeacherRequest {
-    String email;
-    String password;
-    String name;
-    String phone;
-    String gender;
-    String identityNumber;
-    String avatarUrl;
+public class CreateLessonRequest {
+    private String title;
+    private String description;
 }

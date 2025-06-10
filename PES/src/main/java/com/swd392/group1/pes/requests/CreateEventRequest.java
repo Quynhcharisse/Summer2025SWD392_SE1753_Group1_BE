@@ -7,17 +7,23 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.experimental.FieldDefaults;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
 @FieldDefaults(level = AccessLevel.PRIVATE)
-public class CreateTeacherRequest {
-    String email;
-    String password;
+public class CreateEventRequest {
     String name;
-    String phone;
-    String gender;
-    String identityNumber;
-    String avatarUrl;
+    LocalDate date;
+    LocalDateTime startTime;
+    LocalDateTime endTime;
+    String location;
+    String description;
+    String status;
+    String registrationDeadline;
+    String attachmentImg;
+    String hostName;
 }

@@ -9,6 +9,8 @@ import com.swd392.group1.pes.requests.ProcessAccountRequest;
 import com.swd392.group1.pes.requests.UpdateTeacherRequest;
 import com.swd392.group1.pes.response.ResponseObject;
 import com.swd392.group1.pes.services.HRService;
+import com.swd392.group1.pes.utils.GenerateEmailTeacherUtil;
+import com.swd392.group1.pes.utils.RandomPasswordUtil;
 import com.swd392.group1.pes.validations.AccountValidation.ProcessAccountValidation;
 import com.swd392.group1.pes.validations.HRValidation.CreateTeacherValidation;
 import com.swd392.group1.pes.validations.HRValidation.UpdateTeacherValidation;
@@ -16,6 +18,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -91,7 +94,7 @@ public class HRServiceImpl implements HRService {
     @Override
     public ResponseEntity<ResponseObject> createTeacher(CreateTeacherRequest request) {
         String error = CreateTeacherValidation.validate(request, accountRepo);
-        if(!error.isEmpty()){
+        if (!error.isEmpty()) {
             return ResponseEntity.ok().body(
                     ResponseObject.builder()
                             .message(error)
@@ -101,17 +104,21 @@ public class HRServiceImpl implements HRService {
             );
         }
 
-        Account account = new Account();
-        account.setEmail(request.getEmail());
-        account.setPassword("123456");
-        account.setName(request.getName());
-        account.setPhone(request.getPhone());
-        account.setGender(request.getGender());
-        account.setIdentityNumber(request.getIdentityNumber());
-        account.setRole(Role.TEACHER);
-        account.setStatus(Status.ACCOUNT_ACTIVE.getValue());
+        Account account = accountRepo.save(
+                Account.builder()
+                        .email(GenerateEmailTeacherUtil.generateTeacherEmail(request.getEmail(), accountRepo))
+                        .password(RandomPasswordUtil.generateRandomPassword())
+                        .name(request.getName())
+                        .phone(request.getPhone())
+                        .gender(request.getGender())
+                        .identityNumber(request.getIdentityNumber())
+                        .avatarUrl(request.getAvatarUrl())
+                        .status(Status.ACCOUNT_ACTIVE.getValue())
+                        .role(Role.TEACHER)
+                        .createdAt(LocalDate.now())
+                        .build()
+        );
 
-        accountRepo.save(account);
 
         return ResponseEntity.ok().body(
                 ResponseObject.builder()
@@ -121,6 +128,7 @@ public class HRServiceImpl implements HRService {
                         .build()
         );
     }
+
 
     @Override
     public ResponseEntity<ResponseObject> viewTeacherList() {
@@ -183,7 +191,7 @@ public class HRServiceImpl implements HRService {
                 ResponseObject.builder()
                         .message("Update Teacher Successfully")
                         .success(true)
-                        .data(null)
+                        .data(account)
                         .build()
         );
     }
@@ -212,7 +220,8 @@ public class HRServiceImpl implements HRService {
             );
         }
 
-        accountRepo.deleteById(account.getId());
+        account.setStatus(Status.ACCOUNT_BAN.getValue());
+        accountRepo.save(account);
 
         return ResponseEntity.ok().body(
                 ResponseObject.builder()
