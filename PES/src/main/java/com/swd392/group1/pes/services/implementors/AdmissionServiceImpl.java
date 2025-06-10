@@ -12,7 +12,6 @@ import com.swd392.group1.pes.repositories.AdmissionTermRepo;
 import com.swd392.group1.pes.repositories.StudentRepo;
 import com.swd392.group1.pes.requests.CreateAdmissionTermRequest;
 import com.swd392.group1.pes.requests.ProcessAdmissionFormRequest;
-import com.swd392.group1.pes.requests.UpdateAdmissionFeeRequest;
 import com.swd392.group1.pes.requests.UpdateAdmissionTermRequest;
 import com.swd392.group1.pes.response.ResponseObject;
 import com.swd392.group1.pes.services.AdmissionService;
@@ -20,6 +19,7 @@ import com.swd392.group1.pes.services.MailService;
 import com.swd392.group1.pes.validations.AdmissionValidation.AdmissionFormValidation;
 import com.swd392.group1.pes.validations.AdmissionValidation.AdmissionTermValidation;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
@@ -43,7 +43,7 @@ public class AdmissionServiceImpl implements AdmissionService {
 
         String error = AdmissionTermValidation.createTermValidate(request);
         if (!error.isEmpty()) {
-            return ResponseEntity.ok().body(
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
                     ResponseObject.builder()
                             .message(error)
                             .success(false)
@@ -76,7 +76,7 @@ public class AdmissionServiceImpl implements AdmissionService {
         );
 
 
-        return ResponseEntity.ok().body(
+        return ResponseEntity.status(HttpStatus.OK).body(
                 ResponseObject.builder()
                         .message("Create term and fee successfully")
                         .success(true)
@@ -113,12 +113,16 @@ public class AdmissionServiceImpl implements AdmissionService {
                             data.put("grade", term.getGrade());
                             data.put("status", term.getStatus());
                             data.put("formList", getFormListByTerm(term));
+
+                            AdmissionFee fee = admissionFeeRepo.findByAdmissionTerm_Id(term.getId()).orElse(null);
+                            data.put("fee", fee != null ? buildFeeMap(fee) : null);
+
                             return data;
                         }
                 )
                 .toList();
 
-        return ResponseEntity.ok().body(
+        return ResponseEntity.status(HttpStatus.OK).body(
                 ResponseObject.builder()
                         .message("")
                         .success(true)
@@ -158,13 +162,23 @@ public class AdmissionServiceImpl implements AdmissionService {
                 .toList();
     }
 
+    private Map<String, Object> buildFeeMap(AdmissionFee fee) {
+        Map<String, Object> map = new HashMap<>();
+        map.put("reservationFee", fee.getReservationFee());
+        map.put("serviceFee", fee.getServiceFee());
+        map.put("uniformFee", fee.getUniformFee());
+        map.put("learningMaterialFee", fee.getLearningMaterialFee());
+        map.put("facilityFee", fee.getFacilityFee());
+        return map;
+    }
+
 
     @Override
     public ResponseEntity<ResponseObject> updateAdmissionTerm(UpdateAdmissionTermRequest request) {
 
         String error = AdmissionTermValidation.updateTermValidate(request);
         if (!error.isEmpty()) {
-            return ResponseEntity.ok().body(
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
                     ResponseObject.builder()
                             .message(error)
                             .success(false)
@@ -176,7 +190,7 @@ public class AdmissionServiceImpl implements AdmissionService {
         AdmissionTerm term = admissionTermRepo.findById(request.getId()).orElse(null);
 
         if (term == null) {
-            return ResponseEntity.ok().body(
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
                     ResponseObject.builder()
                             .message("Term not found")
                             .success(false)
@@ -186,7 +200,7 @@ public class AdmissionServiceImpl implements AdmissionService {
         }
 
         if (!term.getStatus().equals(Status.INACTIVE_TERM.getValue())) {
-            return ResponseEntity.ok().body(
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(
                     ResponseObject.builder()
                             .message("Only inactive terms can be updated")
                             .success(false)
@@ -217,7 +231,7 @@ public class AdmissionServiceImpl implements AdmissionService {
         fee.setFacilityFee(request.getFacilityFee());
         admissionFeeRepo.save(fee);
 
-        return ResponseEntity.ok().body(
+        return ResponseEntity.status(HttpStatus.OK).body(
                 ResponseObject.builder()
                         .message("Update term and fee successfully")
                         .success(true)
@@ -253,7 +267,7 @@ public class AdmissionServiceImpl implements AdmissionService {
                 )
                 .toList();
 
-        return ResponseEntity.ok().body(
+        return ResponseEntity.status(HttpStatus.OK).body(
                 ResponseObject.builder()
                         .message("")
                         .success(true)
@@ -266,7 +280,7 @@ public class AdmissionServiceImpl implements AdmissionService {
     public ResponseEntity<ResponseObject> processAdmissionFormList(ProcessAdmissionFormRequest request) {
         String error = AdmissionFormValidation.processFormByManagerValidate(request, admissionFormRepo);
         if (!error.isEmpty()) {
-            return ResponseEntity.ok().body(
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
                     ResponseObject.builder()
                             .message(error)
                             .success(false)
@@ -278,7 +292,7 @@ public class AdmissionServiceImpl implements AdmissionService {
         AdmissionForm form = admissionFormRepo.findById(request.getId()).orElse(null);
 
         if (form == null) {
-            return ResponseEntity.ok().body(
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
                     ResponseObject.builder()
                             .message("Form not found")
                             .success(false)
@@ -291,7 +305,7 @@ public class AdmissionServiceImpl implements AdmissionService {
         String parentEmail = form.getParent().getAccount().getEmail();//account phải có email
 
         if (form.getStudent() == null) {
-            return ResponseEntity.ok().body(
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
                     ResponseObject.builder()
                             .message("Form has no associated student.")
                             .success(false)
@@ -329,22 +343,12 @@ public class AdmissionServiceImpl implements AdmissionService {
 
         admissionFormRepo.save(form);
 
-        return ResponseEntity.ok().body(
+        return ResponseEntity.status(HttpStatus.OK).body(
                 ResponseObject.builder()
                         .message(request.isApproved() ? "Form Approved" : "Form Rejected")
                         .success(true)
                         .data(null)
                         .build()
         );
-    }
-
-    @Override
-    public ResponseEntity<ResponseObject> updateAdmissionFee(UpdateAdmissionFeeRequest request) {
-        return null;
-    }
-
-    @Override
-    public ResponseEntity<ResponseObject> viewAdmissionFee(int term) {
-        return null;
     }
 }

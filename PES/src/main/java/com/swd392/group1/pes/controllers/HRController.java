@@ -52,12 +52,6 @@ public class HRController {
         return hrService.updateTeacher(request);
     }
 
-    @PutMapping("/teacher/remove")
-    @PreAuthorize("hasRole('hr')")
-    public ResponseEntity<ResponseObject> removeTeacher(@RequestBody ProcessAccountRequest request) {
-        return hrService.removeTeacher(request);
-    }
-
     @GetMapping("/parent")
     @PreAuthorize("hasRole('hr')")
     public ResponseEntity<ResponseObject> viewParentList() {

@@ -15,7 +15,5 @@ public interface HRService {
 
     ResponseEntity<ResponseObject> updateTeacher (UpdateTeacherRequest request);
 
-    ResponseEntity<ResponseObject> removeTeacher (ProcessAccountRequest request);
-
     ResponseEntity<ResponseObject> viewParentList ();
 }

@@ -24,6 +24,7 @@ import com.swd392.group1.pes.validations.ParentValidation.EditAdmissionFormValid
 import com.swd392.group1.pes.validations.ParentValidation.SubmittedAdmissionFormValidation;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
@@ -56,9 +57,9 @@ public class ParentServiceImpl implements ParentService {
         //xac thuc nguoi dung
         Account account = jwtService.extractAccountFromCookie(request);
         if (account == null || !account.getRole().equals(Role.PARENT)) {
-            return ResponseEntity.ok().body(
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(
                     ResponseObject.builder()
-                            .message("Get list failed")
+                            .message("Forbidden: Only parents can access this resource")
                             .success(false)
                             .data(null)
                             .build()
@@ -92,7 +93,7 @@ public class ParentServiceImpl implements ParentService {
         data.put("studentList", studentList);
 
 
-        return ResponseEntity.ok().body(
+        return ResponseEntity.status(HttpStatus.OK).body(
                 ResponseObject.builder()
                         .message("")
                         .success(true)
@@ -128,9 +129,9 @@ public class ParentServiceImpl implements ParentService {
         // 1. Lấy account từ cookie
         Account account = jwtService.extractAccountFromCookie(httpRequest);
         if (account == null || !account.getRole().equals(Role.PARENT)) {
-            return ResponseEntity.ok().body(
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(
                     ResponseObject.builder()
-                            .message("Submitted admission form failed")
+                            .message("Forbidden: Only parents can access this resource")
                             .success(false)
                             .data(null)
                             .build()
@@ -140,7 +141,7 @@ public class ParentServiceImpl implements ParentService {
         String error = SubmittedAdmissionFormValidation.validate(request);
 
         if (!error.isEmpty()) {
-            return ResponseEntity.ok().body(
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
                     ResponseObject.builder()
                             .message(error)
                             .success(false)
@@ -156,14 +157,15 @@ public class ParentServiceImpl implements ParentService {
                 .orElse(null);
 
         if (activeTerm == null) {
-            return ResponseEntity.ok().body(
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(
                     ResponseObject.builder()
-                            .message("No active admission term available.")
+                            .message("Form cannot be submitted. No active admission term is currently open.")
                             .success(false)
                             .data(null)
                             .build()
             );
         }
+
 
         // 4. Tìm các form đã nộp cho học sinh này trong kỳ hiện tại
         List<AdmissionForm> existingForms = admissionFormRepo
@@ -176,7 +178,7 @@ public class ParentServiceImpl implements ParentService {
                 .anyMatch(form -> form.getStatus().equals(Status.APPROVED.getValue()));
 
         if (hasApprovedForm) {
-            return ResponseEntity.ok().body(
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(
                     ResponseObject.builder()
                             .message("This student has already been approved in the current admission term.")
                             .success(false)
@@ -209,7 +211,7 @@ public class ParentServiceImpl implements ParentService {
         );
 
 
-        return ResponseEntity.ok().body(
+        return ResponseEntity.status(HttpStatus.OK).body(
                 ResponseObject.builder()
                         .message("Successfully submitted")
                         .success(true)
@@ -225,9 +227,9 @@ public class ParentServiceImpl implements ParentService {
         // 1. Lấy account từ cookie
         Account account = jwtService.extractAccountFromCookie(httpRequest);
         if (account == null || !account.getRole().equals(Role.PARENT)) {
-            return ResponseEntity.ok().body(
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(
                     ResponseObject.builder()
-                            .message("Cancelled admission form failed")
+                            .message("Forbidden: Only parents can access this resource")
                             .success(false)
                             .data(null)
                             .build()
@@ -238,7 +240,7 @@ public class ParentServiceImpl implements ParentService {
         String error = EditAdmissionFormValidation.canceledValidate(id, account, admissionFormRepo);
 
         if (!error.isEmpty()) {
-            return ResponseEntity.ok().body(
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
                     ResponseObject.builder()
                             .message(error)
                             .success(false)
@@ -250,17 +252,17 @@ public class ParentServiceImpl implements ParentService {
         AdmissionForm form = admissionFormRepo.findById(id).orElse(null);
 
         if (form == null) {
-            return ResponseEntity.ok(
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
                     ResponseObject.builder()
-                            .success(false)
                             .message("Admission form not found")
+                            .success(false)
                             .data(null)
                             .build()
             );
         }
 
         if (!form.getStatus().equals(Status.PENDING_APPROVAL.getValue())) {
-            return ResponseEntity.ok().body(
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(
                     ResponseObject.builder()
                             .message("Only pending approval forms can be cancelled.")
                             .success(false)
@@ -279,7 +281,7 @@ public class ParentServiceImpl implements ParentService {
                 "Dear Parent,\n\nYour admission form has been cancelled successfully. If this was a mistake, you can submit again.\n\nRegards,\nSunShine Preschool"
         );
 
-        return ResponseEntity.ok().body(
+        return ResponseEntity.status(HttpStatus.OK).body(
                 ResponseObject.builder()
                         .message("Successfully cancelled")
                         .success(true)
@@ -293,9 +295,9 @@ public class ParentServiceImpl implements ParentService {
         //xac thuc nguoi dung
         Account account = jwtService.extractAccountFromCookie(httpRequest);
         if (account == null || !account.getRole().equals(Role.PARENT)) {
-            return ResponseEntity.ok().body(
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(
                     ResponseObject.builder()
-                            .message("Get list failed")
+                            .message("Forbidden: Only parents can access this resource")
                             .success(false)
                             .data(null)
                             .build()
@@ -305,7 +307,7 @@ public class ParentServiceImpl implements ParentService {
         // Tìm parent dựa vào account ID
         Parent parent = parentRepo.findByAccount_Id(account.getId()).orElse(null);
         if (parent == null) {
-            return ResponseEntity.ok().body(
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
                     ResponseObject.builder()
                             .message("Parent not found")
                             .success(false)
@@ -329,7 +331,7 @@ public class ParentServiceImpl implements ParentService {
                 })
                 .toList();
 
-        return ResponseEntity.ok().body(
+        return ResponseEntity.status(HttpStatus.OK).body(
                 ResponseObject.builder()
                         .message("")
                         .success(true)
@@ -342,9 +344,9 @@ public class ParentServiceImpl implements ParentService {
     public ResponseEntity<ResponseObject> addChild(AddChildRequest request, HttpServletRequest httpRequest) {
         Account acc = jwtService.extractAccountFromCookie(httpRequest);
         if (acc == null || !acc.getRole().equals(Role.PARENT)) {
-            return ResponseEntity.ok().body(
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(
                     ResponseObject.builder()
-                            .message("Add child failed: Unauthorized")
+                            .message("Forbidden: Only parents can access this resource")
                             .success(false)
                             .data(null)
                             .build());
@@ -352,7 +354,7 @@ public class ParentServiceImpl implements ParentService {
 
         String error = ChildValidation.addChildValidate(request);
         if (!error.isEmpty()) {
-            return ResponseEntity.ok().body(
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
                     ResponseObject.builder()
                             .message(error)
                             .success(false)
@@ -362,7 +364,7 @@ public class ParentServiceImpl implements ParentService {
 
         Parent parent = parentRepo.findByAccount_Id(acc.getId()).orElse(null);
         if (parent == null) {
-            return ResponseEntity.ok().body(
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
                     ResponseObject.builder()
                             .message("Parent not found")
                             .success(false)
@@ -390,7 +392,7 @@ public class ParentServiceImpl implements ParentService {
         childData.put("placeOfBirth", student.getPlaceOfBirth());
         childData.put("isStudent", student.isStudent()); //nhớ hiển thị trên UI: child status : processing / approved
 
-        return ResponseEntity.ok().body(
+        return ResponseEntity.status(HttpStatus.OK).body(
                 ResponseObject.builder()
                         .message("Child added successfully")
                         .success(true)
@@ -404,9 +406,9 @@ public class ParentServiceImpl implements ParentService {
     public ResponseEntity<ResponseObject> updateChild(UpdateChildRequest request, HttpServletRequest httpRequest) {
         Account acc = jwtService.extractAccountFromCookie(httpRequest);
         if (acc == null || !acc.getRole().equals(Role.PARENT)) {
-            return ResponseEntity.ok().body(
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(
                     ResponseObject.builder()
-                            .message("Update child failed: Unauthorized")
+                            .message("Forbidden: Only parents can access this resource")
                             .success(false)
                             .data(null)
                             .build());
@@ -414,7 +416,7 @@ public class ParentServiceImpl implements ParentService {
 
         String error = ChildValidation.updateChildValidate(request);
         if (!error.isEmpty()) {
-            return ResponseEntity.ok().body(
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
                     ResponseObject.builder()
                             .message(error)
                             .success(false)
@@ -426,7 +428,7 @@ public class ParentServiceImpl implements ParentService {
         // Tìm parent từ account
         Parent parent = parentRepo.findByAccount_Id(acc.getId()).orElse(null);
         if (parent == null) {
-            return ResponseEntity.ok().body(
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
                     ResponseObject.builder()
                             .message("Parent not found")
                             .success(false)
@@ -437,7 +439,7 @@ public class ParentServiceImpl implements ParentService {
         // KHÔNG cho update nếu đã là học sinh chính thức
         Student student = studentRepo.findById(request.getId()).orElse(null);
         if (student == null || !student.getParent().getId().equals(parent.getId())) {
-            return ResponseEntity.ok().body(
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
                     ResponseObject.builder()
                             .message("Child not found or access denied")
                             .success(false)
@@ -446,7 +448,7 @@ public class ParentServiceImpl implements ParentService {
         }
 
         if(student.isStudent()) {
-            return ResponseEntity.ok().body(
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(
                     ResponseObject.builder()
                             .message("Cannot update child info after submitting admission form")
                             .success(false)
@@ -469,7 +471,7 @@ public class ParentServiceImpl implements ParentService {
         childData.put("dateOfBirth", student.getDateOfBirth());
         childData.put("placeOfBirth", student.getPlaceOfBirth());
 
-        return ResponseEntity.ok().body(
+        return ResponseEntity.status(HttpStatus.OK).body(
                 ResponseObject.builder()
                         .message("Child updated successfully")
                         .success(true)

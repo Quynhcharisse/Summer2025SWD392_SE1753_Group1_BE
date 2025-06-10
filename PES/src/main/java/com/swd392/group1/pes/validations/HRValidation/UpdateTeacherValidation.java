@@ -5,20 +5,6 @@ import com.swd392.group1.pes.requests.UpdateTeacherRequest;
 
 public class UpdateTeacherValidation {
     public static String validate(UpdateTeacherRequest request, AccountRepo accountRepo) {
-        //Email không được để trống
-        if (request.getEmail().trim().isEmpty()) {
-            return "Email is required";
-        }
-
-        // Kiểm tra định dạng email
-        if (!request.getEmail().matches("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+$")) {
-            return "Invalid email format";
-        }
-
-        // Kiểm tra email đã tồn tại trong hệ thống
-        if (!accountRepo.existsByEmail(request.getEmail())) {
-            return "Email does not exist";
-        }
 
         // Kiểm tra tên không được để trống
         if (request.getName().trim().isEmpty()) {
@@ -52,19 +38,8 @@ public class UpdateTeacherValidation {
 
         // Kiểm tra giới tính hợp lệ
         if (!request.getGender().equals("male") &&
-                !request.getGender().equals("female") &&
-                !request.getGender().equals("other")) {
-            return "Gender must be male, female, or other";
-        }
-
-        // Kiểm tra số chứng minh nhân dân không được để trống
-        if (request.getIdentityNumber().trim().isEmpty()) {
-            return "Identity number is required";
-        }
-
-        // Kiểm tra định dạng số chứng minh nhân dân
-        if (!request.getIdentityNumber().matches("^\\d{12}$")) {
-            return "Identity number must have 12 digits";
+                !request.getGender().equals("female")) {
+            return "Gender must be male, female";
         }
 
         return "";

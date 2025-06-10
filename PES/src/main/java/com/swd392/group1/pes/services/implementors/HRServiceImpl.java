@@ -15,6 +15,7 @@ import com.swd392.group1.pes.validations.AccountValidation.ProcessAccountValidat
 import com.swd392.group1.pes.validations.HRValidation.CreateTeacherValidation;
 import com.swd392.group1.pes.validations.HRValidation.UpdateTeacherValidation;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
@@ -35,7 +36,7 @@ public class HRServiceImpl implements HRService {
         String error = ProcessAccountValidation.processAccountValidate(request, action, accountRepo);
 
         if (!error.isEmpty()) {
-            return ResponseEntity.ok().body(
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
                     ResponseObject.builder()
                             .message(error)
                             .success(false)
@@ -57,7 +58,7 @@ public class HRServiceImpl implements HRService {
         } else if (action.equalsIgnoreCase("unban")) {
             newStatus = Status.ACCOUNT_UNBAN.getValue();
         } else {
-            return ResponseEntity.ok().body(
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
                     ResponseObject.builder()
                             .message("Invalid action")
                             .success(false)
@@ -67,7 +68,7 @@ public class HRServiceImpl implements HRService {
         }
 
         if (account == null) {
-            return ResponseEntity.ok().body(
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
                     ResponseObject.builder()
                             .message("Account not found or in invalid state")
                             .success(false)
@@ -79,12 +80,12 @@ public class HRServiceImpl implements HRService {
         account.setStatus(newStatus);
         accountRepo.save(account);
 
-        String message = action.equalsIgnoreCase("ban") ?
+        String msg = action.equalsIgnoreCase("ban") ?
                 "Account banned successfully" : "Account unbanned successfully";
 
-        return ResponseEntity.ok().body(
+        return ResponseEntity.status(HttpStatus.OK).body(
                 ResponseObject.builder()
-                        .message(message)
+                        .message(msg)
                         .success(true)
                         .data(null)
                         .build()
@@ -95,7 +96,7 @@ public class HRServiceImpl implements HRService {
     public ResponseEntity<ResponseObject> createTeacher(CreateTeacherRequest request) {
         String error = CreateTeacherValidation.validate(request, accountRepo);
         if (!error.isEmpty()) {
-            return ResponseEntity.ok().body(
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
                     ResponseObject.builder()
                             .message(error)
                             .success(false)
@@ -120,7 +121,7 @@ public class HRServiceImpl implements HRService {
         );
 
 
-        return ResponseEntity.ok().body(
+        return ResponseEntity.status(HttpStatus.CREATED).body(
                 ResponseObject.builder()
                         .message("Create Teacher Successfully")
                         .success(true)
@@ -132,24 +133,27 @@ public class HRServiceImpl implements HRService {
 
     @Override
     public ResponseEntity<ResponseObject> viewTeacherList() {
-        List<Account> teachers = accountRepo.findByRole(Role.TEACHER);
-        if (teachers == null || teachers.isEmpty()) {
-            return ResponseEntity.ok().body(
-                    ResponseObject.builder()
-                            .message("No teachers found")
-                            .success(false)
-                            .data(null)
-                            .build()
-            );
-        }
 
-        List<Map<String, Object>> teacherList = teachers.stream()
-                .map(this::buildAccountBodyDetail)
+        List<Map<String, Object>> teacherList = accountRepo.findByRole(Role.TEACHER).stream()
+                .map(account ->
+                        {
+                            Map<String, Object> data = new HashMap<>();
+                            data.put("email", account.getEmail());
+                            data.put("name", account.getName());
+                            data.put("phone", account.getPhone());
+                            data.put("gender", account.getGender());
+                            data.put("identityNumber", account.getIdentityNumber());
+                            data.put("avatarUrl", account.getAvatarUrl());
+                            data.put("role", account.getRole());
+                            data.put("status", account.getStatus());
+                            return data;
+                        }
+                )
                 .toList();
 
-        return ResponseEntity.ok().body(
+        return ResponseEntity.status(HttpStatus.OK).body(
                 ResponseObject.builder()
-                        .message("Teacher list retrieved successfully")
+                        .message("")
                         .success(true)
                         .data(teacherList)
                         .build()
@@ -158,9 +162,11 @@ public class HRServiceImpl implements HRService {
 
     @Override
     public ResponseEntity<ResponseObject> updateTeacher(UpdateTeacherRequest request) {
+
         String error = UpdateTeacherValidation.validate(request, accountRepo);
+
         if (!error.isEmpty()) {
-            return ResponseEntity.ok().body(
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
                     ResponseObject.builder()
                             .message(error)
                             .success(false)
@@ -168,10 +174,9 @@ public class HRServiceImpl implements HRService {
                             .build()
             );
         }
-
-        Account account = accountRepo.findByEmail(request.getEmail()).orElse(null);
+        Account account = accountRepo.findById(request.getTeacherId()).orElse(null);
         if (account == null || !Role.TEACHER.equals(account.getRole())) {
-            return ResponseEntity.ok().body(
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
                     ResponseObject.builder()
                             .message("Teacher not found")
                             .success(false)
@@ -183,49 +188,13 @@ public class HRServiceImpl implements HRService {
         account.setName(request.getName());
         account.setPhone(request.getPhone());
         account.setGender(request.getGender());
-        account.setIdentityNumber(request.getIdentityNumber());
+        account.setAvatarUrl(request.getAvatarUrl());
 
         accountRepo.save(account);
 
-        return ResponseEntity.ok().body(
+        return ResponseEntity.status(HttpStatus.OK).body(
                 ResponseObject.builder()
                         .message("Update Teacher Successfully")
-                        .success(true)
-                        .data(account)
-                        .build()
-        );
-    }
-
-    @Override
-    public ResponseEntity<ResponseObject> removeTeacher(ProcessAccountRequest request) {
-        String error = ProcessAccountValidation.validateRemove(request, accountRepo);
-        if (!error.isEmpty()) {
-            return ResponseEntity.ok().body(
-                    ResponseObject.builder()
-                            .message(error)
-                            .success(false)
-                            .data(null)
-                            .build()
-            );
-        }
-
-        Account account = accountRepo.findByEmailAndStatus(request.getEmail(), Status.ACCOUNT_ACTIVE.getValue()).orElse(null);
-        if (account == null || !Role.TEACHER.equals(account.getRole())) {
-            return ResponseEntity.ok().body(
-                    ResponseObject.builder()
-                            .message("Teacher not found or already removed")
-                            .success(false)
-                            .data(null)
-                            .build()
-            );
-        }
-
-        account.setStatus(Status.ACCOUNT_BAN.getValue());
-        accountRepo.save(account);
-
-        return ResponseEntity.ok().body(
-                ResponseObject.builder()
-                        .message("Remove Teacher Successfully")
                         .success(true)
                         .data(null)
                         .build()
@@ -234,41 +203,41 @@ public class HRServiceImpl implements HRService {
 
     @Override
     public ResponseEntity<ResponseObject> viewParentList() {
-        List<Account> parents = accountRepo.findByRole(Role.PARENT);
-        if (parents == null || parents.isEmpty()) {
-            return ResponseEntity.ok().body(
-                    ResponseObject.builder()
-                            .message("No parents found")
-                            .success(false)
-                            .data(null)
-                            .build()
-            );
-        }
+        List<Map<String, Object>> parentList = accountRepo.findByRole(Role.PARENT).stream()
+                .map(parentAcc -> {
+                    Map<String, Object> data = new HashMap<>();
+                    data.put("email", parentAcc.getEmail());
+                    data.put("name", parentAcc.getName());
+                    data.put("phone", parentAcc.getPhone());
+                    data.put("gender", parentAcc.getGender());
+                    data.put("identityNumber", parentAcc.getIdentityNumber());
+                    data.put("avatarUrl", parentAcc.getAvatarUrl());
 
-        List<Map<String, Object>> parentList = parents.stream()
-                .map(this::buildAccountBodyDetail)
+                    // xử lý an toàn khi parentAcc.getParent() có thể null
+                    if (parentAcc.getParent() != null) {
+                        data.put("job", parentAcc.getParent().getJob());
+                        data.put("address", parentAcc.getParent().getAddress());
+                        data.put("relationshipToChild", parentAcc.getParent().getRelationshipToChild());
+                    } else {
+                        data.put("job", null);
+                        data.put("address", null);
+                        data.put("relationshipToChild", null);
+                    }
+
+                    data.put("role", parentAcc.getRole());
+                    data.put("status", parentAcc.getStatus());
+                    return data;
+                })
                 .toList();
 
-        return ResponseEntity.ok().body(
+        return ResponseEntity.status(HttpStatus.OK).body(
                 ResponseObject.builder()
-                        .message("Parent list retrieved successfully")
+                        .message("")
                         .success(true)
                         .data(parentList)
                         .build()
         );
     }
 
-    private Map<String, Object> buildAccountBodyDetail(Account account) {
-        Map<String, Object> body = new HashMap<>();
-        body.put("email", account.getEmail());
-        body.put("name", account.getName());
-        body.put("phone", account.getPhone());
-        body.put("gender", account.getGender());
-        body.put("identityNumber", account.getIdentityNumber());
-        body.put("createdAt", account.getCreatedAt());
-        body.put("avatarUrl", account.getAvatarUrl());
-        body.put("role", account.getRole());
-        body.put("status", account.getStatus());
-        return body;
-    }
+
 }
