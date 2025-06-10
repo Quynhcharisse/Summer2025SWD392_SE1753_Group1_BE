@@ -6,14 +6,12 @@ import com.swd392.group1.pes.enums.Role;
 import com.swd392.group1.pes.models.Classes;
 import com.swd392.group1.pes.models.Event;
 import com.swd392.group1.pes.models.Lesson;
-import com.swd392.group1.pes.models.Lesson;
 import com.swd392.group1.pes.models.Syllabus;
 import com.swd392.group1.pes.models.SyllabusLesson;
 import com.swd392.group1.pes.repositories.ClassRepo;
 import com.swd392.group1.pes.repositories.EventRepo;
 import com.swd392.group1.pes.repositories.LessonRepo;
 import com.swd392.group1.pes.repositories.StudentRepo;
-import com.swd392.group1.pes.repositories.LessonRepo;
 import com.swd392.group1.pes.repositories.SyllabusRepo;
 import com.swd392.group1.pes.requests.CreateLessonRequest;
 import com.swd392.group1.pes.requests.AssignLessonsRequest;
@@ -33,7 +31,6 @@ import com.swd392.group1.pes.validations.SyllabusValidation.CreateSyllabusValida
 import com.swd392.group1.pes.validations.SyllabusValidation.UpdateSyllabusValidation;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
@@ -52,8 +49,6 @@ public class EducationServiceImpl implements EducationService {
     private final SyllabusRepo syllabusRepo;
     private final StudentRepo studentRepo;
     private final ClassRepo classRepo;
-    private final LessonRepo lessonRepo;
-
     private final LessonRepo lessonRepo;
     private final EventRepo eventRepo;
 
