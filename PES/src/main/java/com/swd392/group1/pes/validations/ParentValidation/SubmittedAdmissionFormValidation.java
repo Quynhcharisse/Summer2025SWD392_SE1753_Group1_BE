@@ -52,7 +52,6 @@ public class SubmittedAdmissionFormValidation {
     }
 
     private static String validateImageField(String img, String value) {
-
         //ko để trống
         if (value == null || value.isEmpty()) {
             return img + " is required.";
@@ -62,6 +61,7 @@ public class SubmittedAdmissionFormValidation {
         if (!value.matches("(?i)^.+\\.(jpg|jpeg|png|gif|bmp)$")) {
             return img + " must be a valid image file (.jpg, .png, .jpeg, .gif, .bmp).";
         }
+
         return "";
     }
 }

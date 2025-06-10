@@ -14,10 +14,10 @@ import java.time.LocalDate;
 @AllArgsConstructor
 @Builder
 @FieldDefaults(level = AccessLevel.PRIVATE)
-public class GenerateClassesRequest {
-    private int numberStudentsOfEachClass;
-    private int termId;
-    private int syllabusId;
-    private LocalDate startDate;
-    private LocalDate endDate;
+public class UpdateChildRequest {
+    int id;
+    String name;
+    String gender;
+    LocalDate dateOfBirth;
+    String placeOfBirth;
 }

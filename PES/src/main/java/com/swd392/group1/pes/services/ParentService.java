@@ -1,6 +1,8 @@
 package com.swd392.group1.pes.services;
 
+import com.swd392.group1.pes.requests.AddChildRequest;
 import com.swd392.group1.pes.requests.SubmitAdmissionFormRequest;
+import com.swd392.group1.pes.requests.UpdateChildRequest;
 import com.swd392.group1.pes.response.ResponseObject;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.ResponseEntity;
@@ -12,5 +14,11 @@ public interface ParentService {
     ResponseEntity<ResponseObject> cancelAdmissionForm(int id, HttpServletRequest httpRequest);
 
     ResponseEntity<ResponseObject> submitAdmissionForm(SubmitAdmissionFormRequest request, HttpServletRequest httpRequest);
+
+    ResponseEntity<ResponseObject> viewChild(HttpServletRequest httpRequest);
+
+    ResponseEntity<ResponseObject> addChild(AddChildRequest request, HttpServletRequest httpRequest);
+
+    ResponseEntity<ResponseObject> updateChild(UpdateChildRequest request, HttpServletRequest httpRequest);
 
 }

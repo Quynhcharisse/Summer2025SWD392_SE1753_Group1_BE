@@ -8,16 +8,23 @@ import lombok.NoArgsConstructor;
 import lombok.experimental.FieldDefaults;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
 @FieldDefaults(level = AccessLevel.PRIVATE)
-public class GenerateClassesRequest {
-    private int numberStudentsOfEachClass;
-    private int termId;
-    private int syllabusId;
-    private LocalDate startDate;
-    private LocalDate endDate;
+public class CreateAdmissionTermRequest {
+    String name;
+    int year;
+    LocalDateTime startDate;
+    LocalDateTime endDate;
+    int maxNumberRegistration;
+    String grade;
+    double reservationFee;
+    double serviceFee;
+    double uniformFee;
+    double learningMaterialFee;
+    double facilityFee;
 }
