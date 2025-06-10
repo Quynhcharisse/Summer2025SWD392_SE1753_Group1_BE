@@ -9,7 +9,7 @@ import java.util.Arrays;
 public class UpdateSyllabusValidation {
     public static String validate(String id, UpdateSyllabusRequest request, SyllabusRepo syllabusRepo) {
 
-       CheckSyllabusExistence.validate(id, syllabusRepo);
+
 
         // Syllabus's subject không điền
         if(request.getSubject().trim().isEmpty()){

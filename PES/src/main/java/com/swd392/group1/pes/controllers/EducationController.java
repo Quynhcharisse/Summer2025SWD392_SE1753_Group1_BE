@@ -1,5 +1,6 @@
 package com.swd392.group1.pes.controllers;
 
+import com.swd392.group1.pes.requests.AssignLessonsRequest;
 import com.swd392.group1.pes.requests.CreateSyllabusRequest;
 import com.swd392.group1.pes.requests.GenerateClassesRequest;
 import com.swd392.group1.pes.requests.UpdateSyllabusRequest;
@@ -52,4 +53,11 @@ public class EducationController {
     public ResponseEntity<ResponseObject> generateClassesAuto(GenerateClassesRequest request){
         return educationService.generateClassesAuto(request);
     }
+
+    @PutMapping("/syllabus/assign-lessons")
+    @PreAuthorize("hasRole('education')")
+    public ResponseEntity<ResponseObject> assignLessons(@RequestParam String id, @RequestBody AssignLessonsRequest request){
+        return educationService.assignLessonsToSyllabus(id, request);
+    }
+
 }
