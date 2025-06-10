@@ -12,6 +12,7 @@ import com.swd392.group1.pes.validations.AccountValidation.ResetPasswordValidati
 import com.swd392.group1.pes.validations.AccountValidation.UpdateProfileValidation;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
@@ -30,7 +31,7 @@ public class AccountServiceImpl implements AccountService {
     public ResponseEntity<ResponseObject> resetPassword(RestPasswordRequest request) {
         String error = ResetPasswordValidation.validateResetPassword(request, accountRepo);
         if (!error.isEmpty()) {
-            return ResponseEntity.ok().body(
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
                     ResponseObject.builder()
                             .message(error)
                             .success(false)
@@ -42,7 +43,7 @@ public class AccountServiceImpl implements AccountService {
         Account account = accountRepo.findByEmailAndPassword(request.getEmail(), request.getOldPassword()).orElse(null);
 
         if (account == null) {
-            return ResponseEntity.ok().body(
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
                     ResponseObject.builder()
                             .message("Invalid email or password.")
                             .success(false)
@@ -69,7 +70,7 @@ public class AccountServiceImpl implements AccountService {
 
         accountRepo.save(account);
 
-        return ResponseEntity.ok().body(
+        return ResponseEntity.status(HttpStatus.OK).body(
                 ResponseObject.builder()
                         .message("Password reset successfully.")
                         .success(true)
@@ -85,9 +86,9 @@ public class AccountServiceImpl implements AccountService {
         Account account = jwtService.extractAccountFromCookie(request);
 
         if (account == null) {
-            return ResponseEntity.ok().body(
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(
                     ResponseObject.builder()
-                            .message("Cannot retrieve profile. Authentication token is missing or invalid")
+                            .message("Cannot retrieve profile. Authentication token is missing or invalid.")
                             .success(false)
                             .data(null)
                             .build()
@@ -105,7 +106,7 @@ public class AccountServiceImpl implements AccountService {
         body.put("createdAt", account.getCreatedAt());
         body.put("status", account.getStatus());
 
-        return ResponseEntity.ok().body(
+        return ResponseEntity.status(HttpStatus.OK).body(
                 ResponseObject.builder()
                         .message("")
                         .success(true)
@@ -120,9 +121,9 @@ public class AccountServiceImpl implements AccountService {
         Account account = jwtService.extractAccountFromCookie(httpRequest);
 
         if (account == null) {
-            return ResponseEntity.ok().body(
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(
                     ResponseObject.builder()
-                            .message("Cannot retrieve profile. Authentication token is missing or invalid")
+                            .message("Cannot retrieve profile. Authentication token is missing or invalid.")
                             .success(false)
                             .data(null)
                             .build()
@@ -131,7 +132,7 @@ public class AccountServiceImpl implements AccountService {
 
         String error = UpdateProfileValidation.validate(request);
         if (!error.isEmpty()) {
-            return ResponseEntity.ok().body(
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
                     ResponseObject.builder()
                             .message(error)
                             .success(false)
@@ -147,7 +148,7 @@ public class AccountServiceImpl implements AccountService {
 
         accountRepo.save(account);
 
-        return ResponseEntity.ok().body(
+        return ResponseEntity.status(HttpStatus.OK).body(
                 ResponseObject.builder()
                         .message("Update Profile Successfully")
                         .success(true)

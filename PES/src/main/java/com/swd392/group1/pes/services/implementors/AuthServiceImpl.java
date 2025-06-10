@@ -50,7 +50,7 @@ public class AuthServiceImpl implements AuthService {
         String error = LoginValidation.validate(request, accountRepo);
 
         if (!error.isEmpty()) {
-            return ResponseEntity.ok().body(
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
                     ResponseObject.builder()
                             .message(error)
                             .success(false)
@@ -64,7 +64,7 @@ public class AuthServiceImpl implements AuthService {
 
         CookieUtil.createCookie(response, newAccess, newRefresh, accessExpiration, refreshExpiration);
 
-        return ResponseEntity.ok().body(
+        return ResponseEntity.status(HttpStatus.OK).body(
                 ResponseObject.builder()
                         .message("Login successfully")
                         .success(true)
@@ -76,14 +76,14 @@ public class AuthServiceImpl implements AuthService {
     private Map<String, Object> buildLoginBody (Account account) {
         Map <String, Object> body = new HashMap<>();
         body.put("email", account.getEmail());
-        body.put("password", account.getPassword());
+        body.put("role", account.getRole().name());
         return body;
     }
 
     @Override
     public ResponseEntity<ResponseObject> logout(HttpServletResponse response) {
         CookieUtil.removeCookie(response);
-        return ResponseEntity.ok().body(
+        return ResponseEntity.status(HttpStatus.OK).body(
                 ResponseObject.builder()
                         .message("Logout successfully")
                         .success(true)
@@ -106,7 +106,7 @@ public class AuthServiceImpl implements AuthService {
 
                 CookieUtil.createCookie(response, newAccessToken, refreshToken.getValue(), accessExpiration, refreshExpiration);
 
-                return ResponseEntity.ok().body(
+                return ResponseEntity.status(HttpStatus.CREATED).body(
                         ResponseObject.builder()
                                 .message("Refresh access token successfully")
                                 .success(true)
@@ -129,12 +129,13 @@ public class AuthServiceImpl implements AuthService {
 
         String error = RegisterValidation.validate(request, accountRepo);
         if(!error.isEmpty()){
-            return ResponseEntity.ok().body(
-                ResponseObject.builder()
-                        .message(error)
-                        .success(false)
-                        .data(null)
-                        .build()
+
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
+                    ResponseObject.builder()
+                            .message(error)
+                            .success(false)
+                            .data(null)
+                            .build()
             );
         }
 
@@ -151,7 +152,7 @@ public class AuthServiceImpl implements AuthService {
 
         accountRepo.save(account);
 
-        return ResponseEntity.ok().body(
+        return ResponseEntity.status(HttpStatus.CREATED).body(
                 ResponseObject.builder()
                         .message("Register Successfully")
                         .success(true)
@@ -164,7 +165,7 @@ public class AuthServiceImpl implements AuthService {
     public ResponseEntity<ResponseObject> forgotPassword(ForgotPasswordRequest request) {
         String error = ForgotPasswordValidation.validate(request, accountRepo);
         if(!error.isEmpty()){
-            return ResponseEntity.ok().body(
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
                     ResponseObject.builder()
                             .message(error)
                             .success(false)
@@ -174,11 +175,20 @@ public class AuthServiceImpl implements AuthService {
         }
 
         Account account = accountRepo.findByEmail(request.getEmail()).orElse(null);
-        assert account != null;
+
+        if (account == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
+                    ResponseObject.builder()
+                            .message("Account not found")
+                            .success(false)
+                            .data(null)
+                            .build()
+            );
+        }
         account.setPassword(request.getPassword());
         accountRepo.save(account);
 
-        return ResponseEntity.ok().body(
+        return ResponseEntity.status(HttpStatus.OK).body(
                 ResponseObject.builder()
                         .message("Change Password Successfully")
                         .success(true)
