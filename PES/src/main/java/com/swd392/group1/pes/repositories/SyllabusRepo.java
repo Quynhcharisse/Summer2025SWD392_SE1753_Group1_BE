@@ -6,4 +6,5 @@ import javax.security.auth.Subject;
 
 public interface SyllabusRepo extends JpaRepository<Syllabus, Integer> {
     boolean existsBySubjectIgnoreCase(String subject);
+    boolean existsBySubjectIgnoreCaseAndIdNot(String subject, Integer id);
 }

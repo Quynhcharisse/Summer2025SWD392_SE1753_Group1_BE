@@ -53,7 +53,7 @@ public class Syllabus {
     @ToString.Exclude
     List<Classes> classesList;
 
-    @OneToMany(mappedBy = "syllabus", fetch = FetchType.EAGER, cascade = CascadeType.ALL)
+    @OneToMany(mappedBy = "syllabus", fetch = FetchType.EAGER, cascade = CascadeType.ALL, orphanRemoval = true)
     @EqualsAndHashCode.Exclude
     @ToString.Exclude
     List<SyllabusLesson> syllabusLessonList;

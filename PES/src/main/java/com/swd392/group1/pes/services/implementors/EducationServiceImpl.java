@@ -3,6 +3,7 @@ package com.swd392.group1.pes.services.implementors;
 
 import com.swd392.group1.pes.enums.Grade;
 import com.swd392.group1.pes.enums.Role;
+import com.swd392.group1.pes.enums.Status;
 import com.swd392.group1.pes.models.Classes;
 import com.swd392.group1.pes.models.Event;
 import com.swd392.group1.pes.models.Lesson;
@@ -17,6 +18,7 @@ import com.swd392.group1.pes.requests.CreateLessonRequest;
 import com.swd392.group1.pes.requests.AssignLessonsRequest;
 import com.swd392.group1.pes.requests.CreateSyllabusRequest;
 import com.swd392.group1.pes.requests.GenerateClassesRequest;
+import com.swd392.group1.pes.requests.UnassignLessonsRequest;
 import com.swd392.group1.pes.requests.UpdateEventRequest;
 import com.swd392.group1.pes.requests.UpdateLessonRequest;
 import com.swd392.group1.pes.requests.UpdateSyllabusRequest;
@@ -25,10 +27,11 @@ import com.swd392.group1.pes.services.EducationService;
 import com.swd392.group1.pes.requests.CreateEventRequest;
 import com.swd392.group1.pes.validations.EducationValidation.EventValidation;
 import com.swd392.group1.pes.validations.EducationValidation.LessonValidation;
-import com.swd392.group1.pes.validations.SyllabusValidation.AssignLessonsValidation;
-import com.swd392.group1.pes.validations.SyllabusValidation.CheckSyllabusExistence;
-import com.swd392.group1.pes.validations.SyllabusValidation.CreateSyllabusValidation;
-import com.swd392.group1.pes.validations.SyllabusValidation.UpdateSyllabusValidation;
+import com.swd392.group1.pes.validations.EducationValidation.SyllabusValidation.AssignLessonsValidation;
+import com.swd392.group1.pes.validations.EducationValidation.SyllabusValidation.CheckSyllabusId;
+import com.swd392.group1.pes.validations.EducationValidation.SyllabusValidation.CreateSyllabusValidation;
+import com.swd392.group1.pes.validations.EducationValidation.SyllabusValidation.UnassignLessonsValidation;
+import com.swd392.group1.pes.validations.EducationValidation.SyllabusValidation.UpdateSyllabusValidation;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -39,6 +42,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -89,19 +93,7 @@ public class EducationServiceImpl implements EducationService {
     @Override
     public ResponseEntity<ResponseObject> updateSyllabus(String id, UpdateSyllabusRequest request) {
 
-        String error = CheckSyllabusExistence.validate(id, syllabusRepo);
-
-        if(!error.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
-                    ResponseObject.builder()
-                            .message(error)
-                            .success(false)
-                            .data(null)
-                            .build()
-            );
-        }
-
-        error = UpdateSyllabusValidation.validate(id, request, syllabusRepo);
+        String error = UpdateSyllabusValidation.validate(id, request, syllabusRepo);
 
         if(!error.isEmpty()) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
@@ -112,6 +104,18 @@ public class EducationServiceImpl implements EducationService {
                             .build()
             );
         }
+
+        // Syllabus không tồn tại hoặc bị xóa
+        if(syllabusRepo.findById(Integer.parseInt(id)).isEmpty())
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
+                    ResponseObject.builder()
+                            .message("Syllabus with id " + id + " does not exist or be deleted")
+                            .success(false)
+                            .data(null)
+                            .build()
+            );
+
+
 
         syllabusRepo.save(
                 Syllabus.builder()
@@ -136,16 +140,28 @@ public class EducationServiceImpl implements EducationService {
     @Override
     public ResponseEntity<ResponseObject> viewSyllabusDetail(String id) {
 
-        String error = CheckSyllabusExistence.validate(id, syllabusRepo);
+        String error = CheckSyllabusId.validate(id);
 
         if (!error.isEmpty())
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
                     ResponseObject.builder()
                             .message(error)
                             .success(false)
                             .data(null)
                             .build()
             );
+
+        // Syllabus không tồn tại hoặc bị xóa
+        if(syllabusRepo.findById(Integer.parseInt(id)).isEmpty())
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
+                    ResponseObject.builder()
+                            .message("Syllabus with id " + id + " does not exist or be deleted")
+                            .success(false)
+                            .data(null)
+                            .build()
+            );
+
+
 
         Syllabus syllabus = syllabusRepo.findById(Integer.parseInt(id)).get();
 
@@ -163,16 +179,6 @@ public class EducationServiceImpl implements EducationService {
     public ResponseEntity<ResponseObject> viewAllSyllabus() {
 
         List<Syllabus> syllabuses = syllabusRepo.findAll();
-
-        if(syllabuses.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.NO_CONTENT).body(
-                    ResponseObject.builder()
-                            .message("No Syllabuses Found")
-                            .success(false)
-                            .data(null)
-                            .build()
-            );
-        }
 
         // Chia syllabus thành 2 nhóm
         List<Syllabus> notAssigned = new ArrayList<>();
@@ -231,18 +237,8 @@ public class EducationServiceImpl implements EducationService {
 
     @Override
     public ResponseEntity<ResponseObject> assignLessonsToSyllabus(String id, AssignLessonsRequest request) {
-        String error = CheckSyllabusExistence.validate(id, syllabusRepo);
 
-        if (!error.isEmpty())
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
-                    ResponseObject.builder()
-                            .message(error)
-                            .success(false)
-                            .data(null)
-                            .build()
-            );
-
-        error = AssignLessonsValidation.validate(id, request, lessonRepo);
+        String error = AssignLessonsValidation.validate(id, request, lessonRepo);
 
         if (!error.isEmpty())
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
@@ -252,6 +248,18 @@ public class EducationServiceImpl implements EducationService {
                             .data(null)
                             .build()
             );
+
+        // Syllabus không tồn tại hoặc bị xóa
+        if(syllabusRepo.findById(Integer.parseInt(id)).isEmpty())
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
+                    ResponseObject.builder()
+                            .message("Syllabus with id " + id + " does not exist or be deleted")
+                            .success(false)
+                            .data(null)
+                            .build()
+            );
+
+
 
         Syllabus syllabus = syllabusRepo.findById(Integer.parseInt(id)).get();
 
@@ -268,7 +276,7 @@ public class EducationServiceImpl implements EducationService {
         Map<Integer, SyllabusLesson> existingLessonMap = syllabus.getSyllabusLessonList().stream()
                 .collect(Collectors.toMap(sl -> sl.getLesson().getId(), sl -> sl));
 
-        List<SyllabusLesson> updatedList = new ArrayList<>(syllabus.getSyllabusLessonList());
+        List<SyllabusLesson> updatedList = syllabus.getSyllabusLessonList();
         int newlyAddedCount = 0;
 
         for (Lesson lesson : validLessons) {
@@ -281,9 +289,21 @@ public class EducationServiceImpl implements EducationService {
                 newlyAddedCount++; // đếm số lesson mới được add
             }
         }
+
+        if (newlyAddedCount == 0) {
+            return ResponseEntity.ok().body(
+                    ResponseObject.builder()
+                            .message("No new lessons were added.")
+                            .success(true)
+                            .data(null)
+                            .build());
+        }
+
         syllabus.setSyllabusLessonList(updatedList);
         syllabus.setAssigned(true);
         syllabusRepo.save(syllabus);
+
+
 
         return ResponseEntity.ok().body(
                 ResponseObject.builder()
@@ -293,6 +313,83 @@ public class EducationServiceImpl implements EducationService {
                         .build()
         );
     }
+
+    @Override
+    public ResponseEntity<ResponseObject> unassignLessonsFromSyllabus(String id, UnassignLessonsRequest request) {
+
+        String error = UnassignLessonsValidation.validate(id, request);
+
+        if (!error.isEmpty())
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
+                    ResponseObject.builder()
+                            .message(error)
+                            .success(false)
+                            .data(null)
+                            .build()
+            );
+
+        // Syllabus không tồn tại hoặc bị xóa
+        if(syllabusRepo.findById(Integer.parseInt(id)).isEmpty())
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
+                    ResponseObject.builder()
+                            .message("Syllabus with id " + id + " does not exist or be deleted")
+                            .success(false)
+                            .data(null)
+                            .build()
+            );
+
+        Optional<Syllabus> optionalSyllabus = syllabusRepo.findById(Integer.parseInt(id));
+        if (optionalSyllabus.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
+                    ResponseObject.builder()
+                            .message("Syllabus with id " + id + " does not exist or has been deleted")
+                            .success(false)
+                            .data(null)
+                            .build()
+            );
+        }
+
+        Syllabus syllabus = optionalSyllabus.get();
+
+        List<String> namesToRemove = request.getLessonNames().stream()
+                .map(name -> name.trim().toLowerCase().replaceAll("\\s+", " "))
+                .collect(Collectors.toList());
+
+        List<SyllabusLesson> currentList = syllabus.getSyllabusLessonList();
+
+// Lưu lại số lượng ban đầu
+        int beforeSize = currentList.size();
+
+// Xóa theo điều kiện
+        currentList.removeIf(sl -> namesToRemove.contains(
+                sl.getLesson().getTopic().trim().toLowerCase().replaceAll("\\s+", " ")
+        ));
+
+        int removedCount = beforeSize - currentList.size();
+
+        if (removedCount == 0) {
+            return ResponseEntity.ok().body(
+                    ResponseObject.builder()
+                            .message("No lessons were unassigned.")
+                            .success(true)
+                            .data(null)
+                            .build()
+            );
+        }
+
+        if (currentList.isEmpty()) syllabus.setAssigned(false);
+
+// Không cần gọi syllabus.setSyllabusLessonList(updatedList) nữa
+        syllabusRepo.save(syllabus);
+
+        return ResponseEntity.ok().body(
+                ResponseObject.builder()
+                        .message("Unassigned " + removedCount + " lesson(s) from syllabus.")
+                        .success(true)
+                        .data(null)
+                        .build());
+    }
+
 
     private Map<String,Object> buildSyllabusDetail(Syllabus syllabus){
         Map<String,Object> data = new HashMap<>();
@@ -307,9 +404,9 @@ public class EducationServiceImpl implements EducationService {
 
     @Override
     public ResponseEntity<ResponseObject> createLesson(CreateLessonRequest request) {
-        String error = LessonValidation.validateCreate(request);
+        String error = LessonValidation.validateCreate(request, lessonRepo);
         if (!error.isEmpty()) {
-            return ResponseEntity.ok().body(
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
                     ResponseObject.builder()
                             .message(error)
                             .success(false)
@@ -335,7 +432,7 @@ public class EducationServiceImpl implements EducationService {
     public ResponseEntity<ResponseObject> updateLesson(String id, UpdateLessonRequest request) {
         String error = LessonValidation.validateUpdate(id, request, lessonRepo);
         if (!error.isEmpty()) {
-            return ResponseEntity.ok().body(
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
                     ResponseObject.builder()
                             .message(error)
                             .success(false)
@@ -346,9 +443,9 @@ public class EducationServiceImpl implements EducationService {
 
         Lesson lesson = lessonRepo.findById(Integer.parseInt(id)).orElse(null);
         if (lesson == null) {
-            return ResponseEntity.ok().body(
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
                     ResponseObject.builder()
-                            .message("Lesson not found")
+                            .message("Lesson with id " + id + " not found")
                             .success(false)
                             .data(null)
                             .build()
@@ -374,53 +471,12 @@ public class EducationServiceImpl implements EducationService {
         List<Map<String,Object>> lessonDetails = lessons.stream()
                 .map(this::buildLessonDetail)
                 .toList();
-        if (lessons.isEmpty()) {
-            return ResponseEntity.ok().body(
-                    ResponseObject.builder()
-                            .message("No lessons found")
-                            .success(false)
-                            .data(null)
-                            .build()
-            );
-        }
+
         return ResponseEntity.ok().body(
                 ResponseObject.builder()
                         .message("Lesson list retrieved successfully")
                         .success(true)
                         .data(lessonDetails)
-                        .build()
-        );
-    }
-
-    @Override
-    public ResponseEntity<ResponseObject> deleteLesson(String id) {
-        int lessonId;
-        try {
-            lessonId = Integer.parseInt(id);
-        } catch (NumberFormatException e) {
-            return ResponseEntity.ok().body(
-                    ResponseObject.builder()
-                            .message("Invalid lesson ID")
-                            .success(false)
-                            .data(null)
-                            .build()
-            );
-        }
-        if (!lessonRepo.existsById(lessonId)) {
-            return ResponseEntity.ok().body(
-                    ResponseObject.builder()
-                            .message("Lesson not found")
-                            .success(false)
-                            .data(null)
-                            .build()
-            );
-        }
-        lessonRepo.deleteById(lessonId);
-        return ResponseEntity.ok().body(
-                ResponseObject.builder()
-                        .message("Lesson deleted successfully")
-                        .success(true)
-                        .data(null)
                         .build()
         );
     }

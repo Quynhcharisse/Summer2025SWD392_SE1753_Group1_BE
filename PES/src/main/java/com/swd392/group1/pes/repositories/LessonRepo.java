@@ -7,4 +7,5 @@ import java.util.Optional;
 
 public interface LessonRepo extends JpaRepository<Lesson, Integer> {
     Optional<Lesson> findByTopicIgnoreCase(String name);
+    boolean existsByTopicIgnoreCaseAndIdNot(String name, int id);
 }

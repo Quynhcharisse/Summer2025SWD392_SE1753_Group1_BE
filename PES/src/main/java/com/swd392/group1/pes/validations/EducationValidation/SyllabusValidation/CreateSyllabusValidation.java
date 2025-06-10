@@ -1,19 +1,22 @@
-package com.swd392.group1.pes.validations.SyllabusValidation;
+package com.swd392.group1.pes.validations.EducationValidation.SyllabusValidation;
 
 import com.swd392.group1.pes.enums.Grade;
+import com.swd392.group1.pes.enums.Status;
 import com.swd392.group1.pes.repositories.SyllabusRepo;
-import com.swd392.group1.pes.requests.UpdateSyllabusRequest;
+import com.swd392.group1.pes.requests.CreateSyllabusRequest;
 
 import java.util.Arrays;
 
-public class UpdateSyllabusValidation {
-    public static String validate(String id, UpdateSyllabusRequest request, SyllabusRepo syllabusRepo) {
+public class CreateSyllabusValidation {
+    public static String validate(CreateSyllabusRequest request, SyllabusRepo syllabusRepo){
 
-
+        // Syllabus da ton tai
+        if(syllabusRepo.existsBySubjectIgnoreCase(request.getSubject()))
+            return "Syllabus already exists";
 
         // Syllabus's subject không điền
         if(request.getSubject().trim().isEmpty()){
-           return "Subject cannot be empty";
+            return "Subject cannot be empty";
         }
 
         //  Description không điền
@@ -21,7 +24,7 @@ public class UpdateSyllabusValidation {
             return "Description should not be empty";
         }
 
-        // Number of week không điền
+
         if( request.getMaxNumberOfWeek() <= 0 ){
             return "Number of weeks must be greater than 0";
         }

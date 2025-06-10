@@ -4,6 +4,7 @@ import com.swd392.group1.pes.requests.AssignLessonsRequest;
 import com.swd392.group1.pes.requests.CreateEventRequest;
 import com.swd392.group1.pes.requests.CreateLessonRequest;
 import com.swd392.group1.pes.requests.CreateSyllabusRequest;
+import com.swd392.group1.pes.requests.UnassignLessonsRequest;
 import com.swd392.group1.pes.requests.UpdateEventRequest;
 import com.swd392.group1.pes.requests.UpdateLessonRequest;
 import com.swd392.group1.pes.requests.GenerateClassesRequest;
@@ -13,7 +14,6 @@ import com.swd392.group1.pes.services.EducationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -65,6 +65,11 @@ public class EducationController {
         return educationService.assignLessonsToSyllabus(id, request);
     }
 
+    @PutMapping("/syllabus/unassign-lessons")
+    @PreAuthorize("hasRole('education')")
+    public ResponseEntity<ResponseObject> unassignLessons(@RequestParam String id, @RequestBody UnassignLessonsRequest request){
+        return educationService.unassignLessonsFromSyllabus(id, request);
+    }
 
     @PostMapping("/lesson")
     @PreAuthorize("hasRole('education')")
@@ -84,11 +89,6 @@ public class EducationController {
         return educationService.viewLessonList();
     }
 
-    @DeleteMapping("/lesson")
-    @PreAuthorize("hasRole('education')")
-    public ResponseEntity<ResponseObject> deleteLesson(@RequestParam String id) {
-        return educationService.deleteLesson(id);
-    }
 
     @PostMapping("/event")
     @PreAuthorize("hasRole('education')")
