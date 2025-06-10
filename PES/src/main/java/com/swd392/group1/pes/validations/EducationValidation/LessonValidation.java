@@ -5,38 +5,59 @@ import com.swd392.group1.pes.requests.CreateLessonRequest;
 import com.swd392.group1.pes.requests.UpdateLessonRequest;
 
 public class LessonValidation {
-    public static String validateCreate(CreateLessonRequest request) {
-        if (request.getTitle() == null || request.getTitle().trim().isEmpty()) {
-            return "Lesson title is required";
+    public static String validateCreate(CreateLessonRequest request, LessonRepo lessonRepo) {
+
+        if (request.getTitle() == null || request.getTitle().trim().isEmpty())
+        {
+            return "Lesson topic is required";
         }
-        if (request.getTitle().length() > 100) {
-            return "Lesson title must not exceed 100 characters";
+
+        if (request.getDescription() == null ) {
+            return "Lesson description is required";
         }
-        if (request.getDescription() != null && request.getDescription().length() > 500) {
-            return "Lesson description must not exceed 500 characters";
-        }
+
+        // Lesson topic da ton tai
+        if(lessonRepo.findByTopicIgnoreCase(request.getTitle()).isPresent())
+            return "Lesson topic already exists";
+
         return "";
     }
 
     public static String validateUpdate(String id, UpdateLessonRequest request, LessonRepo lessonRepo) {
-        int lessonId;
+
+        if(!checkLessonId(id).trim().isEmpty())
+            return checkLessonId(id);
+
+        boolean isLessonDuplicate = lessonRepo.existsByTopicIgnoreCaseAndIdNot(request.getTitle(), Integer.parseInt(id));
+        if (isLessonDuplicate) {
+            return "Lesson already exists";
+        }
+
+        if (request.getTitle() == null || request.getTitle().trim().isEmpty())
+        {
+            return "Lesson topic is required";
+        }
+
+        if (request.getDescription() == null ) {
+            return "Lesson description is required";
+        }
+
+        return "";
+    }
+
+    public static String checkLessonId(String id){
+        // ID is empty
+        if(id.isEmpty()){
+            return "Id cannot be empty";
+        }
+        // ID wrong format
         try {
-            lessonId = Integer.parseInt(id);
-        } catch (NumberFormatException e) {
-            return "Invalid lesson ID";
-        }
-        if (!lessonRepo.existsById(lessonId)) {
-            return "Lesson not found";
-        }
-        if (request.getTitle() == null || request.getTitle().trim().isEmpty()) {
-            return "Lesson title is required";
-        }
-        if (request.getTitle().length() > 100) {
-            return "Lesson title must not exceed 100 characters";
-        }
-        if (request.getDescription() != null && request.getDescription().length() > 500) {
-            return "Lesson description must not exceed 500 characters";
+            Integer.parseInt(id);
+        } catch (IllegalArgumentException ex) {
+            return "Id must be a number";
         }
         return "";
     }
-}
+
+    }
+
