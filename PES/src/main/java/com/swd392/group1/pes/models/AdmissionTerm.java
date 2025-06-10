@@ -23,6 +23,7 @@ import lombok.ToString;
 import lombok.experimental.FieldDefaults;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Data
@@ -41,10 +42,10 @@ public class AdmissionTerm {
     String name;
 
     @Column(name = "`start_date`")
-    LocalDate startDate;
+    LocalDateTime startDate;
 
     @Column(name = "`end_date`")
-    LocalDate endDate;
+    LocalDateTime endDate;
 
     int year;
 

@@ -1,6 +1,8 @@
 package com.swd392.group1.pes.controllers;
 
+import com.swd392.group1.pes.requests.AddChildRequest;
 import com.swd392.group1.pes.requests.SubmitAdmissionFormRequest;
+import com.swd392.group1.pes.requests.UpdateChildRequest;
 import com.swd392.group1.pes.response.ResponseObject;
 import com.swd392.group1.pes.services.ParentService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -38,4 +40,25 @@ public class ParentController {
     public ResponseEntity<ResponseObject> cancelAdmissionForm(@RequestBody int id, HttpServletRequest httpRequest) {
         return parentService.cancelAdmissionForm(id, httpRequest);
     }
+
+    // gôp getChild + submit vô chung tránh gọi API quá nhiều lần
+
+    @GetMapping("/child")
+    @PreAuthorize("hasRole('parent')")
+    public ResponseEntity<ResponseObject> viewChild(HttpServletRequest request) {
+        return parentService.viewChild(request);
+    }
+
+    @PostMapping("/child")
+    @PreAuthorize("hasRole('parent')")
+    public ResponseEntity<ResponseObject> addChild(@RequestBody AddChildRequest request, HttpServletRequest httpRequest) {
+        return parentService.addChild(request, httpRequest);
+    }
+
+    @PutMapping("/child")
+    @PreAuthorize("hasRole('parent')")
+    public ResponseEntity<ResponseObject> updateChild(@RequestBody UpdateChildRequest request, HttpServletRequest httpRequest) {
+        return parentService.updateChild(request, httpRequest);
+    }
+
 }

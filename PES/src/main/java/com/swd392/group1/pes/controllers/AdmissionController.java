@@ -1,7 +1,8 @@
 package com.swd392.group1.pes.controllers;
 
-import com.swd392.group1.pes.requests.AdmissionTermRequest;
+import com.swd392.group1.pes.requests.CreateAdmissionTermRequest;
 import com.swd392.group1.pes.requests.ProcessAdmissionFormRequest;
+import com.swd392.group1.pes.requests.UpdateAdmissionTermRequest;
 import com.swd392.group1.pes.response.ResponseObject;
 import com.swd392.group1.pes.services.AdmissionService;
 import lombok.RequiredArgsConstructor;
@@ -23,20 +24,20 @@ public class AdmissionController {
 
     @PostMapping("/term")
     @PreAuthorize("hasRole('admission')")
-    public ResponseEntity<ResponseObject> createAdmissionTerm(@RequestBody AdmissionTermRequest request) {
+    public ResponseEntity<ResponseObject> createAdmissionTerm(@RequestBody CreateAdmissionTermRequest request) {
         return admissionService.createAdmissionTerm(request);
     }
 
     @PutMapping("/term")
     @PreAuthorize("hasRole('admission')")
-    public ResponseEntity<ResponseObject> updateAdmissionTerm(@RequestBody AdmissionTermRequest request) {
+    public ResponseEntity<ResponseObject> updateAdmissionTerm(@RequestBody UpdateAdmissionTermRequest request) {
         return admissionService.updateAdmissionTerm(request);
     }
 
     @GetMapping("/term")
     @PreAuthorize("hasRole('admission')")
-    public ResponseEntity<ResponseObject> viewAdmissionTerm() {
-        return admissionService.viewAdmissionTerm();
+    public ResponseEntity<ResponseObject> viewAdmissionTerm(int year) {
+        return admissionService.viewAdmissionTerm(year);
     }
 
     @GetMapping("/form/list")
