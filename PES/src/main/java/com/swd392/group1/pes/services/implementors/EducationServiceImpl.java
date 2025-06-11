@@ -3,7 +3,6 @@ package com.swd392.group1.pes.services.implementors;
 
 import com.swd392.group1.pes.enums.Grade;
 import com.swd392.group1.pes.enums.Role;
-import com.swd392.group1.pes.enums.Status;
 import com.swd392.group1.pes.models.Classes;
 import com.swd392.group1.pes.models.Event;
 import com.swd392.group1.pes.models.Lesson;
@@ -96,7 +95,7 @@ public class EducationServiceImpl implements EducationService {
     @Override
     public ResponseEntity<ResponseObject> updateSyllabus(String id, UpdateSyllabusRequest request) {
 
-        String error = UpdateSyllabusValidation.validate(id, request, syllabusRepo);
+        String error = UpdateSyllabusValidation.validate(id, request);
 
         if(!error.isEmpty()) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
@@ -119,6 +118,17 @@ public class EducationServiceImpl implements EducationService {
             );
 
 
+        // ✅ Check subject trùng với syllabus khác
+        boolean isSubjectDuplicate = syllabusRepo.existsBySubjectIgnoreCaseAndIdNot(request.getSubject(), Integer.parseInt(id));
+        if (isSubjectDuplicate) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(
+                    ResponseObject.builder()
+                            .message("Syllabus already exists")
+                            .success(false)
+                            .data(null)
+                            .build()
+            );
+        }
 
         syllabusRepo.save(
                 Syllabus.builder()
@@ -418,7 +428,7 @@ public class EducationServiceImpl implements EducationService {
             );
         }
         Lesson lesson = Lesson.builder()
-                .topic(request.getTitle())
+                .topic(request.getTopic())
                 .description(request.getDescription())
                 .build();
         lessonRepo.save(lesson);
@@ -433,7 +443,7 @@ public class EducationServiceImpl implements EducationService {
 
     @Override
     public ResponseEntity<ResponseObject> updateLesson(String id, UpdateLessonRequest request) {
-        String error = LessonValidation.validateUpdate(id, request, lessonRepo);
+        String error = LessonValidation.validateUpdate(id, request);
         if (!error.isEmpty()) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
                     ResponseObject.builder()
@@ -454,8 +464,18 @@ public class EducationServiceImpl implements EducationService {
                             .build()
             );
         }
+        boolean isLessonDuplicate = lessonRepo.existsByTopicIgnoreCaseAndIdNot(request.getTopic(), Integer.parseInt(id));
+        if (isLessonDuplicate) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(
+                    ResponseObject.builder()
+                            .message("Lesson already exists")
+                            .success(false)
+                            .data(null)
+                            .build()
+            );
+        }
 
-        lesson.setTopic(request.getTitle());
+        lesson.setTopic(request.getTopic());
         lesson.setDescription(request.getDescription());
         lessonRepo.save(lesson);
 

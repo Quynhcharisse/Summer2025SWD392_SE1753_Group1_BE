@@ -13,6 +13,6 @@ import lombok.experimental.FieldDefaults;
 @Builder
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class CreateLessonRequest {
-    private String title;
+    private String topic;
     private String description;
 }

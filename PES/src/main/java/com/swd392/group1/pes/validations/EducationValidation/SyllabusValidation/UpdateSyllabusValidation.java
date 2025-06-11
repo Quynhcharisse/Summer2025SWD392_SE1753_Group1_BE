@@ -1,22 +1,15 @@
 package com.swd392.group1.pes.validations.EducationValidation.SyllabusValidation;
 
 import com.swd392.group1.pes.enums.Grade;
-import com.swd392.group1.pes.repositories.SyllabusRepo;
 import com.swd392.group1.pes.requests.UpdateSyllabusRequest;
 
 import java.util.Arrays;
 
 public class UpdateSyllabusValidation {
-    public static String validate(String id, UpdateSyllabusRequest request, SyllabusRepo syllabusRepo) {
+    public static String validate(String id, UpdateSyllabusRequest request) {
 
        if(!CheckSyllabusId.validate(id).trim().isEmpty())
            return CheckSyllabusId.validate(id);
-
-        // ✅ Check subject trùng với syllabus khác
-        boolean isSubjectDuplicate = syllabusRepo.existsBySubjectIgnoreCaseAndIdNot(request.getSubject(), Integer.parseInt(id));
-        if (isSubjectDuplicate) {
-            return "Syllabus already exists";
-        }
 
         // Syllabus's subject không điền
         if(request.getSubject().trim().isEmpty()){

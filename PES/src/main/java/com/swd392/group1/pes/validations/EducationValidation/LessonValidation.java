@@ -23,15 +23,10 @@ public class LessonValidation {
         return "";
     }
 
-    public static String validateUpdate(String id, UpdateLessonRequest request, LessonRepo lessonRepo) {
+    public static String validateUpdate(String id, UpdateLessonRequest request) {
 
         if(!checkLessonId(id).trim().isEmpty())
             return checkLessonId(id);
-
-        boolean isLessonDuplicate = lessonRepo.existsByTopicIgnoreCaseAndIdNot(request.getTitle(), Integer.parseInt(id));
-        if (isLessonDuplicate) {
-            return "Lesson already exists";
-        }
 
         if (request.getTitle() == null || request.getTitle().trim().isEmpty())
         {
