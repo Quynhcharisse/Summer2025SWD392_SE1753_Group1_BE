@@ -36,8 +36,8 @@ public class AdmissionController {
 
     @GetMapping("/term")
     @PreAuthorize("hasRole('admission')")
-    public ResponseEntity<ResponseObject> viewAdmissionTerm(int year) {
-        return admissionService.viewAdmissionTerm(year);
+    public ResponseEntity<ResponseObject> viewAdmissionTerm() {
+        return admissionService.viewAdmissionTerm();
     }
 
     @GetMapping("/form/list")

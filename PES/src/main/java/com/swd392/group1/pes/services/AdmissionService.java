@@ -9,7 +9,7 @@ import org.springframework.http.ResponseEntity;
 public interface AdmissionService {
     ResponseEntity<ResponseObject> createAdmissionTerm(CreateAdmissionTermRequest request);
 
-    ResponseEntity<ResponseObject> viewAdmissionTerm(int year);
+    ResponseEntity<ResponseObject> viewAdmissionTerm();
 
     ResponseEntity<ResponseObject> updateAdmissionTerm(UpdateAdmissionTermRequest request);
 

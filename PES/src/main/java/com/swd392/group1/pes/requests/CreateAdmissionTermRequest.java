@@ -16,8 +16,6 @@ import java.time.LocalDateTime;
 @Builder
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class CreateAdmissionTermRequest {
-    String name;
-    int year;
     LocalDateTime startDate;
     LocalDateTime endDate;
     int maxNumberRegistration;

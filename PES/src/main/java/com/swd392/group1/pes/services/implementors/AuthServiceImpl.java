@@ -106,7 +106,7 @@ public class AuthServiceImpl implements AuthService {
 
                 CookieUtil.createCookie(response, newAccessToken, refreshToken.getValue(), accessExpiration, refreshExpiration);
 
-                return ResponseEntity.status(HttpStatus.CREATED).body(
+                return ResponseEntity.status(HttpStatus.OK).body(
                         ResponseObject.builder()
                                 .message("Refresh access token successfully")
                                 .success(true)
@@ -152,7 +152,7 @@ public class AuthServiceImpl implements AuthService {
 
         accountRepo.save(account);
 
-        return ResponseEntity.status(HttpStatus.CREATED).body(
+        return ResponseEntity.status(HttpStatus.OK).body(
                 ResponseObject.builder()
                         .message("Register Successfully")
                         .success(true)

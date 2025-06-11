@@ -23,6 +23,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -54,11 +55,10 @@ public class AdmissionServiceImpl implements AdmissionService {
 
         AdmissionTerm term = admissionTermRepo.save(
                 AdmissionTerm.builder()
-                        .name(request.getName())
-                        .grade(Grade.valueOf(request.getGrade()))
+                        .grade(Grade.valueOf(request.getGrade().toUpperCase()))
                         .startDate(request.getStartDate())
                         .endDate(request.getEndDate())
-                        .year(request.getYear())
+                        .year(LocalDateTime.now().getYear())
                         .maxNumberRegistration(request.getMaxNumberRegistration())
                         .status(Status.INACTIVE_TERM.getValue())
                         .build()
@@ -87,7 +87,7 @@ public class AdmissionServiceImpl implements AdmissionService {
 
 
     @Override
-    public ResponseEntity<ResponseObject> viewAdmissionTerm(int year) {
+    public ResponseEntity<ResponseObject> viewAdmissionTerm() {
 
         List<AdmissionTerm> terms = admissionTermRepo.findAll();
 
@@ -105,14 +105,12 @@ public class AdmissionServiceImpl implements AdmissionService {
                 .map(term -> {
                             Map<String, Object> data = new HashMap<>();
                             data.put("id", term.getId());
-                            data.put("name", term.getName());
                             data.put("startDate", term.getStartDate());
                             data.put("endDate", term.getEndDate());
-                            data.put("year", term.getYear());
+                            data.put("year", LocalDate.now().getYear());
                             data.put("maxNumberRegistration", term.getMaxNumberRegistration());
                             data.put("grade", term.getGrade());
                             data.put("status", term.getStatus());
-                            data.put("formList", getFormListByTerm(term));
 
                             AdmissionFee fee = admissionFeeRepo.findByAdmissionTerm_Id(term.getId()).orElse(null);
                             data.put("fee", fee != null ? buildFeeMap(fee) : null);
@@ -139,27 +137,6 @@ public class AdmissionServiceImpl implements AdmissionService {
         } else {
             return Status.LOCKED_TERM.getValue();
         }
-    }
-
-    private List<Map<String, Object>> getFormListByTerm(AdmissionTerm term) {
-        return term.getAdmissionFormList().stream()
-                .map(form -> {
-                            Map<String, Object> data = new HashMap<>();
-                            data.put("id", form.getId());
-                            data.put("householdRegistrationAddress", form.getHouseholdRegistrationAddress());
-                            data.put("profileImage", form.getProfileImage());
-                            data.put("birthCertificateImg", form.getBirthCertificateImg());
-                            data.put("householdRegistrationImg", form.getHouseholdRegistrationImg());
-                            data.put("commitmentImg", form.getCommitmentImg());
-                            data.put("cancelReason", form.getCancelReason());
-                            data.put("submittedDate", form.getSubmittedDate());
-                            data.put("note", form.getNote());
-                            data.put("status", form.getStatus());
-                            data.put("studentName", form.getStudent().getName());
-                            return data;
-                        }
-                )
-                .toList();
     }
 
     private Map<String, Object> buildFeeMap(AdmissionFee fee) {
@@ -209,7 +186,6 @@ public class AdmissionServiceImpl implements AdmissionService {
             );
         }
 
-        term.setName(request.getName());
         term.setStartDate(request.getStartDate());
         term.setEndDate(request.getEndDate());
         term.setYear(request.getYear());

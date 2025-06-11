@@ -100,7 +100,7 @@ public class AccountServiceImpl implements AccountService {
         body.put("name", account.getName());
         body.put("phone", account.getPhone());
         body.put("gender", account.getGender());
-        body.put("identityNumber", account.getIdentityNumber());
+        body.put("identityNumber", maskIdentityNumber(account.getIdentityNumber()));
         body.put("avatarUrl", account.getAvatarUrl());
         body.put("role", account.getRole());
         body.put("createdAt", account.getCreatedAt());
@@ -114,6 +114,18 @@ public class AccountServiceImpl implements AccountService {
                         .build()
         );
     }
+
+    private String maskIdentityNumber(String identityNumber) {
+        if (identityNumber == null || identityNumber.length() < 4) {
+            return "****"; // hoặc xử lý phù hợp nếu quá ngắn
+        }
+
+        int visibleDigits = 4;
+        String masked = "*".repeat(identityNumber.length() - visibleDigits);
+        String last4 = identityNumber.substring(identityNumber.length() - visibleDigits);
+        return masked + last4;
+    }
+
 
     @Override
     public ResponseEntity<ResponseObject> updateProfile(UpdateProfileRequest request, HttpServletRequest httpRequest) {
