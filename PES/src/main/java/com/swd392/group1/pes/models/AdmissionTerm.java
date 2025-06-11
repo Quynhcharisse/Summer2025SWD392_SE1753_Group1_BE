@@ -39,15 +39,13 @@ public class AdmissionTerm {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     Integer id;
 
-    String name;
-
     @Column(name = "`start_date`")
     LocalDateTime startDate;
 
     @Column(name = "`end_date`")
     LocalDateTime endDate;
 
-    int year;
+    Integer year;
 
     @Column(name = "`max_number_registration`")
     int maxNumberRegistration;
