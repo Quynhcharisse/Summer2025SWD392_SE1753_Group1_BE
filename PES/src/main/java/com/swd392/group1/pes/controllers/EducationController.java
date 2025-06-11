@@ -59,7 +59,7 @@ public class EducationController {
         return educationService.generateClassesAuto(request);
     }
 
-    @PutMapping("/syllabus/assign-lessons")
+    @PutMapping("/syllabus/assign/lessionlession")
     @PreAuthorize("hasRole('education')")
     public ResponseEntity<ResponseObject> assignLessons(@RequestParam String id, @RequestBody AssignLessonsRequest request){
         return educationService.assignLessonsToSyllabus(id, request);
