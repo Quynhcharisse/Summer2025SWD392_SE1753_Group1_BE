@@ -3,11 +3,13 @@ package com.swd392.group1.pes.services.implementors;
 
 import com.swd392.group1.pes.enums.Grade;
 import com.swd392.group1.pes.enums.Role;
+import com.swd392.group1.pes.enums.Status;
 import com.swd392.group1.pes.models.Classes;
 import com.swd392.group1.pes.models.Event;
 import com.swd392.group1.pes.models.Lesson;
 import com.swd392.group1.pes.models.Syllabus;
 import com.swd392.group1.pes.models.SyllabusLesson;
+import com.swd392.group1.pes.repositories.AdmissionFormRepo;
 import com.swd392.group1.pes.repositories.ClassRepo;
 import com.swd392.group1.pes.repositories.EventRepo;
 import com.swd392.group1.pes.repositories.LessonRepo;
@@ -52,11 +54,11 @@ import java.util.stream.Stream;
 public class EducationServiceImpl implements EducationService {
 
     private final SyllabusRepo syllabusRepo;
-    private final StudentRepo studentRepo;
     private final ClassRepo classRepo;
     private final LessonRepo lessonRepo;
     private final EventRepo eventRepo;
     private final SyllabusLessonRepo syllabusLessonRepo;
+    private final AdmissionFormRepo admissionFormRepo;
 
 
     @Override
@@ -221,7 +223,7 @@ public class EducationServiceImpl implements EducationService {
 
     @Override
     public ResponseEntity<ResponseObject> generateClassesAuto(GenerateClassesRequest request) {
-        int maxStudents = studentRepo.findAll().size();
+        int maxStudents = admissionFormRepo.countByAdmissionTerm_IdAndStatusAndTransaction_Status(request.getTermId(), Status.APPROVED.getValue(), Status.TRANSACTION_SUCCESSFUL.getValue());
         int maxClasses = (int) Math.ceil((double) maxStudents / request.getNumberStudentsOfEachClass());
         Syllabus syllabus = syllabusRepo.findById(request.getSyllabusId()).get();
         for (int i = 0; i < maxClasses; i++)
@@ -251,7 +253,7 @@ public class EducationServiceImpl implements EducationService {
     @Override
     public ResponseEntity<ResponseObject> assignLessonsToSyllabus(String id, AssignLessonsRequest request) {
 
-        String error = AssignLessonsValidation.validate(id, request, lessonRepo);
+        String error = AssignLessonsValidation.validate(id, request);
 
         if (!error.isEmpty())
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(

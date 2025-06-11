@@ -7,7 +7,7 @@ import com.swd392.group1.pes.requests.UpdateLessonRequest;
 public class LessonValidation {
     public static String validateCreate(CreateLessonRequest request, LessonRepo lessonRepo) {
 
-        if (request.getTitle() == null || request.getTitle().trim().isEmpty())
+        if (request.getTopic() == null || request.getTopic().trim().isEmpty())
         {
             return "Lesson topic is required";
         }
@@ -17,7 +17,7 @@ public class LessonValidation {
         }
 
         // Lesson topic da ton tai
-        if(lessonRepo.findByTopicIgnoreCase(request.getTitle()).isPresent())
+        if(lessonRepo.findByTopicIgnoreCase(request.getTopic()).isPresent())
             return "Lesson topic already exists";
 
         return "";
@@ -28,7 +28,7 @@ public class LessonValidation {
         if(!checkLessonId(id).trim().isEmpty())
             return checkLessonId(id);
 
-        if (request.getTitle() == null || request.getTitle().trim().isEmpty())
+        if (request.getTopic() == null || request.getTopic().trim().isEmpty())
         {
             return "Lesson topic is required";
         }

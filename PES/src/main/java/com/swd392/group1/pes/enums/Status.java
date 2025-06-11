@@ -22,7 +22,9 @@ public enum Status {
     INACTIVE_TERM("inactive"), // chưa đến ngày
     CLOSED("closed"), // hết hạn đăng ký
     LOCKED_TERM("locked"),
-    ARCHIVED("archived");
+    ARCHIVED("archived"),
+
+    TRANSACTION_SUCCESSFUL("success");
 
     private final String value;
 }
