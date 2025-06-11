@@ -113,7 +113,19 @@ public class AdmissionServiceImpl implements AdmissionService {
                             data.put("status", term.getStatus());
 
                             AdmissionFee fee = admissionFeeRepo.findByAdmissionTerm_Id(term.getId()).orElse(null);
-                            data.put("fee", fee != null ? buildFeeMap(fee) : null);
+                            if (fee != null) {
+                                data.put("reservationFee", fee.getReservationFee());
+                                data.put("serviceFee", fee.getServiceFee());
+                                data.put("uniformFee", fee.getUniformFee());
+                                data.put("learningMaterialFee", fee.getLearningMaterialFee());
+                                data.put("facilityFee", fee.getFacilityFee());
+                            } else {
+                                data.put("reservationFee", 0);
+                                data.put("serviceFee", 0);
+                                data.put("uniformFee", 0);
+                                data.put("learningMaterialFee", 0);
+                                data.put("facilityFee", 0);
+                            }
 
                             return data;
                         }
@@ -188,9 +200,9 @@ public class AdmissionServiceImpl implements AdmissionService {
 
         term.setStartDate(request.getStartDate());
         term.setEndDate(request.getEndDate());
-        term.setYear(request.getYear());
+        term.setYear(LocalDateTime.now().getYear());
         term.setMaxNumberRegistration(request.getMaxNumberRegistration());
-        term.setGrade(Grade.valueOf(request.getGrade().toLowerCase()));
+        term.setGrade(Grade.valueOf(request.getGrade().toUpperCase()));
         admissionTermRepo.save(term);
 
 

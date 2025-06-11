@@ -16,8 +16,6 @@ import java.time.LocalDateTime;
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class UpdateAdmissionTermRequest {
     int id;
-    String name;
-    int year;
     LocalDateTime startDate;
     LocalDateTime endDate;
     int maxNumberRegistration;
