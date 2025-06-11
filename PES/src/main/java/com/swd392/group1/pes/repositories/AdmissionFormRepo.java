@@ -7,4 +7,9 @@ import java.util.List;
 
 public interface AdmissionFormRepo extends JpaRepository<AdmissionForm, Integer> {
     List<AdmissionForm> findAllByParent_IdAndStudent_Id(int parent_id, int student_id);
+    int countByAdmissionTerm_IdAndStatusAndTransaction_Status(
+            Integer termId,
+            String formStatus,
+            String transactionStatus
+    );
 }

@@ -56,10 +56,6 @@ public class Student {
     @JoinColumn(name = "`parent_id`")
     Parent parent;
 
-    @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "`form_id`")
-    AdmissionForm admissionForm;
-
     @OneToMany(mappedBy = "student", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
     @EqualsAndHashCode.Exclude
     @ToString.Exclude

@@ -35,7 +35,7 @@ public class Lesson {
 
     String description;
 
-    @OneToMany(mappedBy = "lesson", fetch = FetchType.LAZY )
+    @OneToMany(mappedBy = "lesson", fetch = FetchType.LAZY)
     @EqualsAndHashCode.Exclude
     @ToString.Exclude
     List<SyllabusLesson> syllabusLessonList;
