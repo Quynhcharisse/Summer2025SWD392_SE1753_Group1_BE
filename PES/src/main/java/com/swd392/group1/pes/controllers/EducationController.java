@@ -71,6 +71,18 @@ public class EducationController {
         return educationService.unassignLessonsFromSyllabus(id, request);
     }
 
+    @GetMapping("/syllabus/unassign-lessons")
+    @PreAuthorize("hasRole('education')")
+    public ResponseEntity<ResponseObject> viewLessonNotAssignedOfSyllabus(@RequestParam String id){
+        return educationService.viewLessonNotAssignedOfSyllabus(id);
+    }
+
+    @GetMapping("/syllabus/assign-lessons")
+    @PreAuthorize("hasRole('education')")
+    public ResponseEntity<ResponseObject> viewLessonAssignedOfSyllabus(@RequestParam String id){
+        return educationService.viewLessonAssignedOfSyllabus(id);
+    }
+
     @PostMapping("/lesson")
     @PreAuthorize("hasRole('education')")
     public ResponseEntity<ResponseObject> createLesson(@RequestBody CreateLessonRequest request) {
