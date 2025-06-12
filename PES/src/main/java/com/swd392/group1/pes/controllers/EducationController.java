@@ -73,14 +73,14 @@ public class EducationController {
 
     @GetMapping("/syllabus/unassign/lessons")
     @PreAuthorize("hasRole('education')")
-    public ResponseEntity<ResponseObject> viewLessonNotAssignedOfSyllabus(@RequestParam String id){
-        return educationService.viewLessonNotAssignedOfSyllabus(id);
+    public ResponseEntity<ResponseObject> viewLessonNotAssignedOfSyllabus(@RequestParam String id,  @RequestParam(value = "searchQuery", required = false) String searchQuery){
+        return educationService.viewLessonNotAssignedOfSyllabus(id, searchQuery);
     }
 
     @GetMapping("/syllabus/assign/lessons")
     @PreAuthorize("hasRole('education')")
-    public ResponseEntity<ResponseObject> viewLessonAssignedOfSyllabus(@RequestParam String id){
-        return educationService.viewLessonAssignedOfSyllabus(id);
+    public ResponseEntity<ResponseObject> viewLessonAssignedOfSyllabus(@RequestParam String id,  @RequestParam(value = "searchQuery", required = false) String searchQuery){
+        return educationService.viewLessonAssignedOfSyllabus(id, searchQuery);
     }
 
     @PostMapping("/lesson")

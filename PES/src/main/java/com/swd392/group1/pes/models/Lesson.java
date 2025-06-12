@@ -16,6 +16,7 @@ import lombok.NoArgsConstructor;
 import lombok.ToString;
 import lombok.experimental.FieldDefaults;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Data
@@ -30,10 +31,12 @@ public class Lesson {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     Integer id;
-
     String topic;
-
     String description;
+    String objective;
+    String toolsRequired;
+    int duration;
+    LocalDateTime createdAt;
 
     @OneToMany(mappedBy = "lesson", fetch = FetchType.LAZY)
     @EqualsAndHashCode.Exclude
