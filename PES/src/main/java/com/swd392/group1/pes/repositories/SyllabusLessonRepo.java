@@ -7,4 +7,5 @@ import java.util.List;
 
 public interface SyllabusLessonRepo extends JpaRepository<SyllabusLesson, Integer> {
   List<SyllabusLesson> findBySyllabusId(int id);
+  List<SyllabusLesson> findByLessonId(int id);
 }

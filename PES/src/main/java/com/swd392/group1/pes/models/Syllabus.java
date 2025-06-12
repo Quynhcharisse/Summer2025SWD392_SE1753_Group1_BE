@@ -21,6 +21,7 @@ import lombok.NoArgsConstructor;
 import lombok.ToString;
 import lombok.experimental.FieldDefaults;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Data
@@ -45,6 +46,8 @@ public class Syllabus {
     @Column(name = "`max_number_of_week`")
     int maxNumberOfWeek;
 
+    int maxHoursOfSyllabus;
+
     @Enumerated(EnumType.STRING)
     Grade grade;
 
@@ -57,4 +60,7 @@ public class Syllabus {
     @EqualsAndHashCode.Exclude
     @ToString.Exclude
     List<SyllabusLesson> syllabusLessonList;
+
+    LocalDateTime createdAt;
+
 }

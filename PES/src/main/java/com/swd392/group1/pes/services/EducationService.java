@@ -23,8 +23,8 @@ public interface EducationService {
     ResponseEntity<ResponseObject> createLesson(CreateLessonRequest request);
     ResponseEntity<ResponseObject> updateLesson(String id, UpdateLessonRequest request);
     ResponseEntity<ResponseObject> viewLessonList();
-    ResponseEntity<ResponseObject> viewLessonNotAssignedOfSyllabus(String id);
-    ResponseEntity<ResponseObject> viewLessonAssignedOfSyllabus(String id);
+    ResponseEntity<ResponseObject> viewLessonNotAssignedOfSyllabus(String id, String searchQuery);
+    ResponseEntity<ResponseObject> viewLessonAssignedOfSyllabus(String id, String searchQuery);
     ResponseEntity<ResponseObject> createEvent(CreateEventRequest request);
     ResponseEntity<ResponseObject> updateEvent(String id, UpdateEventRequest request);
     ResponseEntity<ResponseObject> viewEventList();

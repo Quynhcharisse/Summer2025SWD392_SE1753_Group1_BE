@@ -13,7 +13,6 @@ import com.swd392.group1.pes.repositories.AdmissionFormRepo;
 import com.swd392.group1.pes.repositories.ClassRepo;
 import com.swd392.group1.pes.repositories.EventRepo;
 import com.swd392.group1.pes.repositories.LessonRepo;
-import com.swd392.group1.pes.repositories.StudentRepo;
 import com.swd392.group1.pes.repositories.SyllabusLessonRepo;
 import com.swd392.group1.pes.repositories.SyllabusRepo;
 import com.swd392.group1.pes.requests.CreateLessonRequest;
@@ -40,7 +39,10 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -81,7 +83,9 @@ public class EducationServiceImpl implements EducationService {
                         .subject(request.getSubject())
                         .description(request.getDescription())
                         .maxNumberOfWeek(request.getMaxNumberOfWeek())
+                        .maxHoursOfSyllabus(request.getMaxNumberOfWeek() * 40)
                         .grade(getGradeFromName(request.getGrade()))
+                        .createdAt(LocalDateTime.now())
                         .build()
         );
 
@@ -138,6 +142,7 @@ public class EducationServiceImpl implements EducationService {
                         .subject(request.getSubject())
                         .description(request.getDescription())
                         .maxNumberOfWeek(request.getMaxNumberOfWeek())
+                        .maxHoursOfSyllabus(request.getMaxNumberOfWeek() * 40)
                         .grade(getGradeFromName(request.getGrade()))
                         .build()
         );
@@ -149,7 +154,6 @@ public class EducationServiceImpl implements EducationService {
                         .data(null)
                         .build()
         );
-
     }
 
     @Override
@@ -196,16 +200,15 @@ public class EducationServiceImpl implements EducationService {
         List<Syllabus> syllabuses = syllabusRepo.findAll();
 
         // Chia syllabus thành 2 nhóm
-        List<Syllabus> notAssigned = new ArrayList<>();
-        List<Syllabus> assigned = new ArrayList<>();
+        List<Syllabus> notAssigned = syllabuses.stream()
+                .filter(s -> !s.isAssigned())
+                .sorted(Comparator.comparing(Syllabus::getCreatedAt).reversed())
+                .toList();
 
-        for (Syllabus s : syllabuses) {
-            if (!s.isAssigned()) {
-                notAssigned.add(s);
-            } else {
-                assigned.add(s);
-            }
-        }
+        List<Syllabus> assigned = syllabuses.stream()
+                .filter(Syllabus::isAssigned)
+                .sorted(Comparator.comparing(Syllabus::getCreatedAt).reversed())
+                .toList();
 
         List<Map<String, Object>> syllabusesDetail = Stream.concat(
                 notAssigned.stream().map(this::buildSyllabusDetail),
@@ -290,6 +293,31 @@ public class EducationServiceImpl implements EducationService {
         //5. Tạo bản đồ bài học đã có trong syllabus
         Map<Integer, SyllabusLesson> existingLessonMap = syllabus.getSyllabusLessonList().stream()
                 .collect(Collectors.toMap(sl -> sl.getLesson().getId(), sl -> sl));
+
+        // 6. Tính tổng duration sau khi gán thêm
+        int existingDuration = syllabus.getSyllabusLessonList().stream()
+                .mapToInt(sl -> sl.getLesson().getDuration())
+                .sum();
+
+        int addedDuration = validLessons.stream()
+                .filter(lesson -> !existingLessonMap.containsKey(lesson.getId()))
+                .mapToInt(Lesson::getDuration)
+                .sum();
+
+        int totalAfterAssign = existingDuration + addedDuration;
+        int maxAllowed = syllabus.getMaxHoursOfSyllabus();
+
+        if (totalAfterAssign > maxAllowed) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(
+                    ResponseObject.builder()
+                            .message("Cannot assign lessons.\n Total duration would be " + totalAfterAssign +
+                                    " hours which exceeds the allowed limit (" + maxAllowed + " hours) for syllabus '" +
+                                    syllabus.getSubject() + "'.")
+                            .success(false)
+                            .data(null)
+                            .build()
+            );
+        }
 
         List<SyllabusLesson> updatedList = syllabus.getSyllabusLessonList();
         int newlyAddedCount = 0;
@@ -412,6 +440,7 @@ public class EducationServiceImpl implements EducationService {
         data.put("subject",syllabus.getSubject());
         data.put("description",syllabus.getDescription());
         data.put("maxNumberOfWeek",syllabus.getMaxNumberOfWeek());
+        data.put("maxHoursOfSyllabus", syllabus.getMaxHoursOfSyllabus());
         data.put("grade",syllabus.getGrade());
         data.put("isAssigned",syllabus.isAssigned());
         return data;
@@ -429,10 +458,18 @@ public class EducationServiceImpl implements EducationService {
                             .build()
             );
         }
+        if (request.getToolsRequired() == null || request.getToolsRequired().trim().isEmpty()) {
+            request.setToolsRequired("N/A");
+                    }
         Lesson lesson = Lesson.builder()
-                .topic(request.getTopic())
-                .description(request.getDescription())
-                .build();
+                    .topic(request.getTopic())
+                    .description(request.getDescription())
+                    .duration(request.getDuration())
+                    .objective(request.getObjective())
+                    .toolsRequired(request.getToolsRequired())
+                    .createdAt(LocalDateTime.now())
+                    .build();
+
         lessonRepo.save(lesson);
         return ResponseEntity.ok().body(
                 ResponseObject.builder()
@@ -477,8 +514,25 @@ public class EducationServiceImpl implements EducationService {
             );
         }
 
+        List<String> violatedSyllabuses = checkDurationExceedSyllabus(lesson, request.getDuration());
+        if (!violatedSyllabuses.isEmpty())
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(
+                    ResponseObject.builder()
+                            .message("Cannot update duration. The following syllabuses would exceed max hours:\n" +
+                                    String.join("\n", violatedSyllabuses))
+                            .success(false)
+                            .data(null)
+                            .build()
+            );
         lesson.setTopic(request.getTopic());
         lesson.setDescription(request.getDescription());
+        lesson.setObjective(request.getObjective());
+        lesson.setDuration(request.getDuration());
+        if (request.getToolsRequired() == null || request.getToolsRequired().trim().isEmpty()) {
+            lesson.setToolsRequired("N/A");
+        } else {
+            lesson.setToolsRequired(request.getToolsRequired());
+        }
         lessonRepo.save(lesson);
 
         return ResponseEntity.ok().body(
@@ -493,6 +547,8 @@ public class EducationServiceImpl implements EducationService {
     @Override
     public ResponseEntity<ResponseObject> viewLessonList() {
         List<Lesson> lessons = lessonRepo.findAll();
+        // Sắp xếp theo createdAt giảm dần
+        lessons.sort(Comparator.comparing(Lesson::getCreatedAt).reversed());
         List<Map<String,Object>> lessonDetails = lessons.stream()
                 .map(this::buildLessonDetail)
                 .toList();
@@ -507,9 +563,8 @@ public class EducationServiceImpl implements EducationService {
     }
 
     @Override
-    public ResponseEntity<ResponseObject> viewLessonNotAssignedOfSyllabus(String id) {
+    public ResponseEntity<ResponseObject> viewLessonNotAssignedOfSyllabus(String id, String searchQuery) {
         String error = CheckSyllabusId.validate(id);
-
         if (!error.isEmpty())
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
                     ResponseObject.builder()
@@ -535,8 +590,14 @@ public class EducationServiceImpl implements EducationService {
                 .collect(Collectors.toSet());
 
         List<Lesson> allLessons = lessonRepo.findAll();
+        String q = (searchQuery == null ? "" : searchQuery.trim().toLowerCase());
         List<Map<String,Object>> unassignedLessons = allLessons.stream()
                 .filter(l -> !assignedLessonIds.contains(l.getId()))
+                .filter(l ->
+                        // a) Nếu q.empty → trả về true cho tất cả
+                        q.isEmpty()
+                                // b) Hoặc topic chứa q
+                                || l.getTopic().toLowerCase().contains(q))
                 .map(this::buildLessonDetail)
                 .toList();
 
@@ -550,7 +611,7 @@ public class EducationServiceImpl implements EducationService {
     }
 
     @Override
-    public ResponseEntity<ResponseObject> viewLessonAssignedOfSyllabus(String id) {
+    public ResponseEntity<ResponseObject> viewLessonAssignedOfSyllabus(String id, String searchQuery) {
 
         String error = CheckSyllabusId.validate(id);
 
@@ -575,8 +636,14 @@ public class EducationServiceImpl implements EducationService {
 
         // Lấy danh sách bài học đã gán
         List<SyllabusLesson> assignedLinks = syllabusLessonRepo.findBySyllabusId(Integer.parseInt(id));
+        String q = (searchQuery == null ? "" : searchQuery.trim().toLowerCase());
         List<Map<String, Object>> assignedLessons = assignedLinks.stream()
                 .map(SyllabusLesson::getLesson)
+                .filter(l -> {
+                    if (q.isEmpty()) return true;
+                    String topic = l.getTopic().toLowerCase();
+                    return topic.contains(q);
+                })
                 .map(this::buildLessonDetail)
                 .toList();
 
@@ -594,6 +661,9 @@ public class EducationServiceImpl implements EducationService {
         data.put("id", lesson.getId());
         data.put("topic",lesson.getTopic());
         data.put("description",lesson.getDescription());
+        data.put("objective",lesson.getObjective());
+        data.put("duration", lesson.getDuration());
+        data.put("Tools Required",lesson.getToolsRequired());
         return data;
     }
 
@@ -737,6 +807,32 @@ public class EducationServiceImpl implements EducationService {
             }
         }
         return null;
+    }
+
+    private List<String> checkDurationExceedSyllabus(Lesson lesson, int newDuration) {
+
+        if (lesson.getDuration() == newDuration) return Collections.emptyList();
+
+        List<SyllabusLesson> assignedLinks = syllabusLessonRepo.findByLessonId(lesson.getId());
+        List<String> violatedSyllabuses = new ArrayList<>();
+
+        for (SyllabusLesson sl : assignedLinks) {
+            Syllabus syllabus = sl.getSyllabus();
+            int maxAllowed = syllabus.getMaxHoursOfSyllabus();
+            List<SyllabusLesson> allLessons = syllabus.getSyllabusLessonList();
+
+            int totalDuration = 0;
+            for (SyllabusLesson sll : allLessons) {
+                Lesson l = sll.getLesson();
+                totalDuration += (l.getId().equals(lesson.getId()) ? newDuration : l.getDuration());
+            }
+
+            if (totalDuration > maxAllowed) {
+                violatedSyllabuses.add(syllabus.getSubject() + " (" + totalDuration + "h > " + maxAllowed + "h)");
+            }
+        }
+
+        return violatedSyllabuses;
     }
 
 }

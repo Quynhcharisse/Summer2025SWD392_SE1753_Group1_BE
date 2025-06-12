@@ -16,6 +16,14 @@ public class LessonValidation {
             return "Lesson description is required";
         }
 
+        if (request.getObjective() == null || request.getObjective().trim().isEmpty()) {
+            return "Lesson objective is required";
+        }
+
+        if (request.getDuration() <= 0) {
+            return "Lesson duration must be greater than zero.";
+        }
+
         // Lesson topic da ton tai
         if(lessonRepo.findByTopicIgnoreCase(request.getTopic()).isPresent())
             return "Lesson topic already exists";
@@ -35,6 +43,14 @@ public class LessonValidation {
 
         if (request.getDescription() == null ) {
             return "Lesson description is required";
+        }
+
+        if (request.getObjective() == null || request.getObjective().trim().isEmpty()) {
+            return "Lesson objective is required";
+        }
+
+        if (request.getDuration() <= 0) {
+            return "Lesson duration must be greater than zero.";
         }
 
         return "";

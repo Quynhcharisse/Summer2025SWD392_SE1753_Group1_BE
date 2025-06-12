@@ -13,6 +13,9 @@ import lombok.experimental.FieldDefaults;
 @Builder
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class CreateLessonRequest {
-    private String topic;
-    private String description;
+     String topic;
+     String description;
+     int duration;
+     String objective;
+     String toolsRequired;
 }
