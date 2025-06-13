@@ -41,7 +41,7 @@ public class AdmissionServiceImpl implements AdmissionService {
 
     @Override
     public ResponseEntity<ResponseObject> createAdmissionTerm(CreateAdmissionTermRequest request) {
-
+        // 1. Validate các field cơ bản (ngày, số lượng, grade rỗng...)
         String error = AdmissionTermValidation.createTermValidate(request);
         if (!error.isEmpty()) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
@@ -52,7 +52,38 @@ public class AdmissionServiceImpl implements AdmissionService {
                             .build()
             );
         }
+        // 2. Chuyển đổi grade và tính năm hiện tại
+        Grade grade = Grade.valueOf(request.getGrade().toUpperCase());
+        int currentYear = LocalDate.now().getYear();
 
+
+        // 3. Mỗi năm, mỗi grade chỉ được phép có 1 đợt tuyển sinh
+        long termCountThisYear = admissionTermRepo.countByYearAndGrade(currentYear, grade);
+        if (termCountThisYear >= 1) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(
+                    ResponseObject.builder()
+                            .message("Admission term already exists for grade " + grade + " in year " + currentYear)
+                            .success(false)
+                            .data(null)
+                            .build()
+            );
+        }
+
+        // 4. Kiểm tra trùng thời gian với cùng grade
+        List<AdmissionTerm> termsWithSameGrade = admissionTermRepo.findByGrade(grade);
+        for (AdmissionTerm t : termsWithSameGrade) {
+            if (datesOverlap(request.getStartDate(), request.getEndDate(), t.getStartDate(), t.getEndDate())) {
+                return ResponseEntity.status(HttpStatus.CONFLICT).body(
+                        ResponseObject.builder()
+                                .message("Time period overlaps with another term of the same grade")
+                                .success(false)
+                                .data(null)
+                                .build()
+                );
+            }
+        }
+
+        // Nếu hợp lệ, tiếp tục tạo term
         AdmissionTerm term = admissionTermRepo.save(
                 AdmissionTerm.builder()
                         .grade(Grade.valueOf(request.getGrade().toUpperCase()))
@@ -64,26 +95,65 @@ public class AdmissionServiceImpl implements AdmissionService {
                         .build()
         );
 
-
-        admissionFeeRepo.save(AdmissionFee.builder()
-                .admissionTerm(term)
-                .reservationFee(request.getReservationFee())
-                .serviceFee(request.getServiceFee())
-                .uniformFee(request.getUniformFee())
-                .learningMaterialFee(request.getLearningMaterialFee())
-                .facilityFee(request.getFacilityFee())
-                .build()
-        );
+        // 6. Gán phí mặc định cho grade này bằng logic tách riêng
+        ResponseEntity<ResponseObject> feeResult = handleDefaultFeeLogic(term);
+        if (feeResult != null) return feeResult;
 
 
         return ResponseEntity.status(HttpStatus.OK).body(
                 ResponseObject.builder()
-                        .message("Create term and fee successfully")
+                        .message("Create term successfully")
                         .success(true)
                         .data(null)
                         .build()
         );
     }
+
+    private boolean datesOverlap(LocalDateTime start1, LocalDateTime end1, LocalDateTime start2, LocalDateTime end2) {
+        return !(end1.isBefore(start2) || start1.isAfter(end2));
+    }
+
+    private AdmissionFee cloneDefaultFee(AdmissionFee defaultFee, AdmissionTerm term) {
+        return AdmissionFee.builder()
+                .admissionTerm(term)
+                .grade(term.getGrade())
+                .reservationFee(defaultFee.getReservationFee())
+                .serviceFee(defaultFee.getServiceFee())
+                .uniformFee(defaultFee.getUniformFee())
+                .learningMaterialFee(defaultFee.getLearningMaterialFee())
+                .facilityFee(defaultFee.getFacilityFee())
+                .build();
+    }
+
+    private ResponseEntity<ResponseObject> handleDefaultFeeLogic(AdmissionTerm term) {
+        List<AdmissionFee> defaultFees = admissionFeeRepo.findByAdmissionTermIsNullAndGrade(term.getGrade());
+
+        if (defaultFees.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(
+                    ResponseObject.builder()
+                            .message("Missing default fee for grade: " + term.getGrade())
+                            .success(false)
+                            .data(null)
+                            .build()
+            );
+        }
+
+        if (defaultFees.size() > 1) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(
+                    ResponseObject.builder()
+                            .message("Multiple default fees found for grade: " + term.getGrade())
+                            .success(false)
+                            .data(null)
+                            .build()
+            );
+        }
+
+        AdmissionFee feeToSave = cloneDefaultFee(defaultFees.get(0), term);
+        admissionFeeRepo.save(feeToSave);
+
+        return null;
+    }
+
 
 
     @Override
@@ -151,17 +221,6 @@ public class AdmissionServiceImpl implements AdmissionService {
         }
     }
 
-    private Map<String, Object> buildFeeMap(AdmissionFee fee) {
-        Map<String, Object> map = new HashMap<>();
-        map.put("reservationFee", fee.getReservationFee());
-        map.put("serviceFee", fee.getServiceFee());
-        map.put("uniformFee", fee.getUniformFee());
-        map.put("learningMaterialFee", fee.getLearningMaterialFee());
-        map.put("facilityFee", fee.getFacilityFee());
-        return map;
-    }
-
-
     @Override
     public ResponseEntity<ResponseObject> updateAdmissionTerm(UpdateAdmissionTermRequest request) {
 
@@ -198,6 +257,26 @@ public class AdmissionServiceImpl implements AdmissionService {
             );
         }
 
+        Grade grade = Grade.valueOf(request.getGrade().toUpperCase());
+
+        // Kiểm tra nếu có term khác trùng thời gian trong cùng grade
+        List<AdmissionTerm> otherTerms = admissionTermRepo.findByGrade(grade).stream()
+                .filter(t -> !t.getId().equals(term.getId()))
+                .toList();
+
+        for (AdmissionTerm t : otherTerms) {
+            if (datesOverlap(request.getStartDate(), request.getEndDate(), t.getStartDate(), t.getEndDate())) {
+                return ResponseEntity.status(HttpStatus.CONFLICT).body(
+                        ResponseObject.builder()
+                                .message("Time period overlaps with another term of the same grade")
+                                .success(false)
+                                .data(null)
+                                .build()
+                );
+            }
+        }
+
+        //Cập nhật term
         term.setStartDate(request.getStartDate());
         term.setEndDate(request.getEndDate());
         term.setYear(LocalDateTime.now().getYear());
@@ -205,29 +284,64 @@ public class AdmissionServiceImpl implements AdmissionService {
         term.setGrade(Grade.valueOf(request.getGrade().toUpperCase()));
         admissionTermRepo.save(term);
 
-
-        AdmissionFee fee = admissionFeeRepo.findByAdmissionTerm_Id(request.getId()).orElse(null);
-        if (fee == null) {
-            fee = AdmissionFee.builder()
-                    .admissionTerm(term)
-                    .build();
-        }
-        fee.setReservationFee(request.getReservationFee());
-        fee.setServiceFee(request.getServiceFee());
-        fee.setUniformFee(request.getUniformFee());
-        fee.setLearningMaterialFee(request.getLearningMaterialFee());
-        fee.setFacilityFee(request.getFacilityFee());
-        admissionFeeRepo.save(fee);
-
         return ResponseEntity.status(HttpStatus.OK).body(
                 ResponseObject.builder()
-                        .message("Update term and fee successfully")
+                        .message("Update term successfully")
                         .success(true)
                         .data(null)
                         .build()
         );
     }
 
+    @Override
+    public ResponseEntity<ResponseObject> getDefaultFeeByGrade(String grade) {
+
+        if (!isValidGrade(grade)) {
+            return ResponseEntity.badRequest().body(
+                    ResponseObject.builder()
+                            .message("Invalid grade: " + grade)
+                            .success(false)
+                            .data(null)
+                            .build()
+            );
+        }
+
+        Grade g = Grade.valueOf(grade.toUpperCase());
+        AdmissionFee fee = admissionFeeRepo.findFirstByAdmissionTermIsNullAndGrade(g).orElse(null);
+        if (fee == null) {
+            return ResponseEntity.badRequest().body(
+                    ResponseObject.builder()
+                            .message("Default fee not found for grade" + g)
+                            .success(false)
+                            .data(null)
+                            .build()
+            );
+        }
+
+        Map<String, Object> feeData = new HashMap<>();
+        feeData.put("reservationFee", fee.getReservationFee());
+        feeData.put("serviceFee", fee.getServiceFee());
+        feeData.put("uniformFee", fee.getUniformFee());
+        feeData.put("learningMaterialFee", fee.getLearningMaterialFee());
+        feeData.put("facilityFee", fee.getFacilityFee());
+
+        return ResponseEntity.ok(
+                ResponseObject.builder()
+                        .message("Default fee fetched successfully")
+                        .success(true)
+                        .data(feeData)
+                        .build());
+
+    }
+
+    public boolean isValidGrade(String grade) {
+        for (Grade g : Grade.values()) {
+            if (g.name().equalsIgnoreCase(grade)) {
+                return true;
+            }
+        }
+        return false;
+    }
 
     @Override
     public ResponseEntity<ResponseObject> viewAdmissionFormList() {
@@ -263,6 +377,9 @@ public class AdmissionServiceImpl implements AdmissionService {
                         .build()
         );
     }
+
+
+
 
     @Override
     public ResponseEntity<ResponseObject> processAdmissionFormList(ProcessAdmissionFormRequest request) {

@@ -390,7 +390,7 @@ public class ParentServiceImpl implements ParentService {
         childData.put("gender", student.getGender());
         childData.put("dateOfBirth", student.getDateOfBirth());
         childData.put("placeOfBirth", student.getPlaceOfBirth());
-        childData.put("isStudent", student.isStudent()); //nhớ hiển thị trên UI: child status : processing / approved
+        childData.put("isStudent", student.isStudent()); //nhớ hiển thị trên UI: child status : processing / approved || Đang xử lý / Đã nhập học
 
         return ResponseEntity.status(HttpStatus.OK).body(
                 ResponseObject.builder()

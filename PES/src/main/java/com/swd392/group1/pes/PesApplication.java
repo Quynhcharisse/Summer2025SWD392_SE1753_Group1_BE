@@ -1,9 +1,13 @@
 package com.swd392.group1.pes;
 
+import com.swd392.group1.pes.enums.Grade;
 import com.swd392.group1.pes.enums.Role;
 import com.swd392.group1.pes.enums.Status;
 import com.swd392.group1.pes.models.Account;
+import com.swd392.group1.pes.models.AdmissionFee;
 import com.swd392.group1.pes.repositories.AccountRepo;
+import com.swd392.group1.pes.repositories.AdmissionFeeRepo;
+import lombok.RequiredArgsConstructor;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -12,7 +16,10 @@ import org.springframework.context.annotation.Bean;
 import java.time.LocalDate;
 
 @SpringBootApplication
+@RequiredArgsConstructor
 public class PesApplication {
+
+    private final AdmissionFeeRepo admissionFeeRepo;
 
     public static void main(String[] args) {
         SpringApplication.run(PesApplication.class, args);
@@ -94,6 +101,27 @@ public class PesApplication {
                         .build();
                 accountRepo.save(parent);
             }
+
+            //Set phí mặc định
+            seedAdmissionFeeIfMissing(Grade.SEED, 800_000, 80_000, 100_000, 100_000, 100_000);
+            seedAdmissionFeeIfMissing(Grade.BUD, 1_000_000, 100_000, 110_000, 110_000, 110_000);
+            seedAdmissionFeeIfMissing(Grade.LEAF, 1_200_000, 120_000, 120_000, 120_000, 120_000);
+
         };
+    }
+
+    private void seedAdmissionFeeIfMissing(Grade grade,
+                                           double reservationFee, double serviceFee,
+                                           double uniformFee, double materialFee, double facilityFee) {
+        if (admissionFeeRepo.findByAdmissionTermIsNullAndGrade(grade).isEmpty()) {
+            admissionFeeRepo.save(AdmissionFee.builder()
+                    .grade(grade)
+                    .reservationFee(reservationFee)
+                    .serviceFee(serviceFee)
+                    .uniformFee(uniformFee)
+                    .learningMaterialFee(materialFee)
+                    .facilityFee(facilityFee)
+                    .build());
+        }
     }
 }

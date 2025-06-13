@@ -15,5 +15,7 @@ public interface AdmissionService {
 
     ResponseEntity<ResponseObject> viewAdmissionFormList();
 
+    ResponseEntity<ResponseObject> getDefaultFeeByGrade(String grade);
+
     ResponseEntity<ResponseObject> processAdmissionFormList(ProcessAdmissionFormRequest request);
 }
