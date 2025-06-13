@@ -1,7 +1,10 @@
 package com.swd392.group1.pes.models;
 
+import com.swd392.group1.pes.enums.Grade;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -45,7 +48,11 @@ public class AdmissionFee {
     @Column(name = "`facility_fee`")
     double facilityFee;
 
+    @Enumerated(EnumType.STRING)
+    Grade grade;
+
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "`term_id`")
     AdmissionTerm admissionTerm;
+
 }
