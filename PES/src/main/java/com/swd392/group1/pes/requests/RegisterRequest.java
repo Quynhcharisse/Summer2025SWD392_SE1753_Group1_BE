@@ -20,4 +20,7 @@ public class RegisterRequest {
     String phone;
     String gender;
     String identityNumber;
+    String address;
+    String job;
+    String relationshipToChild;
 }
