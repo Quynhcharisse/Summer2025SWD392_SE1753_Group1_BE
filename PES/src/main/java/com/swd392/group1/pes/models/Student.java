@@ -46,9 +46,6 @@ public class Student {
     @Column(name = "`place_of_birth`")
     String placeOfBirth;
 
-    @Column(name = "`profile_image`")
-    String profileImage;
-
     boolean isStudent;
 
     @ManyToOne(fetch = FetchType.LAZY)
