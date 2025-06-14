@@ -20,10 +20,10 @@ public class AdmissionTermValidation {
             return "Start date must be before end date";
         }
 
-        //Ngày bắt đầu không được ở trong quá khứ
-        if (request.getStartDate().isBefore(LocalDateTime.now())) {
-            return "Start date must not be in the past";
-        }
+//        //Ngày bắt đầu không được ở trong quá khứ
+//        if (request.getStartDate().isBefore(LocalDateTime.now())) {
+//            return "Start date must not be in the past";
+//        }
 
         if (request.getMaxNumberRegistration() <= 0 || request.getMaxNumberRegistration() > 1000) {
             return "Max number registration must be greater than 0 and less than 1000";
@@ -46,10 +46,10 @@ public class AdmissionTermValidation {
             return "Start date must be before end date";
         }
 
-        //Ngày bắt đầu không được ở trong quá khứ
-        if (request.getStartDate().isBefore(LocalDateTime.now())) {
-            return "Start date must not be in the past";
-        }
+//        //Ngày bắt đầu không được ở trong quá khứ
+//        if (request.getStartDate().isBefore(LocalDateTime.now())) {
+//            return "Start date must not be in the past";
+//        }
 
         if (request.getMaxNumberRegistration() <= 0 || request.getMaxNumberRegistration() > 1000) {
             return "Max number registration must be greater than 0 and less than 1000";
