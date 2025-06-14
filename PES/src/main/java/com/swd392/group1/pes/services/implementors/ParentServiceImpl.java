@@ -305,6 +305,7 @@ public class ParentServiceImpl implements ParentService {
         }
 
         // Tìm parent dựa vào account ID
+        // Tìm parent dựa vào account ID
         Parent parent = parentRepo.findByAccount_Id(account.getId()).orElse(null);
         if (parent == null) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
