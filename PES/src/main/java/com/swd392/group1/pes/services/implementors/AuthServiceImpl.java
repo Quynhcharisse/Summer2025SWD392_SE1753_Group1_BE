@@ -3,7 +3,9 @@ package com.swd392.group1.pes.services.implementors;
 import com.swd392.group1.pes.enums.Role;
 import com.swd392.group1.pes.enums.Status;
 import com.swd392.group1.pes.models.Account;
+import com.swd392.group1.pes.models.Parent;
 import com.swd392.group1.pes.repositories.AccountRepo;
+import com.swd392.group1.pes.repositories.ParentRepo;
 import com.swd392.group1.pes.requests.ForgotPasswordRequest;
 import com.swd392.group1.pes.requests.LoginRequest;
 import com.swd392.group1.pes.requests.RegisterRequest;
@@ -30,7 +32,6 @@ import java.util.Map;
 @Service
 @RequiredArgsConstructor
 public class AuthServiceImpl implements AuthService {
-
     @Value("${security-access-expiration}")
     private long accessExpiration;
 
@@ -40,6 +41,8 @@ public class AuthServiceImpl implements AuthService {
     private final AccountRepo accountRepo;
 
     private final JWTService jwtService;
+
+    private final ParentRepo parentRepo;
 
     @Override
     public ResponseEntity<ResponseObject> login(LoginRequest request, HttpServletResponse response) {
@@ -151,6 +154,14 @@ public class AuthServiceImpl implements AuthService {
         account.setCreatedAt(LocalDate.now());
 
         accountRepo.save(account);
+
+        Parent parent = Parent.builder()
+                .address(request.getAddress())
+                .job(request.getJob())
+                .relationshipToChild(request.getRelationshipToChild())
+                .account(account)
+                .build();
+        parentRepo.save(parent);
 
         return ResponseEntity.status(HttpStatus.OK).body(
                 ResponseObject.builder()
