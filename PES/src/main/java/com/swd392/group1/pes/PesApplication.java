@@ -5,8 +5,10 @@ import com.swd392.group1.pes.enums.Role;
 import com.swd392.group1.pes.enums.Status;
 import com.swd392.group1.pes.models.Account;
 import com.swd392.group1.pes.models.AdmissionFee;
+import com.swd392.group1.pes.models.Parent;
 import com.swd392.group1.pes.repositories.AccountRepo;
 import com.swd392.group1.pes.repositories.AdmissionFeeRepo;
+import com.swd392.group1.pes.repositories.ParentRepo;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
@@ -20,6 +22,7 @@ import java.time.LocalDate;
 public class PesApplication {
 
     private final AdmissionFeeRepo admissionFeeRepo;
+    private final ParentRepo parentRepo;
 
     public static void main(String[] args) {
         SpringApplication.run(PesApplication.class, args);
@@ -100,6 +103,16 @@ public class PesApplication {
                         .createdAt(LocalDate.now())
                         .build();
                 accountRepo.save(parent);
+
+                Parent parent1 = Parent.builder()
+                        .account(parent)
+                        .address("66/11 Le Trong Tan, Binh Hung Hoa")
+                        .job("IT")
+                        .relationshipToChild("father")
+                        .residenceProofUrl("666/11 Le trong tan, Binh Hung Hoa")
+                        .build();
+
+                parentRepo.save(parent1);
             }
 
             //Set phí mặc định
