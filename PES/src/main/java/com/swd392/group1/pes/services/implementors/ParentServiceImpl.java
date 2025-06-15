@@ -203,13 +203,18 @@ public class ParentServiceImpl implements ParentService {
                         .build()
         );
 
-        //Gửi email xác nhận
-        mailService.sendMail(
-                account.getEmail(),
-                "Admission Form Submitted",
-                "Dear Parent,\n\nYour admission form for your child has been successfully submitted on " + LocalDateTime.now() + ".\n\nRegards,\nSunShine Preschool"
-        );
+        try {
+            //Gửi email xác nhận
+            mailService.sendMail(
+                    account.getEmail(),
+                    "Admission Form Submitted",
+                    "Dear Parent,\n\nYour admission form for your child has been successfully submitted on " + LocalDateTime.now() + ".\n\nRegards,\nSunShine Preschool"
+            );
 
+        } catch (Exception e) {
+            // Log lỗi nhưng không ảnh hưởng đến luồng xử lý chính
+            System.err.println("Failed to send email notification: " + e.getMessage());
+        }
 
         return ResponseEntity.status(HttpStatus.OK).body(
                 ResponseObject.builder()
@@ -240,7 +245,7 @@ public class ParentServiceImpl implements ParentService {
         String error = EditAdmissionFormValidation.canceledValidate(request, account, admissionFormRepo);
 
         if (!error.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
                     ResponseObject.builder()
                             .message(error)
                             .success(false)
@@ -249,7 +254,7 @@ public class ParentServiceImpl implements ParentService {
             );
         }
 
-        AdmissionForm form = admissionFormRepo.findById(request.getId()).orElse(null);
+        AdmissionForm form = admissionFormRepo.findById(request.getFormId()).orElse(null);
 
         if (form == null) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
@@ -261,7 +266,7 @@ public class ParentServiceImpl implements ParentService {
             );
         }
 
-        if (!form.getStatus().equals(Status.PENDING_APPROVAL.getValue())) {
+        if (!form.getStatus().equals(Status.PENDING_APPROVAL.getValue().toLowerCase())) {
             return ResponseEntity.status(HttpStatus.CONFLICT).body(
                     ResponseObject.builder()
                             .message("Only pending approval forms can be cancelled.")
@@ -275,11 +280,16 @@ public class ParentServiceImpl implements ParentService {
         admissionFormRepo.save(form);
 
         //Gửi email thông báo hủy
-        mailService.sendMail(
-                account.getEmail(),
-                "Admission Form Cancelled",
-                "Dear Parent,\n\nYour admission form has been cancelled successfully. If this was a mistake, you can submit again.\n\nRegards,\nSunShine Preschool"
-        );
+        try {
+            mailService.sendMail(
+                    account.getEmail(),
+                    "Admission Form Cancelled",
+                    "Dear Parent,\n\nYour admission form has been cancelled successfully. If this was a mistake, you can submit again.\n\nRegards,\nSunShine Preschool"
+            );
+        } catch (Exception e) {
+            // Log lỗi nhưng không ảnh hưởng đến luồng xử lý chính
+            System.err.println("Failed to send email notification: " + e.getMessage());
+        }
 
         return ResponseEntity.status(HttpStatus.OK).body(
                 ResponseObject.builder()
@@ -304,7 +314,6 @@ public class ParentServiceImpl implements ParentService {
             );
         }
 
-        // Tìm parent dựa vào account ID
         // Tìm parent dựa vào account ID
         Parent parent = parentRepo.findByAccount_Id(account.getId()).orElse(null);
         if (parent == null) {
@@ -384,7 +393,6 @@ public class ParentServiceImpl implements ParentService {
                         .build());
 
 
-
         Map<String, Object> childData = new HashMap<>();
         childData.put("id", student.getId());
         childData.put("name", student.getName());
@@ -448,7 +456,7 @@ public class ParentServiceImpl implements ParentService {
                             .build());
         }
 
-        if(student.isStudent()) {
+        if (student.isStudent()) {
             return ResponseEntity.status(HttpStatus.CONFLICT).body(
                     ResponseObject.builder()
                             .message("Cannot update child info after submitting admission form")

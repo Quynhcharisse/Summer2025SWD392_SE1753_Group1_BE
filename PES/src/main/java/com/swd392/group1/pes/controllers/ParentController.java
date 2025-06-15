@@ -39,7 +39,7 @@ public class ParentController {
 
     @PutMapping("/form/cancel")
     @PreAuthorize("hasRole('parent')")
-    public ResponseEntity<ResponseObject> cancelAdmissionForm(CancelAdmissionForm request, HttpServletRequest httpRequest) {
+    public ResponseEntity<ResponseObject> cancelAdmissionForm(@RequestBody CancelAdmissionForm request, HttpServletRequest httpRequest) {
         return parentService.cancelAdmissionForm(request, httpRequest);
     }
 
