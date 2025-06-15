@@ -247,7 +247,7 @@ public class AdmissionServiceImpl implements AdmissionService {
             );
         }
 
-        if (!term.getStatus().equals(Status.INACTIVE_TERM.getValue())) {
+        if (!term.getStatus().equals(Status.LOCKED_TERM.getValue())) {
             return ResponseEntity.status(HttpStatus.CONFLICT).body(
                     ResponseObject.builder()
                             .message("Only inactive terms can be updated")
@@ -379,8 +379,6 @@ public class AdmissionServiceImpl implements AdmissionService {
     }
 
 
-
-
     @Override
     public ResponseEntity<ResponseObject> processAdmissionFormList(ProcessAdmissionFormRequest request) {
         String error = AdmissionFormValidation.processFormByManagerValidate(request, admissionFormRepo);
@@ -395,7 +393,6 @@ public class AdmissionServiceImpl implements AdmissionService {
         }
 
         AdmissionForm form = admissionFormRepo.findById(request.getId()).orElse(null);
-
         if (form == null) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
                     ResponseObject.builder()
@@ -406,8 +403,7 @@ public class AdmissionServiceImpl implements AdmissionService {
             );
         }
 
-        //lấy email ph từ account
-        String parentEmail = form.getParent().getAccount().getEmail();//account phải có email
+        String parentEmail = form.getParent().getAccount().getEmail();
 
         if (form.getStudent() == null) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
@@ -423,27 +419,35 @@ public class AdmissionServiceImpl implements AdmissionService {
             form.setStatus(Status.APPROVED.getValue());
 
             Student student = form.getStudent();
-            student.setStudent(true);// Đánh dấu đã trở thành học sinh chính thức
+            student.setStudent(true);
             studentRepo.save(student);
 
-            //gửi email thành công
-            mailService.sendMail(
-                    parentEmail,
-                    "Admission Approved",
-                    "Congratulations!\n\nThe admission form for " + form.getStudent().getName() +
-                            " has been approved.\nWe look forward to seeing you at our school!"
-            );
+            try {
+                mailService.sendMail(
+                        parentEmail,
+                        "Admission Approved",
+                        "Congratulations!\n\nThe admission form for " + form.getStudent().getName() +
+                                " has been approved.\nWe look forward to seeing you at our school!"
+                );
+            } catch (Exception e) {
+                System.err.println("Failed to send approval email: " + e.getMessage());
+                // Optional: log error or report
+            }
+
         } else {
             form.setStatus(Status.REJECTED.getValue());
             form.setCancelReason(request.getReason());
 
-            //gửi email từ chối
-            mailService.sendMail(
-                    parentEmail,
-                    "Admission Rejected",
-                    "We're sorry.\n\nThe admission form for " + form.getStudent().getName() +
-                            " has been rejected.\nReason: " + request.getReason()
-            );
+            try {
+                mailService.sendMail(
+                        parentEmail,
+                        "Admission Rejected",
+                        "We're sorry.\n\nThe admission form for " + form.getStudent().getName() +
+                                " has been rejected.\nReason: " + request.getReason()
+                );
+            } catch (Exception e) {
+                System.err.println("Failed to send rejection email: " + e.getMessage());
+            }
         }
 
         admissionFormRepo.save(form);

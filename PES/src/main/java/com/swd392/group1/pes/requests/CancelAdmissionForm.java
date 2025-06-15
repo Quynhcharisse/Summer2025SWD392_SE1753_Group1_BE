@@ -13,5 +13,5 @@ import lombok.experimental.FieldDefaults;
 @Builder
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class CancelAdmissionForm {
-    int id;
+    int formId;
 }

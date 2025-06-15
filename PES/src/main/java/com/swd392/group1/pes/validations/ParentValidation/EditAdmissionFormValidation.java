@@ -9,7 +9,7 @@ import com.swd392.group1.pes.requests.CancelAdmissionForm;
 public class EditAdmissionFormValidation {
     // validation cho cancel đơn
     public static String canceledValidate(CancelAdmissionForm request, Account account, AdmissionFormRepo admissionFormRepo) {
-        AdmissionForm form = admissionFormRepo.findById(request.getId()).orElse(null);
+        AdmissionForm form = admissionFormRepo.findById(request.getFormId()).orElse(null);
 
         if (form == null) {
             return "Admission form not found.";
@@ -20,7 +20,7 @@ public class EditAdmissionFormValidation {
         }
 
         if (!form.getStatus().equals(Status.PENDING_APPROVAL.getValue())) {
-            return "Forms in PENDING APPROVAL status can be cancelled.";
+            return "Only pending-approval forms can be cancelled.";
         }
         return "";
     }
