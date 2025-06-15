@@ -1,6 +1,7 @@
 package com.swd392.group1.pes.controllers;
 
 import com.swd392.group1.pes.requests.AddChildRequest;
+import com.swd392.group1.pes.requests.CancelAdmissionForm;
 import com.swd392.group1.pes.requests.SubmitAdmissionFormRequest;
 import com.swd392.group1.pes.requests.UpdateChildRequest;
 import com.swd392.group1.pes.response.ResponseObject;
@@ -14,6 +15,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -37,8 +39,8 @@ public class ParentController {
 
     @PutMapping("/form/cancel")
     @PreAuthorize("hasRole('parent')")
-    public ResponseEntity<ResponseObject> cancelAdmissionForm(@RequestBody int id, HttpServletRequest httpRequest) {
-        return parentService.cancelAdmissionForm(id, httpRequest);
+    public ResponseEntity<ResponseObject> cancelAdmissionForm(CancelAdmissionForm request, HttpServletRequest httpRequest) {
+        return parentService.cancelAdmissionForm(request, httpRequest);
     }
 
     // gôp getChild + submit vô chung tránh gọi API quá nhiều lần

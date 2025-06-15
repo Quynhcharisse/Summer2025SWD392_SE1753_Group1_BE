@@ -1,9 +1,10 @@
-package com.swd392.group1.pes.validations.AccountValidation;
+package com.swd392.group1.pes.validations.HRValidation;
 
 import com.swd392.group1.pes.enums.Status;
 import com.swd392.group1.pes.models.Account;
 import com.swd392.group1.pes.repositories.AccountRepo;
 import com.swd392.group1.pes.requests.ProcessAccountRequest;
+import com.swd392.group1.pes.enums.Role;
 
 public class ProcessAccountValidation {
     public static String processAccountValidate(ProcessAccountRequest request, String action, AccountRepo accountRepo) {
@@ -23,6 +24,12 @@ public class ProcessAccountValidation {
         if (acc == null) {
             return "Account not found or in invalid state for action: " + action;
         }
+
+        // Kiểm tra xem tài khoản có phải là parent hoặc teacher không
+        if (!acc.getRole().equals(Role.PARENT) && !acc.getRole().equals(Role.TEACHER)) {
+            return "Can only process parent or teacher accounts";
+        }
+
         return "";
     }
 
