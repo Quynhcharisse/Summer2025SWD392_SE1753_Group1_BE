@@ -9,12 +9,14 @@ import com.swd392.group1.pes.requests.ProcessAccountRequest;
 import com.swd392.group1.pes.requests.UpdateTeacherRequest;
 import com.swd392.group1.pes.response.ResponseObject;
 import com.swd392.group1.pes.services.HRService;
+import com.swd392.group1.pes.services.MailService;
 import com.swd392.group1.pes.utils.GenerateEmailTeacherUtil;
 import com.swd392.group1.pes.utils.RandomPasswordUtil;
-import com.swd392.group1.pes.validations.AccountValidation.ProcessAccountValidation;
+import com.swd392.group1.pes.validations.HRValidation.ProcessAccountValidation;
 import com.swd392.group1.pes.validations.HRValidation.CreateTeacherValidation;
 import com.swd392.group1.pes.validations.HRValidation.UpdateTeacherValidation;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -26,9 +28,11 @@ import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class HRServiceImpl implements HRService {
 
     private final AccountRepo accountRepo;
+    private final MailService mailService;
 
     @Override
     public ResponseEntity<ResponseObject> processAccount(ProcessAccountRequest request, String action) {
@@ -36,6 +40,7 @@ public class HRServiceImpl implements HRService {
         String error = ProcessAccountValidation.processAccountValidate(request, action, accountRepo);
 
         if (!error.isEmpty()) {
+            log.warn("Failed to {} account {}: {}", action, request.getEmail(), error);
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
                     ResponseObject.builder()
                             .message(error)
@@ -58,6 +63,7 @@ public class HRServiceImpl implements HRService {
         } else if (action.equalsIgnoreCase("unban")) {
             newStatus = Status.ACCOUNT_UNBAN.getValue();
         } else {
+            log.error("Invalid action {} for account {}", action, request.getEmail());
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
                     ResponseObject.builder()
                             .message("Invalid action")
@@ -68,6 +74,7 @@ public class HRServiceImpl implements HRService {
         }
 
         if (account == null) {
+            log.warn("Account {} not found or in invalid state for action {}", request.getEmail(), action);
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
                     ResponseObject.builder()
                             .message("Account not found or in invalid state")
@@ -80,9 +87,32 @@ public class HRServiceImpl implements HRService {
         account.setStatus(newStatus);
         accountRepo.save(account);
 
+        // Gửi email thông báo
+        String subject = action.equalsIgnoreCase("ban") ? 
+            "Your Account Has Been Suspended" : "Your Account Has Been Reactivated";
+        
+        String content = action.equalsIgnoreCase("ban") ?
+            "Dear " + account.getName() + ",\n\n" +
+            "Your account has been suspended due to violation of our terms of service. " +
+            "If you believe this is a mistake, please contact our support team.\n\n" +
+            "Best regards,\nPES Team"
+            :
+            "Dear " + account.getName() + ",\n\n" +
+            "Your account has been reactivated. You can now log in to your account normally.\n\n" +
+            "Best regards,\nPES Team";
+
+        try {
+            mailService.sendMail(account.getEmail(), subject, content);
+        } catch (Exception e) {
+            log.error("Failed to send notification email to {} for action {}: {}", 
+                account.getEmail(), action, e.getMessage());
+        }
+
         String msg = action.equalsIgnoreCase("ban") ?
                 "Account banned successfully" : "Account unbanned successfully";
 
+        log.info("Successfully {} account {} ({})", action, account.getEmail(), account.getRole());
+        
         return ResponseEntity.status(HttpStatus.OK).body(
                 ResponseObject.builder()
                         .message(msg)

@@ -4,11 +4,12 @@ import com.swd392.group1.pes.enums.Status;
 import com.swd392.group1.pes.models.Account;
 import com.swd392.group1.pes.models.AdmissionForm;
 import com.swd392.group1.pes.repositories.AdmissionFormRepo;
+import com.swd392.group1.pes.requests.CancelAdmissionForm;
 
 public class EditAdmissionFormValidation {
     // validation cho cancel đơn
-    public static String canceledValidate(int id, Account account, AdmissionFormRepo admissionFormRepo) {
-        AdmissionForm form = admissionFormRepo.findById(id).orElse(null);
+    public static String canceledValidate(CancelAdmissionForm request, Account account, AdmissionFormRepo admissionFormRepo) {
+        AdmissionForm form = admissionFormRepo.findById(request.getId()).orElse(null);
 
         if (form == null) {
             return "Admission form not found.";

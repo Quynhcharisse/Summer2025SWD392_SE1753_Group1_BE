@@ -222,7 +222,7 @@ public class ParentServiceImpl implements ParentService {
 
     // cancel form
     @Override
-    public ResponseEntity<ResponseObject> cancelAdmissionForm(int id, HttpServletRequest httpRequest) {
+    public ResponseEntity<ResponseObject> cancelAdmissionForm(CancelAdmissionForm request, HttpServletRequest httpRequest) {
 
         // 1. Lấy account từ cookie
         Account account = jwtService.extractAccountFromCookie(httpRequest);
@@ -237,7 +237,7 @@ public class ParentServiceImpl implements ParentService {
         }
 
 
-        String error = EditAdmissionFormValidation.canceledValidate(id, account, admissionFormRepo);
+        String error = EditAdmissionFormValidation.canceledValidate(request, account, admissionFormRepo);
 
         if (!error.isEmpty()) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
@@ -249,7 +249,7 @@ public class ParentServiceImpl implements ParentService {
             );
         }
 
-        AdmissionForm form = admissionFormRepo.findById(id).orElse(null);
+        AdmissionForm form = admissionFormRepo.findById(request.getId()).orElse(null);
 
         if (form == null) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
