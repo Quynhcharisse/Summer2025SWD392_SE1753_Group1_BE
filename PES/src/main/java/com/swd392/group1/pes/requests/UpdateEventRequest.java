@@ -7,8 +7,9 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.experimental.FieldDefaults;
 
-import java.time.LocalDate;
+
 import java.time.LocalDateTime;
+
 
 @Data
 @NoArgsConstructor
@@ -17,13 +18,11 @@ import java.time.LocalDateTime;
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class UpdateEventRequest {
     String name;
-    LocalDate date;
     LocalDateTime startTime;
     LocalDateTime endTime;
     String location;
     String description;
-    String status;
-    String registrationDeadline;
+    LocalDateTime registrationDeadline;
     String attachmentImg;
     String hostName;
 }

@@ -20,6 +20,8 @@ public interface EducationService {
     ResponseEntity<ResponseObject> generateClassesAuto(GenerateClassesRequest request);
     ResponseEntity<ResponseObject> assignLessonsToSyllabus(String id, AssignLessonsRequest request);
     ResponseEntity<ResponseObject> unassignLessonsFromSyllabus(String id, UnassignLessonsRequest request);
+    ResponseEntity<ResponseObject> viewAssignedSyllabuses(String id);
+    ResponseEntity<ResponseObject> viewLessonDetail(String id);
     ResponseEntity<ResponseObject> createLesson(CreateLessonRequest request);
     ResponseEntity<ResponseObject> updateLesson(String id, UpdateLessonRequest request);
     ResponseEntity<ResponseObject> viewLessonList();

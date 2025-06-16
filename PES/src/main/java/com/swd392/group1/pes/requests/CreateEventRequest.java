@@ -7,8 +7,9 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.experimental.FieldDefaults;
 
-import java.time.LocalDate;
+
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Data
 @NoArgsConstructor
@@ -17,13 +18,12 @@ import java.time.LocalDateTime;
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class CreateEventRequest {
     String name;
-    LocalDate date;
     LocalDateTime startTime;
     LocalDateTime endTime;
     String location;
     String description;
-    String status;
-    String registrationDeadline;
+    LocalDateTime registrationDeadline;
     String attachmentImg;
     String hostName;
+    List<String> emails;
 }

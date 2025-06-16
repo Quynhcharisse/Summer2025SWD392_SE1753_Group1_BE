@@ -1,7 +1,6 @@
 package com.swd392.group1.pes.validations.EducationValidation.SyllabusValidation;
 
 import com.swd392.group1.pes.enums.Grade;
-import com.swd392.group1.pes.enums.Status;
 import com.swd392.group1.pes.repositories.SyllabusRepo;
 import com.swd392.group1.pes.requests.CreateSyllabusRequest;
 
@@ -29,6 +28,10 @@ public class CreateSyllabusValidation {
             return "Number of weeks must be greater than 0";
         }
 
+        if (request.getMaxNumberOfWeek() >= 54) {
+            return "Number of weeks must be less than 54 weeks";
+        }
+
         // Cần chọn Grade
         if (request.getGrade() == null || request.getGrade().trim().isEmpty()) {
             return "Grade is required";
@@ -40,6 +43,8 @@ public class CreateSyllabusValidation {
         if (!isExistGrade) {
             return "Selected grade does not exist.";
         }
+        if(!AssignLessonsValidation.validate(request.getLessonNames()).isEmpty())
+            return AssignLessonsValidation.validate(request.getLessonNames());
 
         return "";
     }

@@ -41,8 +41,6 @@ public class Syllabus {
 
     String description;
 
-    boolean isAssigned;
-
     @Column(name = "`max_number_of_week`")
     int maxNumberOfWeek;
 
