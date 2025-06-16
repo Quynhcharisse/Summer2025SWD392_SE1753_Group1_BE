@@ -7,19 +7,17 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.experimental.FieldDefaults;
 
+import java.util.List;
+
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class CreateSyllabusRequest {
-
     String subject;
-
     String description;
-
     int maxNumberOfWeek;
-
     String grade;
-
+    private List<String> lessonNames ;
 }

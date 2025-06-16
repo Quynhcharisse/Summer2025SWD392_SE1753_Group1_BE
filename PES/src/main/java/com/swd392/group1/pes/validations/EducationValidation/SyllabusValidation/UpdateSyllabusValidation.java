@@ -26,6 +26,10 @@ public class UpdateSyllabusValidation {
             return "Number of weeks must be greater than 0";
         }
 
+        if (request.getMaxNumberOfWeek() >= 54) {
+            return "Number of weeks must be less than 54 weeks";
+        }
+
         // Cần chọn Grade
         if (request.getGrade() == null || request.getGrade().trim().isEmpty()) {
             return "Grade is required";

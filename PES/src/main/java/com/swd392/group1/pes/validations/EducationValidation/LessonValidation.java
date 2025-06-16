@@ -24,6 +24,10 @@ public class LessonValidation {
             return "Lesson duration must be greater than zero.";
         }
 
+        if (request.getDuration() >= 41) {
+            return "Lesson duration hours must be less than 41 hours.";
+        }
+
         // Lesson topic da ton tai
         if(lessonRepo.findByTopicIgnoreCase(request.getTopic()).isPresent())
             return "Lesson topic already exists";
@@ -51,6 +55,10 @@ public class LessonValidation {
 
         if (request.getDuration() <= 0) {
             return "Lesson duration must be greater than zero.";
+        }
+
+        if (request.getDuration() >= 41) {
+            return "Lesson duration hours must be less than 41 hours.";
         }
 
         return "";

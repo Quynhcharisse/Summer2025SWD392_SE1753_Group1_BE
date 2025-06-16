@@ -17,6 +17,10 @@ public enum Status {
     APPROVED("approved"),
     REJECTED("rejected"),
 
+    EVENT_ACTIVE("active"),
+    EVENT_IN_PROGRESS("in-progress"),
+    EVENT_CLOSED("closed"),
+    EVENT_CANCELLED("cancelled"),
 
     ACTIVE_TERM("active"), // trong khoảng ngày cho phép
     INACTIVE_TERM("inactive"), // chưa đến ngày

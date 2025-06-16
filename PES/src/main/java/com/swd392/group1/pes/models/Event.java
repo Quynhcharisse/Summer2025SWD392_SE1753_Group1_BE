@@ -1,8 +1,11 @@
 package com.swd392.group1.pes.models;
 
+import com.swd392.group1.pes.enums.Status;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -18,7 +21,6 @@ import lombok.NoArgsConstructor;
 import lombok.ToString;
 import lombok.experimental.FieldDefaults;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -37,28 +39,22 @@ public class Event {
 
     String name;
 
-    LocalDate date;
-
-    @Column(name = "`start_time`")
     LocalDateTime startTime;
 
-    @Column(name = "`end_time`")
     LocalDateTime endTime;
 
     String location;
 
     String description;
 
-    @Column(name = "`created_by`")
-    String createdBy;
-
     @Column(name = "`created_at`")
-    LocalDate createdAt;
+    LocalDateTime createdAt;
 
-    String status;
+    @Enumerated(EnumType.STRING)
+    Status status;
 
     @Column(name = "`registration_deadline`")
-    String registrationDeadline;
+    LocalDateTime registrationDeadline;
 
     @Column(name = "`attachment_img`")
     String attachmentImg;
@@ -66,7 +62,7 @@ public class Event {
     @Column(name = "`host_name`")
     String hostName;
 
-    @OneToMany(mappedBy = "event", fetch = FetchType.LAZY) //ko dùng cascade
+    @OneToMany(mappedBy = "event", fetch = FetchType.EAGER, cascade = CascadeType.ALL)
     @EqualsAndHashCode.Exclude
     @ToString.Exclude
     List<TeacherEvent> teacherEventList;

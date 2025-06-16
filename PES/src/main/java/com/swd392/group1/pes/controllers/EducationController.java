@@ -89,6 +89,18 @@ public class EducationController {
         return educationService.createLesson(request);
     }
 
+    @GetMapping("/lesson/detail")
+    @PreAuthorize("hasRole('education')")
+    public ResponseEntity<ResponseObject> viewLessonDetail(@RequestParam String id) {
+        return educationService.viewLessonDetail(id);
+    }
+
+    @GetMapping("/lesson/assign/syllabuses")
+    @PreAuthorize("hasRole('education')")
+    public ResponseEntity<ResponseObject> viewAssignedSyllabuses(@RequestParam String id) {
+        return educationService.viewAssignedSyllabuses(id);
+    }
+
     @PutMapping("/lesson")
     @PreAuthorize("hasRole('education')")
     public ResponseEntity<ResponseObject> updateLesson(@RequestParam String id, @RequestBody UpdateLessonRequest request) {

@@ -4,7 +4,7 @@ services:
     image: mysql:latest
     container_name: mysql_container
     environment:
-      MYSQL_ROOT_PASSWORD: 12345
+      MYSQL_ROOT_PASSWORD: 123456
       MYSQL_DATABASE: pes_swd
     ports:
       - "3307:3306"
@@ -22,5 +22,7 @@ services:
       MYSQL_URL: jdbc:mysql://mysql_container:3306/pes_swd
       MYSQL_USER: "root"
       MYSQL_PASSWORD: "123456"
+      TZ: Asia/Ho_Chi_Minh
+      JAVA_TOOL_OPTIONS: "-Duser.timezone=Asia/Ho_Chi_Minh"
 volumes:
   mysql_data:
