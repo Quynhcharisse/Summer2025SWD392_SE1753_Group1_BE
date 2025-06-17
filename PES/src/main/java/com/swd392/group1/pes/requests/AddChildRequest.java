@@ -22,5 +22,4 @@ public class AddChildRequest {
     String profileImage;
     String birthCertificateImg;
     String householdRegistrationImg;
-    String commitmentImg;
 }

@@ -84,6 +84,9 @@ public class ParentServiceImpl implements ParentService {
                     studentDetail.put("gender", student.getGender());
                     studentDetail.put("dateOfBirth", student.getDateOfBirth());
                     studentDetail.put("placeOfBirth", student.getPlaceOfBirth());
+                    studentDetail.put("profileImage", student.getProfileImage());
+                    studentDetail.put("householdRegistrationImg", student.getHouseholdRegistrationImg());
+                    studentDetail.put("birthCertificateImg", student.getBirthCertificateImg());
                     studentDetail.put("isStudent", student.isStudent());
                     studentDetail.put("hadForm", !student.getAdmissionFormList().isEmpty());//trong từng học sinh check đã tạo form chưa
                     return studentDetail;
@@ -112,11 +115,12 @@ public class ParentServiceImpl implements ParentService {
         data.put("studentGender", form.getStudent().getGender());
         data.put("studentDateOfBirth", form.getStudent().getDateOfBirth());
         data.put("studentPlaceOfBirth", form.getStudent().getPlaceOfBirth());
-        data.put("profileImage", form.getProfileImage());
-        data.put("householdRegistrationAddress", form.getHouseholdRegistrationAddress());
-        data.put("householdRegistrationImg", form.getHouseholdRegistrationImg());
-        data.put("birthCertificateImg", form.getBirthCertificateImg());
+        data.put("profileImage", form.getStudent().getProfileImage());
+        data.put("householdRegistrationImg", form.getStudent().getHouseholdRegistrationImg());
+        data.put("birthCertificateImg", form.getStudent().getBirthCertificateImg());
         data.put("commitmentImg", form.getCommitmentImg());
+        data.put("childCharacteristicsFormImg", form.getChildCharacteristicsFormImg());
+        data.put("householdRegistrationAddress", form.getHouseholdRegistrationAddress());
         data.put("submittedDate", form.getSubmittedDate());
         data.put("cancelReason", form.getCancelReason());
         data.put("note", form.getNote());
@@ -229,6 +233,8 @@ public class ParentServiceImpl implements ParentService {
                 .student(student)
                 .admissionTerm(activeTerm)
                 .householdRegistrationAddress(request.getHouseholdRegistrationAddress())
+                .commitmentImg(request.getCommitmentImg())
+                .childCharacteristicsFormImg(request.getChildCharacteristicsFormImg())
                 .note(request.getNote())
                 .submittedDate(LocalDate.now())
                 .status(Status.PENDING_APPROVAL.getValue())
@@ -372,8 +378,11 @@ public class ParentServiceImpl implements ParentService {
                     studentDetail.put("id", student.getId());
                     studentDetail.put("name", student.getName());
                     studentDetail.put("gender", student.getGender());
-                    studentDetail.put("dateOfBirth", student.getDateOfBirth());
+                    studentDetail.put("dateOfBirth", student.getProfileImage());
                     studentDetail.put("placeOfBirth", student.getPlaceOfBirth());
+                    studentDetail.put("profileImage", student.getProfileImage());
+                    studentDetail.put("birthCertificateImg", student.getBirthCertificateImg());
+                    studentDetail.put("householdRegistrationImg", student.getHouseholdRegistrationImg());
                     studentDetail.put("modifiedDate", student.getModifiedDate());
                     studentDetail.put("isStudent", student.isStudent());
                     studentDetail.put("hadForm", !student.getAdmissionFormList().isEmpty());
@@ -422,29 +431,20 @@ public class ParentServiceImpl implements ParentService {
                             .build());
         }
 
-        Student student = studentRepo.save(
+        studentRepo.save(
                 Student.builder()
                         .name(request.getName())
                         .gender(request.getGender())
                         .dateOfBirth(request.getDateOfBirth())
                         .placeOfBirth(request.getPlaceOfBirth())
+                        .profileImage(request.getProfileImage())
+                        .birthCertificateImg(request.getBirthCertificateImg())
+                        .householdRegistrationImg(request.getHouseholdRegistrationImg())
                         .modifiedDate(LocalDate.now())
                         .isStudent(false)         // mặc định là chưa chính thức
                         .parent(parent)           // gán cha mẹ
                         .build());
 
-
-        // 7. Lưu form mới
-        admissionFormRepo.save(
-                AdmissionForm.builder()
-                        .student(student)
-                        .parent(parent)
-                        .status(Status.DRAFT.getValue()) // add child ==> save thì có status = draft
-                        .profileImage(request.getProfileImage())
-                        .householdRegistrationImg(request.getHouseholdRegistrationImg())
-                        .birthCertificateImg(request.getBirthCertificateImg())
-                        .commitmentImg(request.getCommitmentImg())
-                        .build());
 
         return ResponseEntity.status(HttpStatus.OK).body(
                 ResponseObject.builder()
@@ -477,7 +477,6 @@ public class ParentServiceImpl implements ParentService {
                             .build());
         }
 
-
         // Tìm parent từ account
         Parent parent = parentRepo.findByAccount_Id(acc.getId()).orElse(null);
         if (parent == null) {
@@ -495,6 +494,18 @@ public class ParentServiceImpl implements ParentService {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
                     ResponseObject.builder()
                             .message("Child not found or access denied")
+                            .success(false)
+                            .data(null)
+                            .build());
+        }
+
+        // tránh bị null
+        int count = student.getUpdateCount() == null ? 0 : student.getUpdateCount();
+        // Deny if update limit exceeded
+        if (count >= 5) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(
+                    ResponseObject.builder()
+                            .message("This is critical information and can only be updated 5 times. You have reached the limit.")
                             .success(false)
                             .data(null)
                             .build());
@@ -520,24 +531,18 @@ public class ParentServiceImpl implements ParentService {
         student.setGender(request.getGender());
         student.setDateOfBirth(request.getDateOfBirth());
         student.setPlaceOfBirth(request.getPlaceOfBirth());
+        student.setProfileImage(request.getProfileImage());
+        student.setBirthCertificateImg(request.getBirthCertificateImg());
+        student.setHouseholdRegistrationImg(request.getHouseholdRegistrationImg());
         student.setModifiedDate(LocalDate.now());
+        student.setUpdateCount(count + 1); // safe increment // Tăng số lần cập nhật
         studentRepo.save(student);
 
-        //1 draft
-        AdmissionForm draftForm = student.getAdmissionFormList().stream()
-                .filter(f -> f.getStatus().equals(Status.DRAFT.getValue()))
-                .findFirst().get(); //1 form DRAFT duy nhất cho mỗi student
-
-        draftForm.setProfileImage(request.getProfileImage());
-        draftForm.setBirthCertificateImg(request.getBirthCertificateImg());
-        draftForm.setHouseholdRegistrationImg(request.getHouseholdRegistrationImg());
-        draftForm.setCommitmentImg(request.getCommitmentImg());
-        admissionFormRepo.save(draftForm);
-
+        int remaining = 5 - student.getUpdateCount();
 
         return ResponseEntity.status(HttpStatus.OK).body(
                 ResponseObject.builder()
-                        .message("Child updated successfully")
+                        .message("Update successful. You have " + remaining + " update(s) remaining.")
                         .success(true)
                         .data(null)
                         .build());

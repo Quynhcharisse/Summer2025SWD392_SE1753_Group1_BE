@@ -385,7 +385,7 @@ public class AdmissionServiceImpl implements AdmissionService {
     }
 
     private int countApprovedFormByTerm(AdmissionTerm term) {
-        return  (int) term.getAdmissionFormList().stream().filter(form -> form.getStatus().equals(Status.APPROVED.getValue())).count();
+        return (int) term.getAdmissionFormList().stream().filter(form -> form.getStatus().equals(Status.APPROVED.getValue())).count();
     }
 
     private int countMissingFormAmountByTerm(AdmissionTerm term) {
@@ -405,11 +405,12 @@ public class AdmissionServiceImpl implements AdmissionService {
                             data.put("studentGender", form.getStudent().getGender());
                             data.put("studentDateOfBirth", form.getStudent().getDateOfBirth());
                             data.put("studentPlaceOfBirth", form.getStudent().getPlaceOfBirth());
-                            data.put("profileImage", form.getProfileImage());
+                            data.put("profileImage", form.getStudent().getProfileImage());
+                            data.put("householdRegistrationImg", form.getStudent().getHouseholdRegistrationImg());
                             data.put("householdRegistrationAddress", form.getHouseholdRegistrationAddress());
-                            data.put("householdRegistrationImg", form.getHouseholdRegistrationImg());
-                            data.put("birthCertificateImg", form.getBirthCertificateImg());
+                            data.put("birthCertificateImg", form.getStudent().getBirthCertificateImg());
                             data.put("commitmentImg", form.getCommitmentImg());
+                            data.put("childCharacteristicsFormImg", form.getChildCharacteristicsFormImg());
                             data.put("submittedDate", form.getSubmittedDate());
                             data.put("cancelReason", form.getCancelReason());
                             data.put("note", form.getNote());

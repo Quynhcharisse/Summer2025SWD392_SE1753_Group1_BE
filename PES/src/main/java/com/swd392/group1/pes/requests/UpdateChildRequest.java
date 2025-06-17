@@ -23,5 +23,4 @@ public class UpdateChildRequest {
     String profileImage;
     String birthCertificateImg;
     String householdRegistrationImg;
-    String commitmentImg;
 }
