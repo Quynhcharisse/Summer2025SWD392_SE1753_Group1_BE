@@ -48,6 +48,9 @@ public class Student {
 
     boolean isStudent;
 
+    @Column(name = "`modified_date`")
+    LocalDate modifiedDate;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "`parent_id`")
     Parent parent;

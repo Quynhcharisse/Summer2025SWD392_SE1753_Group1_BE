@@ -16,10 +16,7 @@ import java.time.LocalDate;
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class SubmitAdmissionFormRequest {
     int studentId;
+    int admissionTermId;
     String householdRegistrationAddress;
-    String profileImage;
-    String birthCertificateImg;
-    String householdRegistrationImg;
-    String commitmentImg;
     String note;
 }
