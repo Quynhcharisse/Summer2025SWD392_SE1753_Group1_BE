@@ -185,14 +185,13 @@ public class ParentServiceImpl implements ParentService {
         }
 
         // 5. Kiểm tra độ tuổi phù hợp
-        if (!isAgeValidForGrade(student.getDateOfBirth(), activeTerm.getGrade())) {
+        if (!isAgeValidForGrade(student.getDateOfBirth(), activeTerm.getYear())) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
                     ResponseObject.builder()
-                            .message("Student's age does not match the required grade for current term")
+                            .message("Student's birth year does not match required age for grade " + activeTerm.getGrade())
                             .success(false)
                             .data(null)
-                            .build()
-            );
+                            .build());
         }
 
         // 6. Kiểm tra xem học sinh đã nộp form kỳ này chưa
@@ -263,9 +262,13 @@ public class ParentServiceImpl implements ParentService {
         );
     }
 
-    private boolean isAgeValidForGrade(LocalDate dateOfBirth, Grade grade) {
-        int exactAge = Period.between(dateOfBirth, LocalDate.now()).getYears();
-        return exactAge == grade.getAge();
+    private boolean isAgeValidForGrade(LocalDate dob, int admissionYear) {
+        int birthYear = dob.getYear();
+        int ageAtAdmission = admissionYear - birthYear;
+
+        System.out.println(birthYear);
+        System.out.println(ageAtAdmission);
+        return ageAtAdmission >= 3 && ageAtAdmission <= 5;
     }
 
 
