@@ -1,6 +1,7 @@
 package com.swd392.group1.pes.services;
 
 import com.swd392.group1.pes.requests.CreateAdmissionTermRequest;
+import com.swd392.group1.pes.requests.CreateExtraTermRequest;
 import com.swd392.group1.pes.requests.ProcessAdmissionFormRequest;
 import com.swd392.group1.pes.requests.UpdateAdmissionTermRequest;
 import com.swd392.group1.pes.response.ResponseObject;
@@ -11,7 +12,9 @@ public interface AdmissionService {
 
     ResponseEntity<ResponseObject> viewAdmissionTerm();
 
-    ResponseEntity<ResponseObject> updateAdmissionTerm(UpdateAdmissionTermRequest request);
+    ResponseEntity<ResponseObject> createExtraTerm(CreateExtraTermRequest request);
+
+    ResponseEntity<ResponseObject> viewExtraTerm();
 
     ResponseEntity<ResponseObject> viewAdmissionFormList();
 

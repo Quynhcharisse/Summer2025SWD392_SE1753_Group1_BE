@@ -1,15 +1,14 @@
 package com.swd392.group1.pes.controllers;
 
 import com.swd392.group1.pes.requests.CreateAdmissionTermRequest;
+import com.swd392.group1.pes.requests.CreateExtraTermRequest;
 import com.swd392.group1.pes.requests.ProcessAdmissionFormRequest;
-import com.swd392.group1.pes.requests.UpdateAdmissionTermRequest;
 import com.swd392.group1.pes.response.ResponseObject;
 import com.swd392.group1.pes.services.AdmissionService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -30,10 +29,16 @@ public class AdmissionController {
         return admissionService.createAdmissionTerm(request);
     }
 
-    @PutMapping("/term")
+    @PostMapping("/extra/term")
     @PreAuthorize("hasRole('admission')")
-    public ResponseEntity<ResponseObject> updateAdmissionTerm(@RequestBody UpdateAdmissionTermRequest request) {
-        return admissionService.updateAdmissionTerm(request);
+    public ResponseEntity<ResponseObject> createExtraTerm(@RequestBody CreateExtraTermRequest request) {
+        return admissionService.createExtraTerm(request);
+    }
+
+    @GetMapping("/extra/term")
+    @PreAuthorize("hasRole('admission')")
+    public ResponseEntity<ResponseObject> viewExtraTerm() {
+        return admissionService.viewExtraTerm();
     }
 
     @GetMapping("/term")

@@ -39,6 +39,8 @@ public class AdmissionTerm {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     Integer id;
 
+    String name;
+
     @Column(name = "`start_date`")
     LocalDateTime startDate;
 
@@ -59,6 +61,11 @@ public class AdmissionTerm {
     @EqualsAndHashCode.Exclude
     @ToString.Exclude
     List<AdmissionForm> admissionFormList;
+
+    @OneToMany(mappedBy = "admissionTerm", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+    @EqualsAndHashCode.Exclude
+    @ToString.Exclude
+    List<ExtraTerm> extraTermList;
 
     @OneToOne(mappedBy = "admissionTerm", fetch = FetchType.LAZY)
     @EqualsAndHashCode.Exclude
