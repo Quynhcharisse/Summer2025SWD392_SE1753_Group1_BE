@@ -37,26 +37,20 @@ public class AdmissionForm {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     Integer id;
 
-    @Column(name = "`profile_image`")
-    String profileImage;
-
-    @Column(name = "`household_registration_address`")
-    String householdRegistrationAddress;
-
-    @Column(name = "`birth_certificate_img`")
-    String birthCertificateImg;
-
-    @Column(name = "`household_registration_img`")
-    String householdRegistrationImg ;
-
-    @Column(name = "`commitment_img`")
-    String commitmentImg ;
-
     @Column(name = "`cancel_reason`")
     String cancelReason;
 
     @Column(name = "`submitted_date`")
     LocalDate submittedDate;
+
+    @Column(name = "`household_registration_address`")
+    String householdRegistrationAddress;
+
+    @Column(name = "`child_characteristics_form_img`")
+    String childCharacteristicsFormImg;
+
+    @Column(name = "`commitment_img`")
+    String commitmentImg ;
 
     String note;
 

@@ -20,11 +20,16 @@ public class ChildValidation {
         }
 
         if (!isValidGender(request.getGender())) {
-            return "Gender must be Male, Female or Other.";
+            return "Gender must be Male, Female";
         }
 
         if (request.getDateOfBirth() == null || request.getDateOfBirth().isAfter(LocalDate.now())) {
             return "Date of birth must be in the past.";
+        }
+
+        int age = Period.between(request.getDateOfBirth(), LocalDate.now()).getYears();
+        if (age < 3 || age > 5) {
+            return "Child's age must be between 3 and 5 years.";
         }
 
         if (request.getPlaceOfBirth() == null || request.getPlaceOfBirth().trim().isEmpty()) {
@@ -50,11 +55,6 @@ public class ChildValidation {
             return "Birth certificate image is required.";
         }
 
-        // Không được để trống
-        if (request.getCommitmentImg() == null || request.getCommitmentImg().isEmpty()) {
-            return "Commitment image is required.";
-        }
-
         String imgError;
 
         imgError = validateImageField("Profile image", request.getProfileImage());
@@ -64,9 +64,6 @@ public class ChildValidation {
         if (!imgError.isEmpty()) return imgError;
 
         imgError = validateImageField("Birth certificate image", request.getBirthCertificateImg());
-        if (!imgError.isEmpty()) return imgError;
-
-        imgError = validateImageField("Commitment image", request.getCommitmentImg());
         if (!imgError.isEmpty()) return imgError;
 
         return "";
@@ -105,7 +102,6 @@ public class ChildValidation {
                 request.getProfileImage(),
                 request.getHouseholdRegistrationImg(),
                 request.getBirthCertificateImg(),
-                request.getCommitmentImg()
         };
         String[] imageNames = {
                 "Profile image",
