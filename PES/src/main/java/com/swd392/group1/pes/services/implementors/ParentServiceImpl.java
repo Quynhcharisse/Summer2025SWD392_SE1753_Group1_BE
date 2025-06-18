@@ -36,6 +36,7 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
@@ -197,11 +198,11 @@ public class ParentServiceImpl implements ParentService {
         // 6. Kiểm tra xem học sinh đã nộp form kỳ này chưa
         List<AdmissionForm> existingForms = admissionFormRepo
                 .findAllByParent_IdAndStudent_Id(account.getParent().getId(), student.getId()).stream()
-                .filter(form -> form.getAdmissionTerm() != null && form.getAdmissionTerm().getId() == activeTerm.getId())
+                .filter(form -> form.getAdmissionTerm() != null && Objects.equals(form.getAdmissionTerm().getId(), activeTerm.getId()))
                 .toList();
 
         boolean hasSubmittedForm = existingForms.stream()
-                .anyMatch(form -> !form.getStatus().equals(Status.REJECTED.getValue()) && form.getStatus().equals(Status.CANCELLED.getValue()));
+                .anyMatch(form -> !form.getStatus().equals(Status.REJECTED.getValue()) && !form.getStatus().equals(Status.CANCELLED.getValue()));
 
         if (hasSubmittedForm) {
             return ResponseEntity.status(HttpStatus.CONFLICT).body(
@@ -381,7 +382,7 @@ public class ParentServiceImpl implements ParentService {
                     studentDetail.put("id", student.getId());
                     studentDetail.put("name", student.getName());
                     studentDetail.put("gender", student.getGender());
-                    studentDetail.put("dateOfBirth", student.getProfileImage());
+                    studentDetail.put("dateOfBirth", student.getDateOfBirth());
                     studentDetail.put("placeOfBirth", student.getPlaceOfBirth());
                     studentDetail.put("profileImage", student.getProfileImage());
                     studentDetail.put("birthCertificateImg", student.getBirthCertificateImg());
