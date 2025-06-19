@@ -6,12 +6,12 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class GenerateEmailTeacherUtil {
 
-    public static String generateTeacherEmail(String fullName, AccountRepo accountRepo) {
-        if (fullName == null || fullName.trim().isEmpty()) {
+    public static String generateTeacherEmail(String name, AccountRepo accountRepo) {
+        if (name == null || name.trim().isEmpty()) {
             throw new IllegalArgumentException("Full name cannot be null or empty");
         }
 
-        String[] parts = fullName.trim().split("\\s+");
+        String[] parts = name.trim().split("\\s+");
         String firstName = parts[0].toLowerCase();
         String lastName = parts.length > 1 ? parts[parts.length - 1].toLowerCase() : "";
 

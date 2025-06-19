@@ -13,7 +13,6 @@ import lombok.experimental.FieldDefaults;
 @Builder
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class CreateTeacherRequest {
-    String email;
     String password;
     String name;
     String phone;

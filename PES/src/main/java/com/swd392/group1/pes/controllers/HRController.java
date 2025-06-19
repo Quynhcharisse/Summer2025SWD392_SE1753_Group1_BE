@@ -2,7 +2,6 @@ package com.swd392.group1.pes.controllers;
 
 import com.swd392.group1.pes.requests.CreateTeacherRequest;
 import com.swd392.group1.pes.requests.ProcessAccountRequest;
-import com.swd392.group1.pes.requests.UpdateTeacherRequest;
 import com.swd392.group1.pes.response.ResponseObject;
 import com.swd392.group1.pes.services.HRService;
 import lombok.RequiredArgsConstructor;
@@ -37,19 +36,13 @@ public class HRController {
     @PostMapping("/teacher")
     @PreAuthorize("hasRole('hr')")
     public ResponseEntity<ResponseObject> createTeacher(@RequestBody CreateTeacherRequest request) {
-        return hrService.createTeacher(request);
+        return hrService.createTeacherAcc(request);
     }
 
     @GetMapping("/teacher")
     @PreAuthorize("hasRole('hr')")
     public ResponseEntity<ResponseObject> viewTeacherList() {
         return hrService.viewTeacherList();
-    }
-
-    @PutMapping("/teacher")
-    @PreAuthorize("hasRole('hr')")
-    public ResponseEntity<ResponseObject> updateTeacher(@RequestBody UpdateTeacherRequest request) {
-        return hrService.updateTeacher(request);
     }
 
     @GetMapping("/parent")

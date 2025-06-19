@@ -9,11 +9,9 @@ import org.springframework.http.ResponseEntity;
 public interface HRService {
     ResponseEntity<ResponseObject> processAccount (ProcessAccountRequest request, String action);
 
-    ResponseEntity<ResponseObject> createTeacher (CreateTeacherRequest request);
+    ResponseEntity<ResponseObject> createTeacherAcc (CreateTeacherRequest request);
 
     ResponseEntity<ResponseObject> viewTeacherList ();
-
-    ResponseEntity<ResponseObject> updateTeacher (UpdateTeacherRequest request);
 
     ResponseEntity<ResponseObject> viewParentList ();
 }
