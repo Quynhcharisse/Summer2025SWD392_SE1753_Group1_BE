@@ -123,7 +123,7 @@ public class HRServiceImpl implements HRService {
     }
 
     @Override
-    public ResponseEntity<ResponseObject> createTeacher(CreateTeacherRequest request) {
+    public ResponseEntity<ResponseObject> createTeacherAcc(CreateTeacherRequest request) {
         String error = CreateTeacherValidation.validate(request, accountRepo);
         if (!error.isEmpty()) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
@@ -137,7 +137,7 @@ public class HRServiceImpl implements HRService {
 
         Account account = accountRepo.save(
                 Account.builder()
-                        .email(GenerateEmailTeacherUtil.generateTeacherEmail(request.getEmail(), accountRepo))
+                        .email(GenerateEmailTeacherUtil.generateTeacherEmail(request.getName(), accountRepo))
                         .password(RandomPasswordUtil.generateRandomPassword())
                         .name(request.getName())
                         .phone(request.getPhone())
@@ -186,47 +186,6 @@ public class HRServiceImpl implements HRService {
                         .message("")
                         .success(true)
                         .data(teacherList)
-                        .build()
-        );
-    }
-
-    @Override
-    public ResponseEntity<ResponseObject> updateTeacher(UpdateTeacherRequest request) {
-
-        String error = UpdateTeacherValidation.validate(request, accountRepo);
-
-        if (!error.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
-                    ResponseObject.builder()
-                            .message(error)
-                            .success(false)
-                            .data(null)
-                            .build()
-            );
-        }
-        Account account = accountRepo.findById(request.getTeacherId()).orElse(null);
-        if (account == null || !Role.TEACHER.equals(account.getRole())) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
-                    ResponseObject.builder()
-                            .message("Teacher not found")
-                            .success(false)
-                            .data(null)
-                            .build()
-            );
-        }
-
-        account.setName(request.getName());
-        account.setPhone(request.getPhone());
-        account.setGender(request.getGender());
-        account.setAvatarUrl(request.getAvatarUrl());
-
-        accountRepo.save(account);
-
-        return ResponseEntity.status(HttpStatus.OK).body(
-                ResponseObject.builder()
-                        .message("Update Teacher Successfully")
-                        .success(true)
-                        .data(null)
                         .build()
         );
     }

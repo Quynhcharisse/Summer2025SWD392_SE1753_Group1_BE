@@ -5,20 +5,6 @@ import com.swd392.group1.pes.requests.CreateTeacherRequest;
 
 public class CreateTeacherValidation {
     public static String validate(CreateTeacherRequest request, AccountRepo accountRepo) {
-        //Email không được để trống
-        if (request.getEmail().trim().isEmpty()) {
-            return "Email is required";
-        }
-
-        //Kiểm tra định dạng email
-        if (!request.getEmail().matches("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+$")) {
-            return "Invalid email format";
-        }
-
-        //Kiểm tra email đã tồn tại trong hệ thống
-        if (accountRepo.existsByEmail(request.getEmail())) {
-            return "Email is already registered";
-        }
 
         //Kiểm tra tên không được để trống
         if (request.getName().trim().isEmpty()) {

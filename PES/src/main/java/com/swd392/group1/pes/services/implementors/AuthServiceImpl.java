@@ -132,10 +132,19 @@ public class AuthServiceImpl implements AuthService {
 
         String error = RegisterValidation.validate(request, accountRepo);
         if(!error.isEmpty()){
-
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
                     ResponseObject.builder()
                             .message(error)
+                            .success(false)
+                            .data(null)
+                            .build()
+            );
+        }
+
+        if (accountRepo.existsByEmail(request.getEmail())) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
+                    ResponseObject.builder()
+                            .message("Email is already in use by another account.")
                             .success(false)
                             .data(null)
                             .build()
