@@ -5,12 +5,10 @@ import com.swd392.group1.pes.enums.Status;
 import com.swd392.group1.pes.models.AdmissionFee;
 import com.swd392.group1.pes.models.AdmissionForm;
 import com.swd392.group1.pes.models.AdmissionTerm;
-import com.swd392.group1.pes.models.ExtraTerm;
 import com.swd392.group1.pes.models.Student;
 import com.swd392.group1.pes.repositories.AdmissionFeeRepo;
 import com.swd392.group1.pes.repositories.AdmissionFormRepo;
 import com.swd392.group1.pes.repositories.AdmissionTermRepo;
-import com.swd392.group1.pes.repositories.ExtraTermRepo;
 import com.swd392.group1.pes.repositories.StudentRepo;
 import com.swd392.group1.pes.requests.CreateAdmissionTermRequest;
 import com.swd392.group1.pes.requests.CreateExtraTermRequest;
@@ -41,7 +39,6 @@ public class AdmissionServiceImpl implements AdmissionService {
     private final AdmissionTermRepo admissionTermRepo;
     private final MailService mailService;
     private final AdmissionFeeRepo admissionFeeRepo;
-    private final ExtraTermRepo extraTermRepo;
 
     @Override
     public ResponseEntity<ResponseObject> createAdmissionTerm(CreateAdmissionTermRequest request) {
@@ -214,10 +211,8 @@ public class AdmissionServiceImpl implements AdmissionService {
 
         List<AdmissionTerm> terms = admissionTermRepo.findAll();
 
-        LocalDateTime today = LocalDateTime.now();
-
         for (AdmissionTerm term : terms) {
-            String timeStatus = updateTermStatus(term, today);
+            String timeStatus = updateTermStatus(term);
 
             //if đủ → cần "khóa" lại dù chưa hết hạn
             boolean isFull = countApprovedFormByTerm(term) >= term.getMaxNumberRegistration();
@@ -243,9 +238,11 @@ public class AdmissionServiceImpl implements AdmissionService {
                             data.put("endDate", term.getEndDate());
                             data.put("year", term.getYear());
                             data.put("maxNumberRegistration", term.getMaxNumberRegistration());
-                            data.put("registeredCount", countApprovedFormByTerm(term));
+                            data.put("approvedForm", countApprovedFormByTerm(term));
                             data.put("grade", term.getGrade());
                             data.put("status", term.getStatus());
+
+
 
                             AdmissionFee fee = admissionFeeRepo.findByAdmissionTerm_Id(term.getId()).orElse(null);
                             if (fee != null) {
@@ -261,6 +258,12 @@ public class AdmissionServiceImpl implements AdmissionService {
                                 data.put("learningMaterialFee", 0);
                                 data.put("facilityFee", 0);
                             }
+
+                            //gọi lai extra term
+                            if(!admissionTermRepo.findAllByParentTerm_Id(term.getId()).isEmpty()){
+                                data.put("extraTerms", viewExtraTerm(term));
+                            }
+
                             return data;
                         }
                 )
@@ -275,7 +278,8 @@ public class AdmissionServiceImpl implements AdmissionService {
         );
     }
 
-    private String updateTermStatus(AdmissionTerm term, LocalDateTime today) {
+    private String updateTermStatus(AdmissionTerm term) {
+        LocalDateTime today = LocalDateTime.now();
         if (today.isBefore(term.getStartDate())) {
             return Status.INACTIVE_TERM.getValue();
         } else if (!today.isAfter(term.getEndDate())) {
@@ -283,6 +287,24 @@ public class AdmissionServiceImpl implements AdmissionService {
         } else {
             return Status.LOCKED_TERM.getValue();
         }
+    }
+
+    private List<Map<String, Object>> viewExtraTerm(AdmissionTerm parentTerm) {
+        List<Map<String, Object>> extraTermList = admissionTermRepo.findAllByParentTerm_Id(parentTerm.getId()).stream()
+                .map(extraTerm -> {
+                    Map<String, Object> data = new HashMap<>();
+                    data.put("id", extraTerm.getId());
+                    data.put("name", extraTerm.getName());
+                    data.put("startDate", extraTerm.getStartDate());
+                    data.put("endDate", extraTerm.getEndDate());
+                    data.put("maxNumberRegistration", extraTerm.getMaxNumberRegistration());
+                    data.put("approvedForm", countApprovedFormByTerm(extraTerm));
+                    data.put("status", extraTerm.getStatus());
+                    return data;
+                })
+                .toList();
+
+        return extraTermList;
     }
 
 
@@ -335,51 +357,25 @@ public class AdmissionServiceImpl implements AdmissionService {
         }
 
         // 4. Tạo extra RequestTerm
-        ExtraTerm reversion = ExtraTerm.builder()
-                .name("Reversion Term - " + term.getGrade().getName() + " " + term.getYear())
+        AdmissionTerm extraTerm = admissionTermRepo.save(AdmissionTerm.builder()
+                .name("Extra Term - " + term.getGrade().getName() + " " + term.getYear())
                 .startDate(request.getStartDate())
                 .endDate(request.getEndDate())
                 .maxNumberRegistration(countMissingFormAmountByTerm(term))
-                .reason(request.getReason())
-                .admissionTerm(term)
-                .build();
+                .year(term.getYear())
+                .grade(term.getGrade())
+                .parentTerm(term)
+                .status(Status.INACTIVE_TERM.getValue())
+                .build());
 
-        extraTermRepo.save(reversion);
+        extraTerm.setStatus(updateTermStatus(extraTerm));
+        admissionTermRepo.save(extraTerm);
 
         return ResponseEntity.status(HttpStatus.CREATED).body(
                 ResponseObject.builder()
-                        .message("Reversion request term created successfully")
+                        .message("Extra term created successfully")
                         .success(true)
                         .data(null)
-                        .build()
-        );
-    }
-
-    @Override
-    public ResponseEntity<ResponseObject> viewExtraTerm() {
-        List<ExtraTerm> extraTerm = extraTermRepo.findAll();
-
-        List<Map<String, Object>> extraTermList = extraTerm.stream()
-                .map(rev -> {
-                    Map<String, Object> data = new HashMap<>();
-                    data.put("id", rev.getId());
-                    data.put("name", rev.getName());
-                    data.put("startDate", rev.getStartDate());
-                    data.put("endDate", rev.getEndDate());
-                    data.put("maxNumberRegistration", rev.getMaxNumberRegistration());
-                    data.put("reason", rev.getReason());
-                    data.put("admissionTermId", rev.getAdmissionTerm().getId());
-                    data.put("grade", rev.getAdmissionTerm().getGrade());
-                    data.put("year", rev.getAdmissionTerm().getYear());
-                    return data;
-                })
-                .toList();
-
-        return ResponseEntity.status(HttpStatus.OK).body(
-                ResponseObject.builder()
-                        .message("")
-                        .success(true)
-                        .data(extraTermList)
                         .build()
         );
     }

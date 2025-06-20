@@ -7,16 +7,16 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.experimental.FieldDefaults;
 
-import java.time.LocalDateTime;
-
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
 @FieldDefaults(level = AccessLevel.PRIVATE)
-public class CreateExtraTermRequest {
-    Integer admissionTermId;
-    LocalDateTime startDate;
-    LocalDateTime endDate;
-    int maxNumberRegistration;
+public class RefillFormRequest {
+    int studentId;
+    int admissionTermId;
+    String householdRegistrationAddress;
+    String childCharacteristicsFormImg;
+    String commitmentImg;
+    String note;
 }

@@ -10,6 +10,8 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
@@ -62,10 +64,12 @@ public class AdmissionTerm {
     @ToString.Exclude
     List<AdmissionForm> admissionFormList;
 
-    @OneToMany(mappedBy = "admissionTerm", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+    //join chính nó
+    @ManyToOne
+    @JoinColumn(name = "parent_term_id")
     @EqualsAndHashCode.Exclude
     @ToString.Exclude
-    List<ExtraTerm> extraTermList;
+    AdmissionTerm parentTerm;
 
     @OneToOne(mappedBy = "admissionTerm", fetch = FetchType.LAZY)
     @EqualsAndHashCode.Exclude
