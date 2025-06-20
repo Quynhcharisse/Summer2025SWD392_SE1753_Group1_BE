@@ -1,6 +1,5 @@
 package com.swd392.group1.pes.services.implementors;
 
-import com.swd392.group1.pes.enums.Grade;
 import com.swd392.group1.pes.enums.Role;
 import com.swd392.group1.pes.enums.Status;
 import com.swd392.group1.pes.models.Account;
@@ -14,6 +13,7 @@ import com.swd392.group1.pes.repositories.ParentRepo;
 import com.swd392.group1.pes.repositories.StudentRepo;
 import com.swd392.group1.pes.requests.AddChildRequest;
 import com.swd392.group1.pes.requests.CancelAdmissionForm;
+import com.swd392.group1.pes.requests.RefillFormRequest;
 import com.swd392.group1.pes.requests.SubmitAdmissionFormRequest;
 import com.swd392.group1.pes.requests.UpdateChildRequest;
 import com.swd392.group1.pes.response.ResponseObject;
@@ -22,6 +22,7 @@ import com.swd392.group1.pes.services.MailService;
 import com.swd392.group1.pes.services.ParentService;
 import com.swd392.group1.pes.validations.ParentValidation.ChildValidation;
 import com.swd392.group1.pes.validations.ParentValidation.EditAdmissionFormValidation;
+import com.swd392.group1.pes.validations.ParentValidation.RefillFormValidation;
 import com.swd392.group1.pes.validations.ParentValidation.SubmittedAdmissionFormValidation;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
@@ -31,12 +32,12 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.Period;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -270,6 +271,222 @@ public class ParentServiceImpl implements ParentService {
         System.out.println(birthYear);
         System.out.println(ageAtAdmission);
         return ageAtAdmission >= 3 && ageAtAdmission <= 5;
+    }
+
+
+    //view refill form
+    @Override
+    public ResponseEntity<ResponseObject> viewRefillFormList(HttpServletRequest request) {
+
+        //xac thuc nguoi dung
+        Account account = jwtService.extractAccountFromCookie(request);
+        if (account == null || !account.getRole().equals(Role.PARENT)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(
+                    ResponseObject.builder()
+                            .message("Forbidden: Only parents can access this resource")
+                            .success(false)
+                            .data(null)
+                            .build()
+            );
+        }
+
+        // 2. Tìm kỳ tuyển sinh đang ACTIVE
+        AdmissionTerm activeTerm = admissionTermRepo.findAll().stream()
+                .filter(t -> t.getStatus().equals(Status.ACTIVE_TERM.getValue()))
+                .findFirst().orElse(null);
+
+        List<Map<String, Object>> admissionFormList = admissionFormRepo.findAll().stream()
+                //kiểm tra, nếu form ko cos thì vẫn hiện, chứ ko bị crash, //Crash tại form.getParent().getId() ==> trước khi tạo form phải save parent
+                .filter(form -> form.getParent() != null && form.getParent().getId().equals(account.getParent().getId()))
+                .filter(form -> form.getStudent() != null)// bỏ qua các AdmissionForm không có học sinh ==> tránh bị lỗi null
+                .filter(form -> activeTerm != null &&
+                        form.getAdmissionTerm() != null &&
+                        form.getAdmissionTerm().getId().equals(activeTerm.getId()))
+                .filter(form -> form.getStatus().equals(Status.REJECTED.getValue()) ||
+                        form.getStatus().equals(Status.CANCELLED.getValue()))
+                .sorted(Comparator.comparing(AdmissionForm::getSubmittedDate).reversed())// sort form theo ngày chỉnh sửa mới nhất
+                .map(this::getFormDetail)
+                .toList();
+
+        List<Map<String, Object>> studentList = studentRepo.findAllByParent_Id(account.getParent().getId()).stream()
+                .map(student -> {
+                    Map<String, Object> studentDetail = new HashMap<>();
+                    studentDetail.put("id", student.getId());
+                    studentDetail.put("name", student.getName());
+                    studentDetail.put("gender", student.getGender());
+                    studentDetail.put("dateOfBirth", student.getDateOfBirth());
+                    studentDetail.put("placeOfBirth", student.getPlaceOfBirth());
+                    studentDetail.put("profileImage", student.getProfileImage());
+                    studentDetail.put("householdRegistrationImg", student.getHouseholdRegistrationImg());
+                    studentDetail.put("birthCertificateImg", student.getBirthCertificateImg());
+                    studentDetail.put("isStudent", student.isStudent());
+                    studentDetail.put("hadForm", !student.getAdmissionFormList().isEmpty());//trong từng học sinh check đã tạo form chưa
+                    return studentDetail;
+                })
+                .toList();
+
+        Map<String, Object> data = new HashMap<>();
+        data.put("admissionFormList", admissionFormList);
+        data.put("studentList", studentList);
+
+
+        return ResponseEntity.status(HttpStatus.OK).body(
+                ResponseObject.builder()
+                        .message("")
+                        .success(true)
+                        .data(data)
+                        .build()
+        );
+    }
+
+    //refill form
+    @Override
+    public ResponseEntity<ResponseObject> refillForm(RefillFormRequest request, HttpServletRequest httpRequest) {
+
+        // 1. Xác thực người dùng
+        Account account = jwtService.extractAccountFromCookie(httpRequest);
+        if (account == null || !account.getRole().equals(Role.PARENT)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(
+                    ResponseObject.builder()
+                            .message("Forbidden: Only parents can access this resource")
+                            .success(false)
+                            .data(null)
+                            .build()
+            );
+        }
+
+        // 2. Validate input
+        String error = RefillFormValidation.validate(request);
+        if (!error.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
+                    ResponseObject.builder()
+                            .message(error)
+                            .success(false)
+                            .data(null)
+                            .build()
+            );
+        }
+
+        // 3. Lấy thông tin student
+        Student student = studentRepo.findById(request.getStudentId()).orElse(null);
+        if (student == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
+                    ResponseObject.builder()
+                            .message("Student not found")
+                            .success(false)
+                            .data(null)
+                            .build()
+            );
+        }
+
+        // 4. Tìm kỳ tuyển sinh đang ACTIVE
+        AdmissionTerm activeTerm = admissionTermRepo.findAll().stream()
+                .filter(t -> t.getStatus().equals(Status.ACTIVE_TERM.getValue()))
+                .findFirst()
+                .orElse(null);
+
+        if (activeTerm == null) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(
+                    ResponseObject.builder()
+                            .message("No active admission term currently open")
+                            .success(false)
+                            .data(null)
+                            .build()
+            );
+        }
+
+        // 5. Kiểm tra độ tuổi phù hợp
+        if (!isAgeValidForGrade(student.getDateOfBirth(), activeTerm.getYear())) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
+                    ResponseObject.builder()
+                            .message("Student's birth year does not match required age for grade " + activeTerm.getGrade())
+                            .success(false)
+                            .data(null)
+                            .build());
+        }
+
+        // 6. kiểm chotra form đã submit kỳ này chưa (ngoại trừ CANCELLED, REJECTED)
+        List<AdmissionForm> existingForms = admissionFormRepo
+                .findAllByParent_IdAndStudent_Id(account.getParent().getId(), student.getId()).stream()
+                .filter(form -> form.getAdmissionTerm() != null && Objects.equals(form.getAdmissionTerm().getId(), activeTerm.getId()))
+                .toList();
+
+        Optional<AdmissionForm> rejectedOrCancelledFormOpt = existingForms.stream()
+                .filter(form -> form.getStatus().equals(Status.REJECTED.getValue()) || form.getStatus().equals(Status.CANCELLED.getValue()))
+                .findFirst();
+
+        boolean hasSubmittedForm = existingForms.stream()
+                .anyMatch(form -> !form.getStatus().equals(Status.REJECTED.getValue()) && !form.getStatus().equals(Status.CANCELLED.getValue()));
+
+        if (hasSubmittedForm) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(
+                    ResponseObject.builder()
+                            .message("This student has already been submitted in the current admission term.")
+                            .success(false)
+                            .data(null)
+                            .build()
+            );
+        }
+
+        boolean hasPendingForm = existingForms.stream()
+                .anyMatch(form -> form.getStatus().equals(Status.PENDING_APPROVAL.getValue()));
+
+        if (hasPendingForm) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(
+                    ResponseObject.builder()
+                            .message("You have already submitted a pending form for this student in the current term.")
+                            .success(false)
+                            .data(null)
+                            .build()
+            );
+        }
+
+        // 7. Nếu có form bị cancel hoặc reject thì cập nhật form đó, nếu không thì tạo mới
+        AdmissionForm form;
+        if (rejectedOrCancelledFormOpt.isPresent()) {
+            form = rejectedOrCancelledFormOpt.get();
+            form.setHouseholdRegistrationAddress(request.getHouseholdRegistrationAddress());
+            form.setCommitmentImg(request.getCommitmentImg());
+            form.setChildCharacteristicsFormImg(request.getChildCharacteristicsFormImg());
+            form.setNote(request.getNote());
+            form.setSubmittedDate(LocalDate.now());
+            form.setStatus(Status.PENDING_APPROVAL.getValue());
+        } else {
+            form = AdmissionForm.builder()
+                    .parent(account.getParent())
+                    .student(student)
+                    .admissionTerm(activeTerm)
+                    .householdRegistrationAddress(request.getHouseholdRegistrationAddress())
+                    .commitmentImg(request.getCommitmentImg())
+                    .childCharacteristicsFormImg(request.getChildCharacteristicsFormImg())
+                    .note(request.getNote())
+                    .submittedDate(LocalDate.now())
+                    .status(Status.PENDING_APPROVAL.getValue())
+                    .build();
+        }
+
+        admissionFormRepo.save(form);
+
+        // 8. Gửi email xác nhận
+        try {
+            mailService.sendMail(
+                    account.getEmail(),
+                    "Admission Form Resubmitted",
+                    "Dear Parent,\n\nYour resubmitted admission form for your child has been successfully received on "
+                            + LocalDateTime.now() + ".\n\nRegards,\nSunShine Preschool"
+            );
+        } catch (Exception e) {
+            System.err.println("Failed to send email notification: " + e.getMessage());
+        }
+
+        // 9. Trả về kết quả thành công
+        return ResponseEntity.ok().body(
+                ResponseObject.builder()
+                        .message("Successfully resubmitted")
+                        .success(true)
+                        .data(null)
+                        .build()
+        );
     }
 
 

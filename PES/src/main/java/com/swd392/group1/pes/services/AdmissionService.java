@@ -14,8 +14,6 @@ public interface AdmissionService {
 
     ResponseEntity<ResponseObject> createExtraTerm(CreateExtraTermRequest request);
 
-    ResponseEntity<ResponseObject> viewExtraTerm();
-
     ResponseEntity<ResponseObject> viewAdmissionFormList();
 
     ResponseEntity<ResponseObject> getDefaultFeeByGrade(String grade);

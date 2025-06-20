@@ -2,6 +2,7 @@ package com.swd392.group1.pes.controllers;
 
 import com.swd392.group1.pes.requests.AddChildRequest;
 import com.swd392.group1.pes.requests.CancelAdmissionForm;
+import com.swd392.group1.pes.requests.RefillFormRequest;
 import com.swd392.group1.pes.requests.SubmitAdmissionFormRequest;
 import com.swd392.group1.pes.requests.UpdateChildRequest;
 import com.swd392.group1.pes.response.ResponseObject;
@@ -35,6 +36,18 @@ public class ParentController {
     @PreAuthorize("hasRole('parent')")
     public ResponseEntity<ResponseObject> submitAdmissionForm(@RequestBody SubmitAdmissionFormRequest request, HttpServletRequest httpRequest) {
         return parentService.submitAdmissionForm(request, httpRequest);
+    }
+
+    @GetMapping("/form/refill/list")
+    @PreAuthorize("hasRole('parent')")
+    public ResponseEntity<ResponseObject> viewRefillFormList(HttpServletRequest request) {
+        return parentService.viewRefillFormList(request);
+    }
+
+    @PostMapping("/form/refill")
+    @PreAuthorize("hasRole('parent')")
+    public ResponseEntity<ResponseObject> refillForm(@RequestBody RefillFormRequest request, HttpServletRequest httpRequest) {
+        return parentService.refillForm(request, httpRequest);
     }
 
     @PutMapping("/form/cancel")

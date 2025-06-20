@@ -19,16 +19,6 @@ public class ExtraTermValidation {
         if (request.getMaxNumberRegistration() <= 0) {
             return "Maximum number of registrations must be greater than 0.";
         }
-
-        if (request.getReason() == null || request.getReason().trim().isEmpty()) {
-            return "Reason is required";
-        }
-
-
-        if (request.getReason().trim().split("\\s+").length > 150) {
-            return "Reason must not exceed 150 words currently" + request.getReason().trim().split("\\s+").length + " words";
-        }
-
         return "";
     }
 }

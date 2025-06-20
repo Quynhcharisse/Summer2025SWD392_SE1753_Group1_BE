@@ -1,9 +1,9 @@
 package com.swd392.group1.pes.validations.ParentValidation;
 
-import com.swd392.group1.pes.requests.SubmitAdmissionFormRequest;
+import com.swd392.group1.pes.requests.RefillFormRequest;
 
-public class SubmittedAdmissionFormValidation {
-    public static String validate(SubmitAdmissionFormRequest request) {
+public class RefillFormValidation {
+    public static String validate(RefillFormRequest request) {
         // 1. Địa chỉ hộ khẩu
         if (request.getHouseholdRegistrationAddress() == null || request.getHouseholdRegistrationAddress().trim().isEmpty()) {
             return "Household registration address is required.";
@@ -38,9 +38,7 @@ public class SubmittedAdmissionFormValidation {
 
         return "";
     }
-
     private static boolean isValidImage(String fileName) {
         return fileName.matches("(?i)^.+\\.(jpg|jpeg|png|gif|bmp|webp)$");
     }
 }
-

@@ -137,7 +137,7 @@ public class HRServiceImpl implements HRService {
 
         Account account = accountRepo.save(
                 Account.builder()
-                        .email(GenerateEmailTeacherUtil.generateTeacherEmail(request.getName(), accountRepo))
+                        .email(GenerateEmailTeacherUtil.generateTeacherEmail(accountRepo))
                         .password(RandomPasswordUtil.generateRandomPassword())
                         .name(request.getName())
                         .phone(request.getPhone())
