@@ -48,7 +48,15 @@ public class AuthServiceImpl implements AuthService {
     public ResponseEntity<ResponseObject> login(LoginRequest request, HttpServletResponse response) {
         Account account = accountRepo.findByEmailAndPassword(request.getEmail(), request.getPassword()).orElse(null);
 
-        assert account != null;
+        if (account == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(
+                    ResponseObject.builder()
+                            .message("Invalid email or password")
+                            .success(false)
+                            .data(null)
+                            .build()
+            );
+        }
 
         String error = LoginValidation.validate(request, accountRepo);
 
@@ -118,9 +126,9 @@ public class AuthServiceImpl implements AuthService {
                 );
             }
         }
-        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(
                 ResponseObject.builder()
-                        .message("Refresh invalid")
+                        .message("Refresh token is invalid or expired")
                         .success(false)
                         .data(null)
                         .build()

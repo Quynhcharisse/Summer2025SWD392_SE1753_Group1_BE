@@ -13,6 +13,7 @@ import com.swd392.group1.pes.repositories.ParentRepo;
 import com.swd392.group1.pes.repositories.StudentRepo;
 import com.swd392.group1.pes.requests.AddChildRequest;
 import com.swd392.group1.pes.requests.CancelAdmissionForm;
+import com.swd392.group1.pes.requests.GetPaymentURLRequest;
 import com.swd392.group1.pes.requests.RefillFormRequest;
 import com.swd392.group1.pes.requests.SubmitAdmissionFormRequest;
 import com.swd392.group1.pes.requests.UpdateChildRequest;
@@ -26,18 +27,30 @@ import com.swd392.group1.pes.validations.ParentValidation.RefillFormValidation;
 import com.swd392.group1.pes.validations.ParentValidation.SubmittedAdmissionFormValidation;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
+import javax.crypto.Mac;
+import javax.crypto.spec.SecretKeySpec;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+import java.text.SimpleDateFormat;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.Calendar;
 import java.util.Comparator;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Random;
+import java.util.SortedMap;
+import java.util.TimeZone;
+import java.util.TreeMap;
 
 @Service
 @RequiredArgsConstructor
@@ -54,6 +67,12 @@ public class ParentServiceImpl implements ParentService {
     private final StudentRepo studentRepo;
 
     private final MailService mailService;
+
+    @Value("${vnpay.return.url}")
+    String vnpayReturnUrl;
+
+    @Value("${vnpay.hash.key}")
+    String hashKey;
 
     @Override
     public ResponseEntity<ResponseObject> viewAdmissionFormList(HttpServletRequest request) {
@@ -767,5 +786,110 @@ public class ParentServiceImpl implements ParentService {
                         .success(true)
                         .data(null)
                         .build());
+    }
+
+    @Override
+    public ResponseEntity<ResponseObject> getPaymentURL(GetPaymentURLRequest request, HttpServletRequest httpRequest) {
+        String version = "2.1.1";
+        String command = "pay";
+        String tmnCode = "NSLIVTOU";
+        long amount = request.getAmount() * 100;
+        Calendar cld = Calendar.getInstance(TimeZone.getTimeZone("Etc/GMT+7"));
+        SimpleDateFormat formatter = new SimpleDateFormat("yyyyMMddHHmmss");
+        String createDate = formatter.format(cld.getTime());
+        String currCode = "VND";
+        String ipAddr = "127.0.0.1";
+        String locale = "vn";
+        String orderInfo = request.getPaymentInfo();
+        String orderType = "education";
+        String returnUrl = vnpayReturnUrl;
+        cld.add(Calendar.MINUTE, 10);
+        String expireDate = formatter.format(cld.getTime());
+        String txnRef = getTxnRef(8);
+
+        // step 1: put all params into a sorted map
+        SortedMap<String, String> vnpParams = new TreeMap<>();
+        vnpParams.put("vnp_Version", version);
+        vnpParams.put("vnp_Command", command);
+        vnpParams.put("vnp_TmnCode", tmnCode);
+        vnpParams.put("vnp_Amount", String.valueOf(amount));
+        vnpParams.put("vnp_CurrCode", currCode);
+        vnpParams.put("vnp_TxnRef", txnRef);
+        vnpParams.put("vnp_OrderInfo", orderInfo);
+        vnpParams.put("vnp_OrderType", orderType);
+        vnpParams.put("vnp_Locale", locale);
+        vnpParams.put("vnp_ReturnUrl", returnUrl);
+        vnpParams.put("vnp_IpAddr", ipAddr);
+        vnpParams.put("vnp_CreateDate", createDate);
+        vnpParams.put("vnp_ExpireDate", expireDate);
+
+        // step 2: build the hash data string
+        StringBuilder hashData = new StringBuilder();
+        for (Map.Entry<String, String> entry : vnpParams.entrySet()) {
+            if (!hashData.isEmpty()) hashData.append('&');
+            hashData.append(URLEncoder.encode(entry.getKey(), StandardCharsets.US_ASCII));
+            hashData.append('=');
+            hashData.append(URLEncoder.encode(entry.getValue(), StandardCharsets.US_ASCII));
+        }
+
+        // step 3: create secure hash
+        String secureHash = getHashSecret(hashData.toString());
+
+        // step 4: build full URL with all params + secure hash
+        StringBuilder paymentUrl = new StringBuilder("https://sandbox.vnpayment.vn/paymentv2/vpcpay.html?");
+        for (Map.Entry<String, String> entry : vnpParams.entrySet()) {
+            paymentUrl.append(URLEncoder.encode(entry.getKey(), StandardCharsets.US_ASCII));
+            paymentUrl.append('=');
+            paymentUrl.append(URLEncoder.encode(entry.getValue(), StandardCharsets.US_ASCII));
+            paymentUrl.append('&');
+        }
+        paymentUrl.append("vnp_SecureHash=").append(secureHash);
+
+        Map<String, Object> data = new HashMap<>();
+        data.put("paymentUrl", paymentUrl.toString());
+
+        // step 5: return the result
+        return ResponseEntity.ok(
+                ResponseObject.builder()
+                        .message("Successfully generated VNPay URL")
+                        .success(true)
+                        .data(data)
+                        .build()
+        );
+    }
+
+    private String getTxnRef(int length) {
+        String randomCharacter = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+        Random random = new Random();
+        SimpleDateFormat formatter = new SimpleDateFormat("yyyyMMddHHmmss");
+        formatter.setTimeZone(TimeZone.getTimeZone("Etc/GMT+7"));
+        String timestamp = formatter.format(new Date());
+        StringBuilder suffix = new StringBuilder(length);
+        for (int i = 0; i < length; i++) {
+            suffix.append(randomCharacter.charAt(random.nextInt(randomCharacter.length())));
+        }
+        return timestamp + suffix.toString();
+    }
+
+    private String getHashSecret(String hashData) {
+        String key = hashKey;
+        try {
+            Mac mac = Mac.getInstance("HmacSHA512");
+            byte[] keyBytes = key.getBytes(StandardCharsets.UTF_8);
+            SecretKeySpec secretKey = new SecretKeySpec(keyBytes, "HmacSHA512");
+            mac.init(secretKey);
+            byte[] hashBytes = mac.doFinal(hashData.getBytes(StandardCharsets.UTF_8));
+            return bytesToHex(hashBytes);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to generate HMAC-SHA512 hash.", e);
+        }
+    }
+
+    private String bytesToHex(byte[] bytes) {
+        StringBuilder sb = new StringBuilder(bytes.length * 2);
+        for (byte b : bytes) {
+            sb.append(String.format("%02x", b));
+        }
+        return sb.toString();
     }
 }

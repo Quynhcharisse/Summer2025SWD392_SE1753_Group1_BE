@@ -5,7 +5,7 @@ import com.swd392.group1.pes.repositories.AccountRepo;
 
 public class GenerateEmailTeacherUtil {
 
-    private static final String BASE_EMAIL = "lasystem.teacher@gmail.com";
+    private static final String BASE_EMAIL = "systemteacher08@gmail.com";
 
     public static String generateTeacherEmail(AccountRepo accountRepo) {
         long count = accountRepo.countByRole(Role.TEACHER);
