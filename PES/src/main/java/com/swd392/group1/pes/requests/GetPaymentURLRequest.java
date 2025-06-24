@@ -12,8 +12,7 @@ import lombok.experimental.FieldDefaults;
 @AllArgsConstructor
 @Builder
 @FieldDefaults(level = AccessLevel.PRIVATE)
-public class CreateTeacherRequest {
-    String name;
-    String avatarUrl;
-    String gender;
+public class GetPaymentURLRequest {
+    long amount;
+    String paymentInfo; //nội dung chuyển khoản
 }

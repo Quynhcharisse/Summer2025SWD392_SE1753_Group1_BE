@@ -1,20 +1,19 @@
 package com.swd392.group1.pes.services.implementors;
 
+import com.swd392.group1.pes.email.Format;
 import com.swd392.group1.pes.enums.Role;
 import com.swd392.group1.pes.enums.Status;
 import com.swd392.group1.pes.models.Account;
 import com.swd392.group1.pes.repositories.AccountRepo;
 import com.swd392.group1.pes.requests.CreateTeacherRequest;
 import com.swd392.group1.pes.requests.ProcessAccountRequest;
-import com.swd392.group1.pes.requests.UpdateTeacherRequest;
 import com.swd392.group1.pes.response.ResponseObject;
 import com.swd392.group1.pes.services.HRService;
 import com.swd392.group1.pes.services.MailService;
 import com.swd392.group1.pes.utils.GenerateEmailTeacherUtil;
 import com.swd392.group1.pes.utils.RandomPasswordUtil;
-import com.swd392.group1.pes.validations.HRValidation.ProcessAccountValidation;
 import com.swd392.group1.pes.validations.HRValidation.CreateTeacherValidation;
-import com.swd392.group1.pes.validations.HRValidation.UpdateTeacherValidation;
+import com.swd392.group1.pes.validations.HRValidation.ProcessAccountValidation;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -88,31 +87,31 @@ public class HRServiceImpl implements HRService {
         accountRepo.save(account);
 
         // Gửi email thông báo
-        String subject = action.equalsIgnoreCase("ban") ? 
-            "Your Account Has Been Suspended" : "Your Account Has Been Reactivated";
-        
+        String subject = action.equalsIgnoreCase("ban") ?
+                "Your Account Has Been Suspended" : "Your Account Has Been Reactivated";
+
         String content = action.equalsIgnoreCase("ban") ?
-            "Dear " + account.getName() + ",\n\n" +
-            "Your account has been suspended due to violation of our terms of service. " +
-            "If you believe this is a mistake, please contact our support team.\n\n" +
-            "Best regards,\nPES Team"
-            :
-            "Dear " + account.getName() + ",\n\n" +
-            "Your account has been reactivated. You can now log in to your account normally.\n\n" +
-            "Best regards,\nPES Team";
+                "Dear " + account.getName() + ",\n\n" +
+                        "Your account has been suspended due to violation of our terms of service. " +
+                        "If you believe this is a mistake, please contact our support team.\n\n" +
+                        "Best regards,\nPES Team"
+                :
+                "Dear " + account.getName() + ",\n\n" +
+                        "Your account has been reactivated. You can now log in to your account normally.\n\n" +
+                        "Best regards,\nPES Team";
 
         try {
             mailService.sendMail(account.getEmail(), subject, content);
         } catch (Exception e) {
-            log.error("Failed to send notification email to {} for action {}: {}", 
-                account.getEmail(), action, e.getMessage());
+            log.error("Failed to send notification email to {} for action {}: {}",
+                    account.getEmail(), action, e.getMessage());
         }
 
         String msg = action.equalsIgnoreCase("ban") ?
                 "Account banned successfully" : "Account unbanned successfully";
 
         log.info("Successfully {} account {} ({})", action, account.getEmail(), account.getRole());
-        
+
         return ResponseEntity.status(HttpStatus.OK).body(
                 ResponseObject.builder()
                         .message(msg)
@@ -124,6 +123,7 @@ public class HRServiceImpl implements HRService {
 
     @Override
     public ResponseEntity<ResponseObject> createTeacherAcc(CreateTeacherRequest request) {
+
         String error = CreateTeacherValidation.validate(request, accountRepo);
         if (!error.isEmpty()) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
@@ -135,27 +135,32 @@ public class HRServiceImpl implements HRService {
             );
         }
 
+        String rawPassword = RandomPasswordUtil.generateRandomPassword();
+
         Account account = accountRepo.save(
                 Account.builder()
                         .email(GenerateEmailTeacherUtil.generateTeacherEmail(accountRepo))
-                        .password(RandomPasswordUtil.generateRandomPassword())
+                        .password(rawPassword)
                         .name(request.getName())
-                        .phone(request.getPhone())
+                        .avatarUrl(null)
                         .gender(request.getGender())
-                        .identityNumber(request.getIdentityNumber())
-                        .avatarUrl(request.getAvatarUrl())
                         .status(Status.ACCOUNT_ACTIVE.getValue())
                         .role(Role.TEACHER)
                         .createdAt(LocalDate.now())
                         .build()
         );
 
+        mailService.sendMail(
+                account.getEmail(),
+                "[PES]_New Teacher Account Created",
+                Format.getTeacherFormat(account.getEmail(), rawPassword)
+        );
 
         return ResponseEntity.status(HttpStatus.CREATED).body(
                 ResponseObject.builder()
                         .message("Create Teacher Successfully")
                         .success(true)
-                        .data(account)
+                        .data(null)
                         .build()
         );
     }
@@ -170,10 +175,8 @@ public class HRServiceImpl implements HRService {
                             Map<String, Object> data = new HashMap<>();
                             data.put("email", account.getEmail());
                             data.put("name", account.getName());
-                            data.put("phone", account.getPhone());
-                            data.put("gender", account.getGender());
-                            data.put("identityNumber", account.getIdentityNumber());
                             data.put("avatarUrl", account.getAvatarUrl());
+                            data.put("gender", account.getGender());
                             data.put("role", account.getRole());
                             data.put("status", account.getStatus());
                             return data;

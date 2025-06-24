@@ -2,6 +2,7 @@ package com.swd392.group1.pes.controllers;
 
 import com.swd392.group1.pes.requests.AddChildRequest;
 import com.swd392.group1.pes.requests.CancelAdmissionForm;
+import com.swd392.group1.pes.requests.GetPaymentURLRequest;
 import com.swd392.group1.pes.requests.RefillFormRequest;
 import com.swd392.group1.pes.requests.SubmitAdmissionFormRequest;
 import com.swd392.group1.pes.requests.UpdateChildRequest;
@@ -74,6 +75,12 @@ public class ParentController {
     @PreAuthorize("hasRole('parent')")
     public ResponseEntity<ResponseObject> updateChild(@RequestBody UpdateChildRequest request, HttpServletRequest httpRequest) {
         return parentService.updateChild(request, httpRequest);
+    }
+
+    @PostMapping("/payment")
+    @PreAuthorize("hasRole('parent')")
+    public ResponseEntity<ResponseObject> getPaymentURL(@RequestBody GetPaymentURLRequest request, HttpServletRequest httpRequest) {
+        return parentService.getPaymentURL(request, httpRequest);
     }
 
 }

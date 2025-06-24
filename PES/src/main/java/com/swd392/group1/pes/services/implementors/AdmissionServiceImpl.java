@@ -258,12 +258,10 @@ public class AdmissionServiceImpl implements AdmissionService {
                                 data.put("learningMaterialFee", 0);
                                 data.put("facilityFee", 0);
                             }
-
                             //gọi lai extra term
                             if(!admissionTermRepo.findAllByParentTerm_Id(term.getId()).isEmpty()){
                                 data.put("extraTerms", viewExtraTerm(term));
                             }
-
                             return data;
                         }
                 )

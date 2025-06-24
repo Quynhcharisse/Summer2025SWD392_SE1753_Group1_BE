@@ -2,6 +2,7 @@ package com.swd392.group1.pes.services;
 
 import com.swd392.group1.pes.requests.AddChildRequest;
 import com.swd392.group1.pes.requests.CancelAdmissionForm;
+import com.swd392.group1.pes.requests.GetPaymentURLRequest;
 import com.swd392.group1.pes.requests.RefillFormRequest;
 import com.swd392.group1.pes.requests.SubmitAdmissionFormRequest;
 import com.swd392.group1.pes.requests.UpdateChildRequest;
@@ -26,5 +27,7 @@ public interface ParentService {
     ResponseEntity<ResponseObject> addChild(AddChildRequest request, HttpServletRequest httpRequest);
 
     ResponseEntity<ResponseObject> updateChild(UpdateChildRequest request, HttpServletRequest httpRequest);
+
+    ResponseEntity<ResponseObject> getPaymentURL(GetPaymentURLRequest request, HttpServletRequest httpRequest);
 
 }
