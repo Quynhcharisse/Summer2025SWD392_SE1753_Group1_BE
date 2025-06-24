@@ -42,9 +42,9 @@ public class Syllabus {
     String description;
 
     @Column(name = "`max_number_of_week`")
-    int maxNumberOfWeek;
+    int numberOfWeek;
 
-    int maxHoursOfSyllabus;
+    int hoursOfSyllabus;
 
     @Enumerated(EnumType.STRING)
     Grade grade;

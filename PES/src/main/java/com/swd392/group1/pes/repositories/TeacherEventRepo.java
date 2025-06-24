@@ -11,7 +11,7 @@ import java.util.List;
 public interface TeacherEventRepo extends JpaRepository<TeacherEvent, Integer> {
 
     // Với nhiều teacherId cùng lúc
-    List<TeacherEvent> findByTeacherIdInAndEventStatusAndEventStartTimeLessThanEqualAndEventEndTimeGreaterThanEqual(
+    List<TeacherEvent> findByTeacherIdInAndEventStatusAndEventStartTimeLessThanAndEventEndTimeGreaterThan(
             Collection<Integer> teacher_id, Status event_status, LocalDateTime event_startTime, LocalDateTime event_endTime
     );
 

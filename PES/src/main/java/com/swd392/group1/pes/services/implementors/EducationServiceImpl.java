@@ -23,8 +23,6 @@ import com.swd392.group1.pes.requests.CreateLessonRequest;
 import com.swd392.group1.pes.requests.AssignLessonsRequest;
 import com.swd392.group1.pes.requests.CreateSyllabusRequest;
 import com.swd392.group1.pes.requests.GenerateClassesRequest;
-import com.swd392.group1.pes.requests.UnassignLessonsRequest;
-import com.swd392.group1.pes.requests.UpdateEventRequest;
 import com.swd392.group1.pes.requests.UpdateLessonRequest;
 import com.swd392.group1.pes.requests.UpdateSyllabusRequest;
 import com.swd392.group1.pes.response.ResponseObject;
@@ -35,7 +33,6 @@ import com.swd392.group1.pes.validations.EducationValidation.LessonValidation;
 import com.swd392.group1.pes.validations.EducationValidation.SyllabusValidation.AssignLessonsValidation;
 import com.swd392.group1.pes.validations.EducationValidation.SyllabusValidation.CheckSyllabusId;
 import com.swd392.group1.pes.validations.EducationValidation.SyllabusValidation.CreateSyllabusValidation;
-import com.swd392.group1.pes.validations.EducationValidation.SyllabusValidation.UnassignLessonsValidation;
 import com.swd392.group1.pes.validations.EducationValidation.SyllabusValidation.UpdateSyllabusValidation;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -50,6 +47,7 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -105,20 +103,16 @@ public class EducationServiceImpl implements EducationService {
                             .build());
         }
 
-        // 3. Tính tổng duration của các bài học được yêu cầu
         int totalDuration = validLessons.stream()
                 .mapToInt(Lesson::getDuration)
-                .sum() * request.getMaxNumberOfWeek();
+                .sum();
 
-        // 4. Tính maxAllowed từ số tuần
-        int maxAllowed = request.getMaxNumberOfWeek() * 40;
-        if (totalDuration > maxAllowed) {
+
+        if (totalDuration != 30) {
             return ResponseEntity
                     .status(HttpStatus.CONFLICT)
                     .body(ResponseObject.builder()
-                            .message("Cannot create syllabus.\n Total lesson duration ("
-                                    + totalDuration + "h) exceeds limit ("
-                                    + maxAllowed + "h).")
+                            .message("Cannot create syllabus.\n Total after assignment would be " + totalDuration + " hours per week, but syllabus '"+ request.getSubject() +"' must have exactly 30 hours per week.\n Adjust your lessons accordingly.")
                             .success(false)
                             .data(null)
                             .build());
@@ -128,8 +122,8 @@ public class EducationServiceImpl implements EducationService {
         Syllabus syllabus = Syllabus.builder()
                 .subject(request.getSubject())
                 .description(request.getDescription())
-                .maxNumberOfWeek(request.getMaxNumberOfWeek())
-                .maxHoursOfSyllabus(maxAllowed)
+                .numberOfWeek(request.getNumberOfWeek())
+                .hoursOfSyllabus(request.getNumberOfWeek() * 30)
                 .grade(getGradeFromName(request.getGrade()))
                 .createdAt(LocalDateTime.now())
                 .build();
@@ -142,7 +136,6 @@ public class EducationServiceImpl implements EducationService {
                         .toList();
         syllabus.setSyllabusLessonList(joins);
 
-        // 6. Lưu xuống DB
         syllabusRepo.save(syllabus);
 
         return ResponseEntity
@@ -192,15 +185,18 @@ public class EducationServiceImpl implements EducationService {
             );
         }
 
+        List<SyllabusLesson> list = syllabusLessonRepo.findBySyllabusId(Integer.parseInt(id));
+        
         syllabusRepo.save(
                 Syllabus.builder()
                         .id(Integer.parseInt(id))
                         .subject(request.getSubject())
                         .description(request.getDescription())
-                        .maxNumberOfWeek(request.getMaxNumberOfWeek())
-                        .maxHoursOfSyllabus(request.getMaxNumberOfWeek() * 40)
+                        .numberOfWeek(request.getNumberOfWeek())
+                        .hoursOfSyllabus(request.getNumberOfWeek() * 30)
                         .grade(getGradeFromName(request.getGrade()))
                         .createdAt(syllabusRepo.findById(Integer.parseInt(id)).get().getCreatedAt())
+                        .syllabusLessonList(list)
                         .build()
         );
 
@@ -270,44 +266,18 @@ public class EducationServiceImpl implements EducationService {
         );
     }
 
-    @Override
-    public ResponseEntity<ResponseObject> generateClassesAuto(GenerateClassesRequest request) {
-        int maxStudents = admissionFormRepo.countByAdmissionTerm_IdAndStatusAndTransaction_Status(request.getTermId(), Status.APPROVED.getValue(), Status.TRANSACTION_SUCCESSFUL.getValue());
-        int maxClasses = (int) Math.ceil((double) maxStudents / request.getNumberStudentsOfEachClass());
-        Syllabus syllabus = syllabusRepo.findById(request.getSyllabusId()).get();
-        for (int i = 0; i < maxClasses; i++)
-        {
-            classRepo.save(
-              Classes.builder()
-//                      .name(request.getGrade()+"_"+String.format("%02d", i+1) + "_" + request.getAcademicYear())
-                      .numberStudent(request.getNumberStudentsOfEachClass())
-//                      .academicYear(request.getAcademicYear())
-                      .startDate(request.getStartDate())
-                      .endDate(request.getEndDate())
-                      .status("NOT VERIFIED")
-//                      .grade(getGradeFromName(request.getGrade()))
-                      .syllabus(syllabus)
-                      .build()
-            );
-        }
-        return ResponseEntity.ok(
-                ResponseObject.builder()
-                        .message("Generate Classes Successfully")
-                        .success(true)
-                        .data(null)
-                        .build()
-        );
-    }
 
     @Override
     public ResponseEntity<ResponseObject> assignLessonsToSyllabus(String id, AssignLessonsRequest request) {
-
-        String error = AssignLessonsValidation.validate(request.getLessonNames());
-
-        if(!CheckSyllabusId.validate(id).trim().isEmpty())
-            error = CheckSyllabusId.validate(id);
-
-        if (!error.isEmpty())
+        // 1. Validate request.getLessonNames()
+        List<String> requestedNames = request.getLessonNames();
+        String error = AssignLessonsValidation.validate(requestedNames);
+        // Nếu validation của ID cũng trả lỗi, ưu tiên thông báo ID lỗi
+        String idError = CheckSyllabusId.validate(id);
+        if (!idError.trim().isEmpty()) {
+            error = idError;
+        }
+        if (!error.isEmpty()) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
                     ResponseObject.builder()
                             .message(error)
@@ -315,30 +285,18 @@ public class EducationServiceImpl implements EducationService {
                             .data(null)
                             .build()
             );
-
-        // Syllabus không tồn tại hoặc bị xóa
-        if(syllabusRepo.findById(Integer.parseInt(id)).isEmpty())
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
-                    ResponseObject.builder()
-                            .message("Syllabus with id " + id + " does not exist or be deleted")
-                            .success(false)
-                            .data(null)
-                            .build()
-            );
-
+        }
 
 
         Syllabus syllabus = syllabusRepo.findById(Integer.parseInt(id)).get();
 
-        // 4. Lấy danh sách bài học theo tên
-        List<String> requestedNames = request.getLessonNames();
+        // 3. Lấy danh sách Lesson hợp lệ theo topic (theo thứ tự request nếu cần):
         List<Lesson> validLessons = new ArrayList<>();
-
         for (String name : requestedNames) {
-            lessonRepo.findByTopicIgnoreCase(name)
-                    .ifPresent(validLessons::add); // đảm bảo đúng thứ tự nếu cần
+            lessonRepo.findByTopicIgnoreCase(name).ifPresent(validLessons::add);
         }
-        if (validLessons.isEmpty()) {
+        // Nếu muốn báo lỗi khi một số tên không tồn tại, có thể so sánh requestedNames vs validLessons:
+        if (validLessons.isEmpty() && !requestedNames.isEmpty()) {
             return ResponseEntity
                     .status(HttpStatus.NOT_FOUND)
                     .body(ResponseObject.builder()
@@ -348,144 +306,94 @@ public class EducationServiceImpl implements EducationService {
                             .data(null)
                             .build());
         }
-        //5. Tạo bản đồ bài học đã có trong syllabus
-        Map<Integer, SyllabusLesson> existingLessonMap = syllabus.getSyllabusLessonList().stream()
+        // Nếu requestedNames rỗng (UI gửi mảng rỗng, muốn clear hết), validLessons sẽ rỗng.
+
+        // 4. Lấy map các lesson hiện có trong syllabus
+        List<SyllabusLesson> existingList = syllabus.getSyllabusLessonList();
+        Map<Integer, SyllabusLesson> existingLessonMap = existingList.stream()
                 .collect(Collectors.toMap(sl -> sl.getLesson().getId(), sl -> sl));
 
-        // 6. Tính tổng duration sau khi gán thêm
-        int existingDuration = syllabus.getSyllabusLessonList().stream()
-                .mapToInt(sl -> sl.getLesson().getDuration())
-                .sum();
 
-        int addedDuration = validLessons.stream()
-                .filter(lesson -> !existingLessonMap.containsKey(lesson.getId()))
+        int totalAfterAssign = validLessons.stream()
                 .mapToInt(Lesson::getDuration)
                 .sum();
 
-        int totalAfterAssign = (existingDuration + addedDuration) * syllabus.getMaxNumberOfWeek();
-        int maxAllowed = syllabus.getMaxHoursOfSyllabus();
 
-        if (totalAfterAssign > maxAllowed) {
+        if (totalAfterAssign != 30) {
+            String msg = String.format(
+                    "Assignment invalid: \n Total after assignment would be %d hours per week, but \n syllabus '%s' must have exactly 30 hours per week.\n Adjust your lessons accordingly.",
+                    totalAfterAssign, syllabus.getSubject()
+            );
             return ResponseEntity.status(HttpStatus.CONFLICT).body(
                     ResponseObject.builder()
-                            .message("Cannot assign lessons.\n Total duration would be " + totalAfterAssign +
-                                    " hours which exceeds the allowed limit (" + maxAllowed + " hours) for syllabus '" +
-                                    syllabus.getSubject() + "'.")
+                            .message(msg)
                             .success(false)
                             .data(null)
                             .build()
             );
         }
 
-        List<SyllabusLesson> updatedList = syllabus.getSyllabusLessonList();
-        int newlyAddedCount = 0;
+        // 7. Xác định lessons cần xóa (unassign) và cần thêm (assign)
+        Set<Integer> requestedIds = validLessons.stream()
+                .map(Lesson::getId)
+                .collect(Collectors.toSet());
+        Set<Integer> existingIds = existingLessonMap.keySet();
 
-        for (Lesson lesson : validLessons) {
-            if (!existingLessonMap.containsKey(lesson.getId())) {
-                SyllabusLesson newLink = SyllabusLesson.builder()
-                        .syllabus(syllabus)
-                        .lesson(lesson)
-                        .build();
-                updatedList.add(newLink);
-                newlyAddedCount++; // đếm số lesson mới được add
+        // Những lesson cũ không nằm trong requestedIds => cần unassign
+        List<SyllabusLesson> toRemoveLinks = existingList.stream()
+                .filter(sl -> !requestedIds.contains(sl.getLesson().getId()))
+                .toList();
+        // Những lesson mới trong requestedIds nhưng không nằm trong existingIds => cần add
+        List<Lesson> toAddLessons = validLessons.stream()
+                .filter(l -> !existingIds.contains(l.getId()))
+                .toList();
+        // 8. Thực hiện cập nhật danh sách SyllabusLesson:
+        // Xóa trước
+        int removedCount = 0;
+        if (!toRemoveLinks.isEmpty()) {
+            for (SyllabusLesson slink : toRemoveLinks) {
+                existingList.remove(slink);
+                syllabusLessonRepo.delete(slink);
+                removedCount++;
             }
         }
-
-        if (newlyAddedCount == 0) {
-            return ResponseEntity.ok().body(
-                    ResponseObject.builder()
-                            .message("No new lessons were added.")
-                            .success(true)
-                            .data(null)
-                            .build());
+        // Thêm mới
+        int addedCount = 0;
+        for (Lesson lesson : toAddLessons) {
+            SyllabusLesson newLink = SyllabusLesson.builder()
+                    .syllabus(syllabus)
+                    .lesson(lesson)
+                    .build();
+            existingList.add(newLink);
+            addedCount++;
         }
+        // Cập nhật lại list
+        syllabus.setSyllabusLessonList(existingList);
 
-        syllabus.setSyllabusLessonList(updatedList);
         syllabusRepo.save(syllabus);
 
-
-
-        return ResponseEntity.ok().body(
-                ResponseObject.builder()
-                        .message("Added " + newlyAddedCount + " new lesson(s) to syllabus.")
-                        .success(true)
-                        .data(null)
-                        .build()
-        );
-    }
-
-    @Override
-    public ResponseEntity<ResponseObject> unassignLessonsFromSyllabus(String id, UnassignLessonsRequest request) {
-
-        String error = UnassignLessonsValidation.validate(id, request);
-
-        if (!error.isEmpty())
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
-                    ResponseObject.builder()
-                            .message(error)
-                            .success(false)
-                            .data(null)
-                            .build()
-            );
-
-        // Syllabus không tồn tại hoặc bị xóa
-        if(syllabusRepo.findById(Integer.parseInt(id)).isEmpty())
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
-                    ResponseObject.builder()
-                            .message("Syllabus with id " + id + " does not exist or be deleted")
-                            .success(false)
-                            .data(null)
-                            .build()
-            );
-
-        Optional<Syllabus> optionalSyllabus = syllabusRepo.findById(Integer.parseInt(id));
-        if (optionalSyllabus.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
-                    ResponseObject.builder()
-                            .message("Syllabus with id " + id + " does not exist or has been deleted")
-                            .success(false)
-                            .data(null)
-                            .build()
-            );
-        }
-
-        Syllabus syllabus = optionalSyllabus.get();
-
-        List<String> namesToRemove = request.getLessonNames().stream()
-                .map(name -> name.trim().toLowerCase().replaceAll("\\s+", " "))
-                .toList();
-
-        List<SyllabusLesson> currentList = syllabus.getSyllabusLessonList();
-
-// Lưu lại số lượng ban đầu
-        int beforeSize = currentList.size();
-
-// Xóa theo điều kiện
-        currentList.removeIf(sl -> namesToRemove.contains(
-                sl.getLesson().getTopic().trim().toLowerCase().replaceAll("\\s+", " ")
-        ));
-
-        int removedCount = beforeSize - currentList.size();
-
-        if (removedCount == 0) {
+        // 10. Chuẩn bị thông điệp trả về
+        if (addedCount == 0 && removedCount == 0) {
             return ResponseEntity.ok().body(
                     ResponseObject.builder()
-                            .message("No lessons were unassigned.")
+                            .message("No change: the syllabus lessons remain unchanged.")
+                            .success(true)
+                            .data(null)
+                            .build()
+            );
+        } else {
+            String msg = String.format(
+                    "Updated syllabus: %d lesson(s) added, %d lesson(s) removed.",
+                    addedCount, removedCount
+            );
+            return ResponseEntity.ok().body(
+                    ResponseObject.builder()
+                            .message(msg)
                             .success(true)
                             .data(null)
                             .build()
             );
         }
-
-// Không cần gọi syllabus.setSyllabusLessonList(updatedList) nữa
-        syllabusRepo.save(syllabus);
-
-        return ResponseEntity.ok().body(
-                ResponseObject.builder()
-                        .message("Unassigned " + removedCount + " lesson(s) from syllabus.")
-                        .success(true)
-                        .data(null)
-                        .build());
     }
 
     @Override
@@ -566,8 +474,8 @@ public class EducationServiceImpl implements EducationService {
         data.put("id",syllabus.getId());
         data.put("subject",syllabus.getSubject());
         data.put("description",syllabus.getDescription());
-        data.put("maxNumberOfWeek",syllabus.getMaxNumberOfWeek());
-        data.put("maxHoursOfSyllabus", syllabus.getMaxHoursOfSyllabus());
+        data.put("numberOfWeek",syllabus.getNumberOfWeek());
+        data.put("maxHoursOfSyllabus", syllabus.getHoursOfSyllabus());
         data.put("grade",syllabus.getGrade());
         return data;
     }
@@ -596,6 +504,17 @@ public class EducationServiceImpl implements EducationService {
                     .toolsRequired(request.getToolsRequired())
                     .createdAt(LocalDateTime.now())
                     .build();
+
+        boolean isLessonDuplicate = lessonRepo.existsByTopicIgnoreCase(request.getTopic());
+        if (isLessonDuplicate) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(
+                    ResponseObject.builder()
+                            .message("Lesson already exists")
+                            .success(false)
+                            .data(null)
+                            .build()
+            );
+        }
 
         lessonRepo.save(lesson);
         return ResponseEntity.ok().body(
@@ -641,11 +560,11 @@ public class EducationServiceImpl implements EducationService {
             );
         }
 
-        List<String> violatedSyllabuses = checkDurationExceedSyllabus(lesson, request.getDuration());
+        List<String> violatedSyllabuses = checkDurationMatchSyllabus(lesson, request.getDuration());
         if (!violatedSyllabuses.isEmpty())
             return ResponseEntity.status(HttpStatus.CONFLICT).body(
                     ResponseObject.builder()
-                            .message("Cannot update duration.\n The following syllabuses would exceed max hours:\n" +
+                            .message("Cannot update duration.\n The following syllabuses would not meet required hours:\n" +
                                     String.join("\n", violatedSyllabuses))
                             .success(false)
                             .data(null)
@@ -672,8 +591,13 @@ public class EducationServiceImpl implements EducationService {
     }
 
     @Override
-    public ResponseEntity<ResponseObject> viewLessonList() {
-        List<Lesson> lessons = lessonRepo.findAll();
+    public ResponseEntity<ResponseObject> viewLessonList(String searchQuery) {
+        List<Lesson> lessons;
+        if (searchQuery != null && !searchQuery.isBlank()) {
+            lessons = lessonRepo.findByTopicContainingIgnoreCase(searchQuery.trim());
+        } else {
+            lessons = lessonRepo.findAll();
+        }
         // Sắp xếp theo createdAt giảm dần
         lessons.sort(Comparator.comparing(Lesson::getCreatedAt).reversed());
         List<Map<String,Object>> lessonDetails = lessons.stream()
@@ -838,8 +762,8 @@ public class EducationServiceImpl implements EducationService {
 
         // Lấy tất cả TeacherEvent xung đột
         List<TeacherEvent> conflicts = teacherEventRepo
-                .findByTeacherIdInAndEventStatusAndEventStartTimeLessThanEqualAndEventEndTimeGreaterThanEqual(
-                        validTeacherIds, Status.EVENT_ACTIVE , newEnd, newStart);
+                .findByTeacherIdInAndEventStatusAndEventStartTimeLessThanAndEventEndTimeGreaterThan(
+                        validTeacherIds, Status.EVENT_REGISTRATION_ACTIVE , newEnd, newStart);
 
         Map<Integer, List<Event>> conflictsByTeacher = new HashMap<>();
         for (TeacherEvent te : conflicts) {
@@ -887,7 +811,7 @@ public class EducationServiceImpl implements EducationService {
                 .description(request.getDescription())
                 .createdAt(LocalDateTime.now())
                 .registrationDeadline(request.getRegistrationDeadline())
-                .status(Status.EVENT_ACTIVE)
+                .status(Status.EVENT_REGISTRATION_ACTIVE)
                 .attachmentImg(request.getAttachmentImg())
                 .hostName(request.getHostName())
                 .build();
@@ -909,9 +833,11 @@ public class EducationServiceImpl implements EducationService {
     }
 
     @Override
-    public ResponseEntity<ResponseObject> updateEvent(String id, UpdateEventRequest request) {
-        String error = EventValidation.validateUpdate(id, request);
-        if (!error.isEmpty()) {
+    public ResponseEntity<ResponseObject> cancelEvent(String id) {
+        String error = EventValidation.checkEventId(id);
+
+        if(!error.isEmpty())
+        {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
                     ResponseObject.builder()
                             .message(error)
@@ -920,31 +846,37 @@ public class EducationServiceImpl implements EducationService {
                             .build()
             );
         }
+
         Event event = eventRepo.findById(Integer.parseInt(id)).orElse(null);
         if (event == null) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ResponseObject.builder()
+                    .message("Event not found")
+                    .success(false)
+                    .data(null)
+                    .build());
+        }
+
+        // 3. Chỉ cho phép hủy khi đang mở đăng ký
+        if (!Status.EVENT_REGISTRATION_ACTIVE.equals(event.getStatus())) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(
                     ResponseObject.builder()
-                            .message("Event not found")
+                            .message("Only events with status active can be canceled")
                             .success(false)
                             .data(null)
                             .build()
             );
         }
-        event.setName(request.getName());
-        event.setStartTime(request.getStartTime());
-        event.setEndTime(request.getEndTime());
-        event.setLocation(request.getLocation());
-        event.setDescription(request.getDescription());
-        event.setRegistrationDeadline(request.getRegistrationDeadline());
-        event.setAttachmentImg(request.getAttachmentImg());
-        event.setHostName(request.getHostName());
+
+        event.setStatus(Status.EVENT_CANCELLED);
         eventRepo.save(event);
+
+
         return ResponseEntity.ok(ResponseObject.builder()
-                .message("Event updated successfully")
+                .message("Cancel event successfully")
                 .success(true)
                 .data(null)
-                .build());
-    }
+                .build());    }
+
 
     @Override
     public ResponseEntity<ResponseObject> viewEventList() {
@@ -959,6 +891,7 @@ public class EducationServiceImpl implements EducationService {
                 .data(eventDetails)
                 .build());
     }
+
 
     @Override
     public ResponseEntity<ResponseObject> viewEventDetail(String id) {
@@ -991,20 +924,122 @@ public class EducationServiceImpl implements EducationService {
                 .build());
     }
 
+    @Override
+    public ResponseEntity<ResponseObject> viewAssignedTeachersOfEvent(String id) {
+        String error = EventValidation.checkEventId(id);
+
+        if(!error.isEmpty()){
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
+                    ResponseObject.builder()
+                            .message(error)
+                            .success(false)
+                            .data(null)
+                            .build());
+        }
+        // Lsson không tồn tại hoặc bị xóa
+        if(eventRepo.findById(Integer.parseInt(id)).isEmpty())
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
+                    ResponseObject.builder()
+                            .message("Event with id " + id + " does not exist or be deleted")
+                            .success(false)
+                            .data(null)
+                            .build()
+            );
+        Event event = eventRepo.findById(Integer.parseInt(id)).get();
+        List<TeacherEvent> tes = Optional.ofNullable(event.getTeacherEventList()).orElse(List.of());
+
+        // Build danh sách teacher detail
+        List<Map<String, Object>> teacherDetails = tes.stream()
+                .map(TeacherEvent::getTeacher)
+                .filter(Objects::nonNull)
+                .filter(account -> {
+                    String status = account.getStatus();
+                    return status != null && (
+                            status.equalsIgnoreCase("active") ||
+                                    status.equalsIgnoreCase("unban")
+                    );
+                })
+                .map(account -> {
+                    Map<String, Object> tMap = new HashMap<>();
+                    tMap.put("id", account.getId());
+                    tMap.put("email", account.getEmail());
+                    tMap.put("name", account.getName());
+                    tMap.put("phone", account.getPhone());
+                    tMap.put("gender", account.getGender());
+                    tMap.put("avatarUrl", account.getAvatarUrl());
+                    tMap.put("role", account.getRole());
+                    return tMap;
+                })
+                .toList();
+
+        return ResponseEntity.ok(
+                ResponseObject.builder()
+                        .message("Assigned teachers of event retrieved successfully")
+                        .success(true)
+                        .data(teacherDetails)
+                        .build()
+        );
+    }
+
+    @Override
+    public ResponseEntity<ResponseObject> viewActiveEvents() {
+        List<Event> activeEvents = eventRepo.findByStatus(Status.EVENT_REGISTRATION_ACTIVE);
+        List<Map<String, Object>> activeEventDetails = activeEvents.stream()
+                .sorted(Comparator.comparing(Event::getCreatedAt).reversed())
+                .map(this::buildEventDetail)
+                .toList();
+        return ResponseEntity.ok(ResponseObject.builder()
+                .message("Active Event list retrieved successfully")
+                .success(true)
+                .data(activeEventDetails)
+                .build());
+    }
+
     private Map<String, Object> buildEventDetail(Event event) {
+        DateTimeFormatter fmt = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
         Map<String, Object> data = new HashMap<>();
         data.put("id", event.getId());
         data.put("name", event.getName());
-        data.put("startTime", event.getStartTime());
-        data.put("endTime", event.getEndTime());
+        data.put("startTime", event.getStartTime().format(fmt));
+        data.put("endTime", event.getEndTime().format(fmt));
         data.put("location", event.getLocation());
         data.put("description", event.getDescription());
-        data.put("createdAt", event.getCreatedAt());
         data.put("status", event.getStatus());
-        data.put("registrationDeadline", event.getRegistrationDeadline());
+        data.put("registrationDeadline", event.getRegistrationDeadline().format(fmt));
         data.put("attachmentImg", event.getAttachmentImg());
         data.put("hostName", event.getHostName());
         return data;
+    }
+
+
+
+    @Override
+    public ResponseEntity<ResponseObject> generateClassesAuto(GenerateClassesRequest request) {
+        int maxStudents = admissionFormRepo.countByAdmissionTerm_IdAndStatusAndTransaction_Status(request.getTermId(), Status.APPROVED.getValue(), Status.TRANSACTION_SUCCESSFUL.getValue());
+        int maxClasses = (int) Math.ceil((double) maxStudents / request.getNumberStudentsOfEachClass());
+        Syllabus syllabus = syllabusRepo.findById(request.getSyllabusId()).get();
+        for (int i = 0; i < maxClasses; i++)
+        {
+            classRepo.save(
+                    Classes.builder()
+//                      .name(request.getGrade()+"_"+String.format("%02d", i+1) + "_" + request.getAcademicYear())
+                            .numberStudent(request.getNumberStudentsOfEachClass())
+//                      .academicYear(request.getAcademicYear())
+                            .startDate(request.getStartDate())
+                            .endDate(request.getEndDate())
+                            .status("NOT VERIFIED")
+//                      .grade(getGradeFromName(request.getGrade()))
+                            .syllabus(syllabus)
+                            .build()
+            );
+        }
+        return ResponseEntity.ok(
+                ResponseObject.builder()
+                        .message("Generate Classes Successfully")
+                        .success(true)
+                        .data(null)
+                        .build()
+        );
     }
 
     private Grade getGradeFromName(String name) {
@@ -1016,7 +1051,7 @@ public class EducationServiceImpl implements EducationService {
         return null;
     }
 
-    private List<String> checkDurationExceedSyllabus(Lesson lesson, int newDuration) {
+    private List<String> checkDurationMatchSyllabus(Lesson lesson, int newDuration) {
 
         if (lesson.getDuration() == newDuration) return Collections.emptyList();
 
@@ -1025,7 +1060,7 @@ public class EducationServiceImpl implements EducationService {
 
         for (SyllabusLesson sl : assignedLinks) {
             Syllabus syllabus = sl.getSyllabus();
-            int maxAllowed = syllabus.getMaxHoursOfSyllabus();
+            int allowed = syllabus.getHoursOfSyllabus();
             List<SyllabusLesson> allLessons = syllabus.getSyllabusLessonList();
 
             int totalDuration = 0;
@@ -1034,8 +1069,8 @@ public class EducationServiceImpl implements EducationService {
                 totalDuration += (l.getId().equals(lesson.getId()) ? newDuration : l.getDuration());
             }
 
-            if (totalDuration > maxAllowed) {
-                violatedSyllabuses.add(syllabus.getSubject() + " (" + totalDuration + "h > " + maxAllowed + "h)");
+            if (totalDuration != allowed) {
+                violatedSyllabuses.add(syllabus.getSubject() + " (" + totalDuration + "h > " + allowed + "h)");
             }
         }
 

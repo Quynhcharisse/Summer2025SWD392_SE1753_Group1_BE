@@ -9,6 +9,8 @@ import com.swd392.group1.pes.models.Parent;
 import com.swd392.group1.pes.repositories.AccountRepo;
 import com.swd392.group1.pes.repositories.AdmissionFeeRepo;
 import com.swd392.group1.pes.repositories.ParentRepo;
+
+import com.swd392.group1.pes.utils.RandomPasswordUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
@@ -32,6 +34,23 @@ public class PesApplication {
     public CommandLineRunner initData(AccountRepo accountRepo) {
         return args -> {
 
+            if(!accountRepo.existsByEmail("teacher@gmail.com"))
+            {
+                Account teacherAccount = accountRepo.save(
+                        Account.builder()
+                                .email("teacher@gmail.com")
+                                .password(RandomPasswordUtil.generateRandomPassword())
+                                .name("Teacher")
+                                .phone("0886122578")
+                                .gender("male")
+                                .identityNumber("060204004188")
+                                .status(Status.ACCOUNT_ACTIVE.getValue())
+                                .role(Role.TEACHER)
+                                .createdAt(LocalDate.now())
+                                .build()
+                );
+                accountRepo.save(teacherAccount);
+            }
             // Tạo sẵn HR Manager
             if (!accountRepo.existsByEmail("hrmanager@gmail.com")) {
                 Account hrAccount = Account.builder()
@@ -87,6 +106,8 @@ public class PesApplication {
                         .build();
                 accountRepo.save(admissionAccount);
             }
+
+
 
             //Tạo sẵn parent
             if (!accountRepo.existsByEmail("parent1@gmail.com")) {

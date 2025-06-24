@@ -5,22 +5,28 @@ import com.swd392.group1.pes.enums.Status;
 import com.swd392.group1.pes.models.Account;
 import com.swd392.group1.pes.models.AdmissionForm;
 import com.swd392.group1.pes.models.AdmissionTerm;
+import com.swd392.group1.pes.models.Event;
+import com.swd392.group1.pes.models.EventParticipate;
 import com.swd392.group1.pes.models.Parent;
 import com.swd392.group1.pes.models.Student;
 import com.swd392.group1.pes.repositories.AdmissionFormRepo;
 import com.swd392.group1.pes.repositories.AdmissionTermRepo;
+import com.swd392.group1.pes.repositories.EventParticipateRepo;
+import com.swd392.group1.pes.repositories.EventRepo;
 import com.swd392.group1.pes.repositories.ParentRepo;
 import com.swd392.group1.pes.repositories.StudentRepo;
 import com.swd392.group1.pes.requests.AddChildRequest;
 import com.swd392.group1.pes.requests.CancelAdmissionForm;
 import com.swd392.group1.pes.requests.GetPaymentURLRequest;
 import com.swd392.group1.pes.requests.RefillFormRequest;
+import com.swd392.group1.pes.requests.RegisterEventRequest;
 import com.swd392.group1.pes.requests.SubmitAdmissionFormRequest;
 import com.swd392.group1.pes.requests.UpdateChildRequest;
 import com.swd392.group1.pes.response.ResponseObject;
 import com.swd392.group1.pes.services.JWTService;
 import com.swd392.group1.pes.services.MailService;
 import com.swd392.group1.pes.services.ParentService;
+import com.swd392.group1.pes.validations.EducationValidation.EventValidation;
 import com.swd392.group1.pes.validations.ParentValidation.ChildValidation;
 import com.swd392.group1.pes.validations.ParentValidation.EditAdmissionFormValidation;
 import com.swd392.group1.pes.validations.ParentValidation.RefillFormValidation;
@@ -39,6 +45,7 @@ import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Comparator;
 import java.util.Date;
@@ -51,6 +58,7 @@ import java.util.Random;
 import java.util.SortedMap;
 import java.util.TimeZone;
 import java.util.TreeMap;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -67,6 +75,8 @@ public class ParentServiceImpl implements ParentService {
     private final StudentRepo studentRepo;
 
     private final MailService mailService;
+    private final EventRepo eventRepo;
+    private final EventParticipateRepo eventParticipateRepo;
 
     @Value("${vnpay.return.url}")
     String vnpayReturnUrl;
@@ -787,6 +797,67 @@ public class ParentServiceImpl implements ParentService {
                         .data(null)
                         .build());
     }
+
+    @Override
+    public ResponseEntity<ResponseObject> registerEvent(RegisterEventRequest request) {
+
+        // 1. Validate chung
+        String validationError = EventValidation.validateRegisterEvent(request);
+        if (!validationError.isEmpty()) {
+            return ResponseEntity
+                    .badRequest()
+                    .body(ResponseObject.builder()
+                            .success(false)
+                            .message(validationError)
+                            .data(null)
+                            .build());
+        }
+
+        // 2. Lấy Event và check trạng thái / deadline
+        Event event = eventRepo.findById(Integer.parseInt(request.getEventId()))
+                .orElse(null);
+        if (event == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(ResponseObject.builder()
+                            .success(false)
+                            .message("Event not found")
+                            .data(null)
+                            .build());
+        }
+        if (event.getStatus() != Status.EVENT_REGISTRATION_ACTIVE) {
+            return ResponseEntity.badRequest()
+                    .body(ResponseObject.builder()
+                            .success(false)
+                            .message("Cannot register: event not active")
+                            .data(null)
+                            .build());
+        }
+        LocalDateTime now = LocalDateTime.now();
+        if (event.getRegistrationDeadline() != null
+                && event.getRegistrationDeadline().isBefore(now)) {
+            return ResponseEntity.badRequest()
+                    .body(ResponseObject.builder()
+                            .success(false)
+                            .message("Registration deadline has passed")
+                            .data(null)
+                            .build());
+        }
+
+        // 3. Batch process từng studentId
+        List<String> registeredNames = new ArrayList<>();
+        List<String> errorMessages   = new ArrayList<>();
+
+        // 5. Trả về Response
+        return ResponseEntity.ok(
+                ResponseObject.builder()
+                        .success(false)
+                        .message("SE")
+                        .data(null)
+                        .build()
+        );
+    }
+
+
 
     @Override
     public ResponseEntity<ResponseObject> getPaymentURL(GetPaymentURLRequest request, HttpServletRequest httpRequest) {

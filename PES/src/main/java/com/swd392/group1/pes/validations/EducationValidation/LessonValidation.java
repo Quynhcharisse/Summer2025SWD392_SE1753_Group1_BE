@@ -21,11 +21,11 @@ public class LessonValidation {
         }
 
         if (request.getDuration() <= 0) {
-            return "Lesson duration must be greater than zero.";
+            return "Lesson duration hours of week must be greater than zero.";
         }
 
-        if (request.getDuration() >= 41) {
-            return "Lesson duration hours must be less than 41 hours.";
+        if (request.getDuration() >= 31) {
+            return "Lesson duration hours of week must be less than 31 hours.";
         }
 
         // Lesson topic da ton tai
@@ -54,11 +54,11 @@ public class LessonValidation {
         }
 
         if (request.getDuration() <= 0) {
-            return "Lesson duration must be greater than zero.";
+            return "Lesson duration hours of week must be greater than zero.";
         }
 
         if (request.getDuration() >= 41) {
-            return "Lesson duration hours must be less than 41 hours.";
+            return "Lesson duration hours of week must be less than 41 hours.";
         }
 
         return "";

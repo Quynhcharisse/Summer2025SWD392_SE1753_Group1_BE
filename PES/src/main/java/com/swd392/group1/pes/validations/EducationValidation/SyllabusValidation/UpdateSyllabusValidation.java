@@ -11,7 +11,7 @@ public class UpdateSyllabusValidation {
        if(!CheckSyllabusId.validate(id).trim().isEmpty())
            return CheckSyllabusId.validate(id);
 
-        // Syllabus's subject không điền
+
         if(request.getSubject().trim().isEmpty()){
            return "Subject cannot be empty";
         }
@@ -22,12 +22,8 @@ public class UpdateSyllabusValidation {
         }
 
         // Number of week không điền
-        if( request.getMaxNumberOfWeek() <= 0 ){
+        if( request.getNumberOfWeek() <= 0 ){
             return "Number of weeks must be greater than 0";
-        }
-
-        if (request.getMaxNumberOfWeek() >= 54) {
-            return "Number of weeks must be less than 54 weeks";
         }
 
         // Cần chọn Grade

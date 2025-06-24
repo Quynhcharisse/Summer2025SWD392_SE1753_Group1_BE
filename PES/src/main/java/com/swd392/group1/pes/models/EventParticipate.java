@@ -1,6 +1,9 @@
 package com.swd392.group1.pes.models;
 
+
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.Entity;
+
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -30,9 +33,12 @@ public class EventParticipate {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "`student_id`")
+
     Student student;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "`even_id`")
     Event event;
+
+
 }
