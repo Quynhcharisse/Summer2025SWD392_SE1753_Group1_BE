@@ -91,14 +91,8 @@ public class HRServiceImpl implements HRService {
                 "Your Account Has Been Suspended" : "Your Account Has Been Reactivated";
 
         String content = action.equalsIgnoreCase("ban") ?
-                "Dear " + account.getName() + ",\n\n" +
-                        "Your account has been suspended due to violation of our terms of service. " +
-                        "If you believe this is a mistake, please contact our support team.\n\n" +
-                        "Best regards,\nPES Team"
-                :
-                "Dear " + account.getName() + ",\n\n" +
-                        "Your account has been reactivated. You can now log in to your account normally.\n\n" +
-                        "Best regards,\nPES Team";
+                Format.getAccountBanned(account.getName()) : Format.getAccountReactivated(account.getName());
+        mailService.sendMail(account.getEmail(), subject, content);
 
         try {
             mailService.sendMail(account.getEmail(), subject, content);
