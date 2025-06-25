@@ -352,5 +352,72 @@ public class Format {
                 "</html>";
     }
 
+    public static String getParentRegisterFormat(String parentName, String email) {
+        return "<!DOCTYPE html>\n" +
+                "<html lang=\"en\">\n" +
+                "<head>\n" +
+                "  <meta charset=\"UTF-8\">\n" +
+                "  <title>Account Registration Successful</title>\n" +
+                "  <style>\n" +
+                "    body { font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px; }\n" +
+                "    .container { background-color: #fff; border-radius: 8px; padding: 24px; max-width: 600px; margin: 0 auto; box-shadow: 0 2px 6px rgba(0,0,0,0.1); }\n" +
+                "    h2 { color: #2a7ae2; }\n" +
+                "    .info { margin: 16px 0; font-size: 16px; }\n" +
+                "    .footer { margin-top: 30px; font-size: 14px; color: #888; }\n" +
+                "    a.button { display: inline-block; margin-top: 12px; padding: 10px 20px; background-color: #2a7ae2; color: white; text-decoration: none; border-radius: 4px; font-weight: bold; }\n" +
+                "  </style>\n" +
+                "</head>\n" +
+                "<body>\n" +
+                "  <div class=\"container\">\n" +
+                "    <h2>🎉 Account Created Successfully</h2>\n" +
+                "    <p>Dear " + parentName + ",</p>\n" +
+                "    <p class=\"info\">\n" +
+                "      Welcome to Sunshine Preschool! Your account has been created successfully.<br>\n" +
+                "      <b>Email:</b> " + email + "<br>\n" +
+                "      You can now log in and start using our services.\n" +
+                "    </p>\n" +
+                "    <p class=\"info\">\n" +
+                "      <a href=\"http://localhost:5173/auth/login\" class=\"button\">Login to Your Account</a>\n" +
+                "    </p>\n" +
+                "    <p class=\"footer\">\n" +
+                "      Best regards,<br>\n" +
+                "      Sunshine Preschool Team\n" +
+                "    </p>\n" +
+                "  </div>\n" +
+                "</body>\n" +
+                "</html>";
+    }
+
+    public static String getPasswordChangedFormat(String name) {
+        return "<!DOCTYPE html>\n" +
+                "<html lang=\"en\">\n" +
+                "<head>\n" +
+                "  <meta charset=\"UTF-8\">\n" +
+                "  <title>Password Changed Successfully</title>\n" +
+                "  <style>\n" +
+                "    body { font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px; }\n" +
+                "    .container { background-color: #fff; border-radius: 8px; padding: 24px; max-width: 600px; margin: 0 auto; box-shadow: 0 2px 6px rgba(0,0,0,0.1); }\n" +
+                "    h2 { color: #2a7ae2; }\n" +
+                "    .info { margin: 16px 0; font-size: 16px; }\n" +
+                "    .footer { margin-top: 30px; font-size: 14px; color: #888; }\n" +
+                "  </style>\n" +
+                "</head>\n" +
+                "<body>\n" +
+                "  <div class=\"container\">\n" +
+                "    <h2>🔒 Password Changed</h2>\n" +
+                "    <p>Dear " + (name != null ? name : "User") + ",</p>\n" +
+                "    <p class=\"info\">\n" +
+                "      Your password has been changed successfully.<br>\n" +
+                "      If you did not perform this action, please contact support immediately.\n" +
+                "    </p>\n" +
+                "    <p class=\"footer\">\n" +
+                "      Best regards,<br>\n" +
+                "      Sunshine Preschool Team\n" +
+                "    </p>\n" +
+                "  </div>\n" +
+                "</body>\n" +
+                "</html>";
+    }
+
 
 }
