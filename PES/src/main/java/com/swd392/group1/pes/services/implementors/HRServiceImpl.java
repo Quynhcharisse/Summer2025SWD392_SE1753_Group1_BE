@@ -86,16 +86,26 @@ public class HRServiceImpl implements HRService {
         account.setStatus(newStatus);
         accountRepo.save(account);
 
-        // Gửi email thông báo
-        String subject = action.equalsIgnoreCase("ban") ?
-                "Your Account Has Been Suspended" : "Your Account Has Been Reactivated";
+        // 6. Chuẩn bị email notification
+        String subject = action.equalsIgnoreCase("ban")
+                ? "Your Account Has Been Suspended"
+                : "Your Account Has Been Reactivated";
 
-        String content = action.equalsIgnoreCase("ban") ?
-                Format.getAccountBanned(account.getName()) : Format.getAccountReactivated(account.getName());
-        mailService.sendMail(account.getEmail(), subject, content);
+        String heading = action.equalsIgnoreCase("ban")
+                ? "🚫 Account Suspended"
+                : "✅ Account Reactivated";
+
+        String bodyHtml = action.equalsIgnoreCase("ban")
+                ? Format.getAccountBannedBody(account.getName())
+                : Format.getAccountReactivatedBody(account.getName());
 
         try {
-            mailService.sendMail(account.getEmail(), subject, content);
+            mailService.sendMail(
+                    account.getEmail(),
+                    subject,
+                    heading,
+                    bodyHtml
+            );
         } catch (Exception e) {
             log.error("Failed to send notification email to {} for action {}: {}",
                     account.getEmail(), action, e.getMessage());
@@ -144,10 +154,20 @@ public class HRServiceImpl implements HRService {
                         .build()
         );
 
+        // 3. Chuẩn bị email
+        String subject = "[PES] New Teacher Account Created";
+        String heading = "🎓 New Teacher Account Created";
+        String bodyHtml = Format.getTeacherBody(
+                account.getEmail(),
+                rawPassword
+        );
+
+        // 4. Gửi mail (MailServiceImpl đã tự catch/log lỗi)
         mailService.sendMail(
                 account.getEmail(),
-                "[PES]_New Teacher Account Created",
-                Format.getTeacherFormat(account.getEmail(), rawPassword)
+                subject,
+                heading,
+                bodyHtml
         );
 
         return ResponseEntity.status(HttpStatus.CREATED).body(
