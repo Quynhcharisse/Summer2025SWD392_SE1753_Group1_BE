@@ -961,6 +961,7 @@ public class ParentServiceImpl implements ParentService {
         try {
             mailService.sendMail(
                     account.getEmail(),
+                    "[PES] EVENT REGISTRATION CONFIRMATION",
                     "Event Registration Confirmation",
                     "Dear " + account.getName() + ",\n\n" +
                     "You have successfully registered the following students for \"" +

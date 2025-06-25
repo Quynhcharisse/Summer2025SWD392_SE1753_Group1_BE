@@ -58,6 +58,7 @@ public class EventSchedulerUtil {
                 try {
                     mailService.sendMail(
                             parentEmail,
+                            "[PES] REMINDER EVENT",
                             String.format("Reminder Event \"%s\" starts in 15 minutes", event.getName()),
                             buildReminderBody(ep.getStudent().getParent().getAccount().getName(),
                                     childName,
