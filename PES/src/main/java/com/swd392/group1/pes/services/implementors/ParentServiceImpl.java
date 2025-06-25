@@ -6,22 +6,28 @@ import com.swd392.group1.pes.enums.Status;
 import com.swd392.group1.pes.models.Account;
 import com.swd392.group1.pes.models.AdmissionForm;
 import com.swd392.group1.pes.models.AdmissionTerm;
+import com.swd392.group1.pes.models.Event;
+import com.swd392.group1.pes.models.EventParticipate;
 import com.swd392.group1.pes.models.Parent;
 import com.swd392.group1.pes.models.Student;
 import com.swd392.group1.pes.repositories.AdmissionFormRepo;
 import com.swd392.group1.pes.repositories.AdmissionTermRepo;
+import com.swd392.group1.pes.repositories.EventParticipateRepo;
+import com.swd392.group1.pes.repositories.EventRepo;
 import com.swd392.group1.pes.repositories.ParentRepo;
 import com.swd392.group1.pes.repositories.StudentRepo;
 import com.swd392.group1.pes.requests.AddChildRequest;
 import com.swd392.group1.pes.requests.CancelAdmissionForm;
 import com.swd392.group1.pes.requests.GetPaymentURLRequest;
 import com.swd392.group1.pes.requests.RefillFormRequest;
+import com.swd392.group1.pes.requests.RegisterEventRequest;
 import com.swd392.group1.pes.requests.SubmitAdmissionFormRequest;
 import com.swd392.group1.pes.requests.UpdateChildRequest;
 import com.swd392.group1.pes.response.ResponseObject;
 import com.swd392.group1.pes.services.JWTService;
 import com.swd392.group1.pes.services.MailService;
 import com.swd392.group1.pes.services.ParentService;
+import com.swd392.group1.pes.validations.EducationValidation.EventValidation;
 import com.swd392.group1.pes.validations.ParentValidation.ChildValidation;
 import com.swd392.group1.pes.validations.ParentValidation.EditAdmissionFormValidation;
 import com.swd392.group1.pes.validations.ParentValidation.RefillFormValidation;
@@ -40,6 +46,9 @@ import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.Period;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Comparator;
 import java.util.Date;
@@ -48,10 +57,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.stream.Collectors;
 import java.util.Random;
 import java.util.SortedMap;
 import java.util.TimeZone;
 import java.util.TreeMap;
+import java.util.function.Function;
 
 @Service
 @RequiredArgsConstructor
@@ -74,6 +85,9 @@ public class ParentServiceImpl implements ParentService {
 
     @Value("${vnpay.hash.key}")
     String hashKey;
+
+    private final EventRepo eventRepo;
+    private final EventParticipateRepo eventParticipateRepo;
 
     @Override
     public ResponseEntity<ResponseObject> viewAdmissionFormList(HttpServletRequest request) {
@@ -808,6 +822,198 @@ public class ParentServiceImpl implements ParentService {
     }
 
     @Override
+    public ResponseEntity<ResponseObject> registerEvent(RegisterEventRequest request, HttpServletRequest requestHttp) {
+
+        Account account = jwtService.extractAccountFromCookie(requestHttp);
+
+        // 1. Validate chung
+        String validationError = EventValidation.validateRegisterEvent(request);
+        if (!validationError.isEmpty()) {
+            return ResponseEntity
+                    .badRequest()
+                    .body(ResponseObject.builder()
+                            .success(false)
+                            .message(validationError)
+                            .data(null)
+                            .build());
+        }
+
+        // 2. Lấy Event và check trạng thái / deadline
+        Event event = eventRepo.findById(Integer.parseInt(request.getEventId()))
+                .orElse(null);
+        if (event == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(ResponseObject.builder()
+                            .success(false)
+                            .message("Event not found")
+                            .data(null)
+                            .build());
+        }
+        if (event.getStatus() != Status.EVENT_REGISTRATION_ACTIVE) {
+            return ResponseEntity.badRequest()
+                    .body(ResponseObject.builder()
+                            .success(false)
+                            .message("Cannot register: event not active")
+                            .data(null)
+                            .build());
+        }
+        LocalDateTime now = LocalDateTime.now();
+        if (event.getRegistrationDeadline() != null
+                && event.getRegistrationDeadline().isBefore(now)) {
+            return ResponseEntity.badRequest()
+                    .body(ResponseObject.builder()
+                            .success(false)
+                            .message("Registration deadline has passed")
+                            .data(null)
+                            .build());
+        }
+
+        List<Integer> studentIds = request.getStudentIds().stream()
+                .map(Integer::parseInt)
+                .distinct()
+                .toList();
+        List<Student> students = studentRepo.findAllById(studentIds);
+        Map<Integer, Student> studentMap = students.stream()
+                .collect(Collectors.toMap(Student::getId, Function.identity()));
+
+        // 4. Validate từng student, early-exit khi gặp lỗi
+        List<EventParticipate> toSave       = new ArrayList<>();
+        List<String>            registered  = new ArrayList<>();
+
+        for (Integer sid : studentIds) {
+            Student stu = studentMap.get(sid);
+            // a) tồn tại?
+            if (stu == null) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(ResponseObject.builder()
+                                .success(false)
+                                .message("Student ID " + sid + " not found")
+                                .data(null)
+                                .build());
+            }
+            if (!stu.isStudent()) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(ResponseObject.builder()
+                                .success(false)
+                                .message("Cannot register " + stu.getName()
+                                        + ": only SunShine School students can sign up for events")                                .data(null)
+                                .build());
+            }
+
+            LocalDate dob = stu.getDateOfBirth();
+            int age = Period.between(dob, now.toLocalDate()).getYears();
+            if (age < 3 || age > 5) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(ResponseObject.builder()
+                                .success(false)
+                                .message(stu.getName() + " must be between 3 and 5 years old (actual: " + age + ")")
+                                .data(null)
+                                .build());
+            }
+
+            // b) đã đăng ký chưa?
+            boolean already = eventParticipateRepo
+                    .findByStudentIdAndEventId(sid, event.getId())
+                    .isPresent();
+            if (already) {
+                return ResponseEntity.status(HttpStatus.CONFLICT)
+                        .body(ResponseObject.builder()
+                                .success(false)
+                                .message(stu.getName() + ": already registered this event")
+                                .data(null)
+                                .build());
+            }
+
+            // c) trùng giờ?
+            Optional<Event> conflict = eventParticipateRepo
+                    .findAllByStudentId(sid).stream()
+                    .map(EventParticipate::getEvent)
+                    .filter(e2 ->
+                            e2.getStartTime().isBefore(event.getEndTime()) &&
+                                    event.getStartTime().isBefore(e2.getEndTime())
+                    )
+                    .findFirst();
+            if (conflict.isPresent()) {
+                Event e2 = conflict.get();
+                String msg = String.format(
+                        "%s: conflict with [%s] from %s to %s",
+                        stu.getName(),
+                        e2.getName(),
+                        e2.getStartTime(),
+                        e2.getEndTime()
+                );
+                return ResponseEntity.status(HttpStatus.CONFLICT)
+                        .body(ResponseObject.builder()
+                                .success(false)
+                                .message(msg)
+                                .data(null)
+                                .build());
+            }
+
+            toSave.add(EventParticipate.builder()
+                    .student(stu)
+                    .event(event)
+                    .registeredAt(LocalDateTime.now())
+                    .build());
+            registered.add(stu.getName());
+        }
+
+        try {
+            mailService.sendMail(
+                    account.getEmail(),
+                    "[PES] EVENT REGISTRATION CONFIRMATION",
+                    "Event Registration Confirmation",
+                    "Dear " + account.getName() + ",\n\n" +
+                    "You have successfully registered the following students for \"" +
+                            event.getName() + "\":\n- " +
+                            String.join("\n- ", registered) +
+                            "\n\nThank you,\nSunShine Preschool"
+            );
+        } catch (Exception e) {
+            System.err.println("Failed to send email notification: " + e.getMessage());
+        }
+
+        // 5. Lưu tất cả và trả về kết quả
+        eventParticipateRepo.saveAll(toSave);
+        String successMsg = "All students registered successfully: " + registered;
+        return ResponseEntity.ok(
+                ResponseObject.builder()
+                        .success(true)
+                        .message(successMsg)
+                        .data(null)
+                        .build()
+        );
+    }
+
+    @Override
+    public ResponseEntity<ResponseObject> getRegisteredEvents(HttpServletRequest request) {
+        Account account = jwtService.extractAccountFromCookie(request);
+        Parent parent = parentRepo.findByAccount_Id(account.getId())
+                .orElse(null);
+        if (parent == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(ResponseObject.builder()
+                            .success(false)
+                            .message("Parent profile not found")
+                            .data(null)
+                            .build());
+        }
+        List<Map<String,Object>> result = eventParticipateRepo
+                .findByStudentParentIdOrderByRegisteredAtDesc(parent.getId())
+                .stream()
+                .map(this::buildEventDetail)
+                .toList();
+        return ResponseEntity.ok(
+                new ResponseObject(
+                        "Registered events for all your children",
+                        true,
+                        result
+                )
+        );
+    }
+
+
+    @Override
     public ResponseEntity<ResponseObject> getPaymentURL(GetPaymentURLRequest request, HttpServletRequest httpRequest) {
         String version = "2.1.1";
         String command = "pay";
@@ -911,4 +1117,19 @@ public class ParentServiceImpl implements ParentService {
         }
         return sb.toString();
     }
+
+    private Map<String, Object> buildEventDetail(EventParticipate eventParticipate) {
+        DateTimeFormatter fmt = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
+        Map<String, Object> data = new HashMap<>();
+        Event event = eventParticipate.getEvent();
+        Student s = eventParticipate.getStudent();
+        data.put("childName", s.getName());
+        data.put("eventName", event.getName());
+        data.put("startTime", event.getStartTime().format(fmt));
+        data.put("endTime", event.getEndTime().format(fmt));
+        data.put("location", event.getLocation());
+        data.put("registeredAt", eventParticipate.getRegisteredAt());
+        return data;
+    }
+
 }

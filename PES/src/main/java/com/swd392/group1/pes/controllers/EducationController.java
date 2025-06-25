@@ -4,8 +4,6 @@ import com.swd392.group1.pes.requests.AssignLessonsRequest;
 import com.swd392.group1.pes.requests.CreateEventRequest;
 import com.swd392.group1.pes.requests.CreateLessonRequest;
 import com.swd392.group1.pes.requests.CreateSyllabusRequest;
-import com.swd392.group1.pes.requests.UnassignLessonsRequest;
-import com.swd392.group1.pes.requests.UpdateEventRequest;
 import com.swd392.group1.pes.requests.UpdateLessonRequest;
 import com.swd392.group1.pes.requests.GenerateClassesRequest;
 import com.swd392.group1.pes.requests.UpdateSyllabusRequest;
@@ -65,12 +63,6 @@ public class EducationController {
         return educationService.assignLessonsToSyllabus(id, request);
     }
 
-    @PutMapping("/syllabus/unassign/lessons")
-    @PreAuthorize("hasRole('education')")
-    public ResponseEntity<ResponseObject> unassignLessons(@RequestParam String id, @RequestBody UnassignLessonsRequest request){
-        return educationService.unassignLessonsFromSyllabus(id, request);
-    }
-
     @GetMapping("/syllabus/unassign/lessons")
     @PreAuthorize("hasRole('education')")
     public ResponseEntity<ResponseObject> viewLessonNotAssignedOfSyllabus(@RequestParam String id,  @RequestParam(value = "searchQuery", required = false) String searchQuery){
@@ -109,8 +101,8 @@ public class EducationController {
 
     @GetMapping("/lesson/list")
     @PreAuthorize("hasRole('education')")
-    public ResponseEntity<ResponseObject> viewLessonList() {
-        return educationService.viewLessonList();
+    public ResponseEntity<ResponseObject> viewLessonList(@RequestParam(value = "searchQuery", required = false) String searchQuery) {
+        return educationService.viewLessonList(searchQuery);
     }
 
 
@@ -118,12 +110,6 @@ public class EducationController {
     @PreAuthorize("hasRole('education')")
     public ResponseEntity<ResponseObject> createEvent(@RequestBody CreateEventRequest request) {
         return educationService.createEvent(request);
-    }
-
-    @PutMapping("/event")
-    @PreAuthorize("hasRole('education')")
-    public ResponseEntity<ResponseObject> updateEvent(@RequestParam String id, @RequestBody UpdateEventRequest request) {
-        return educationService.updateEvent(id, request);
     }
 
     @GetMapping("/event/list")
@@ -137,4 +123,17 @@ public class EducationController {
     public ResponseEntity<ResponseObject> viewEventDetail(@RequestParam String id) {
         return educationService.viewEventDetail(id);
     }
+
+    @PutMapping("/event/cancel")
+    @PreAuthorize("hasRole('education')")
+    public ResponseEntity<ResponseObject> cancelEvent(@RequestParam String id) {
+        return educationService.cancelEvent(id);
+    }
+
+    @GetMapping("/event/assign/teachers")
+    @PreAuthorize("hasRole('education')")
+    public ResponseEntity<ResponseObject> viewAssignedTeachersOfEvent(@RequestParam String id) {
+        return educationService.viewAssignedTeachersOfEvent(id);
+    }
+
 }

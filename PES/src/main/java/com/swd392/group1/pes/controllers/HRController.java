@@ -40,7 +40,7 @@ public class HRController {
     }
 
     @GetMapping("/teacher")
-    @PreAuthorize("hasRole('hr')")
+    @PreAuthorize("hasAnyRole('hr', 'education')")
     public ResponseEntity<ResponseObject> viewTeacherList() {
         return hrService.viewTeacherList();
     }

@@ -17,7 +17,7 @@ import java.util.List;
 public class CreateSyllabusRequest {
     String subject;
     String description;
-    int maxNumberOfWeek;
+    int numberOfWeek;
     String grade;
     private List<String> lessonNames ;
 }
