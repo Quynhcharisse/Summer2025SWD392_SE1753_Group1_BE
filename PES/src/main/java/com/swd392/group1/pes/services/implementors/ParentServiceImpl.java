@@ -1,5 +1,6 @@
 package com.swd392.group1.pes.services.implementors;
 
+import com.swd392.group1.pes.email.Format;
 import com.swd392.group1.pes.enums.Role;
 import com.swd392.group1.pes.enums.Status;
 import com.swd392.group1.pes.models.Account;
@@ -276,13 +277,20 @@ public class ParentServiceImpl implements ParentService {
 
         admissionFormRepo.save(form);
 
+        // 8. Gửi email notification
+        String subject  = "[PES] Admission Form Submitted";
+        String heading  = "📨 Admission Form Submitted";
+        String bodyHtml = Format.getAdmissionSubmittedBody(
+                account.getName(),
+                LocalDate.now().toString()
+        );
         // 8. Gửi email
         try {
             mailService.sendMail(
                     account.getEmail(),
-                    "Admission Form Submitted",
-                    "Dear Parent,\n\nYour admission form for your child has been successfully submitted on "
-                            + LocalDateTime.now() + ".\n\nRegards,\nSunShine Preschool"
+                    subject,
+                    heading,
+                    bodyHtml
             );
         } catch (Exception e) {
             System.err.println("Failed to send email notification: " + e.getMessage());
@@ -500,13 +508,21 @@ public class ParentServiceImpl implements ParentService {
 
         admissionFormRepo.save(form);
 
+        // 8. Gửi email notification
+        String subject  = "[PES] Admission Form Resubmitted";
+        String heading  = "🔄 Admission Form Resubmitted";
+        String bodyHtml = Format.getAdmissionRefilledBody(
+                account.getName(),
+                LocalDate.now().toString()
+        );
+
         // 8. Gửi email xác nhận
         try {
             mailService.sendMail(
                     account.getEmail(),
-                    "Admission Form Resubmitted",
-                    "Dear Parent,\n\nYour resubmitted admission form for your child has been successfully received on "
-                            + LocalDateTime.now() + ".\n\nRegards,\nSunShine Preschool"
+                    subject,
+                    heading,
+                    bodyHtml
             );
         } catch (Exception e) {
             System.err.println("Failed to send email notification: " + e.getMessage());
@@ -579,13 +595,16 @@ public class ParentServiceImpl implements ParentService {
 
         //Gửi email thông báo hủy
         try {
+            String subject  = "[PES] Admission Form Cancelled";
+            String heading  = "❌ Admission Form Cancelled";
+            String bodyHtml = Format.getAdmissionCancelledBody(account.getName());
             mailService.sendMail(
                     account.getEmail(),
-                    "Admission Form Cancelled",
-                    "Dear Parent,\n\nYour admission form has been cancelled successfully. If this was a mistake, you can submit again.\n\nRegards,\nSunShine Preschool"
+                    subject,
+                    heading,
+                    bodyHtml
             );
         } catch (Exception e) {
-            // Log lỗi nhưng không ảnh hưởng đến luồng xử lý chính
             System.err.println("Failed to send email notification: " + e.getMessage());
         }
 

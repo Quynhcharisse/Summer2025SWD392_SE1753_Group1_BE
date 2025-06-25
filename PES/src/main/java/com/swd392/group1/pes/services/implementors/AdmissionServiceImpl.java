@@ -1,5 +1,6 @@
 package com.swd392.group1.pes.services.implementors;
 
+import com.swd392.group1.pes.email.Format;
 import com.swd392.group1.pes.enums.Grade;
 import com.swd392.group1.pes.enums.Status;
 import com.swd392.group1.pes.models.AdmissionFee;
@@ -243,7 +244,6 @@ public class AdmissionServiceImpl implements AdmissionService {
                             data.put("status", term.getStatus());
 
 
-
                             AdmissionFee fee = admissionFeeRepo.findByAdmissionTerm_Id(term.getId()).orElse(null);
                             if (fee != null) {
                                 data.put("reservationFee", fee.getReservationFee());
@@ -259,7 +259,7 @@ public class AdmissionServiceImpl implements AdmissionService {
                                 data.put("facilityFee", 0);
                             }
                             //gọi lai extra term
-                            if(!admissionTermRepo.findAllByParentTerm_Id(term.getId()).isEmpty()){
+                            if (!admissionTermRepo.findAllByParentTerm_Id(term.getId()).isEmpty()) {
                                 data.put("extraTerms", viewExtraTerm(term));
                             }
                             return data;
@@ -448,9 +448,8 @@ public class AdmissionServiceImpl implements AdmissionService {
             );
         }
 
-        String parentEmail = form.getParent().getAccount().getEmail();
-
-        if (form.getStudent() == null) {
+        Student student = form.getStudent();
+        if (student == null) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
                     ResponseObject.builder()
                             .message("Form has no associated student.")
@@ -460,39 +459,26 @@ public class AdmissionServiceImpl implements AdmissionService {
             );
         }
 
+        String parentEmail = form.getParent().getAccount().getEmail();
+
         if (request.isApproved()) {
             form.setStatus(Status.APPROVED.getValue());
-
-            Student student = form.getStudent();
             student.setStudent(true);
             studentRepo.save(student);
 
-            try {
-                mailService.sendMail(
-                        parentEmail,
-                        "Admission Approved",
-                        "Congratulations!\n\nThe admission form for " + form.getStudent().getName() +
-                                " has been approved.\nWe look forward to seeing you at our school!"
-                );
-            } catch (Exception e) {
-                System.err.println("Failed to send approval email: " + e.getMessage());
-                // Optional: log error or report
-            }
+            String subject   = "[PES] Admission Approved";
+            String heading   = "🎉 Admission Approved";
+            String bodyHtml  = Format.getAdmissionApprovedBody(student.getName());
+            mailService.sendMail(parentEmail, subject, heading, bodyHtml);
 
         } else {
             form.setStatus(Status.REJECTED.getValue());
             form.setCancelReason(request.getReason());
 
-            try {
-                mailService.sendMail(
-                        parentEmail,
-                        "Admission Rejected",
-                        "We're sorry.\n\nThe admission form for " + form.getStudent().getName() +
-                                " has been rejected.\nReason: " + request.getReason()
-                );
-            } catch (Exception e) {
-                System.err.println("Failed to send rejection email: " + e.getMessage());
-            }
+            String subject   = "[PES] Admission Rejected";
+            String heading   = "❌ Admission Rejected";
+            String bodyHtml  = Format.getAdmissionRejectedBody(student.getName(), request.getReason());
+            mailService.sendMail(parentEmail, subject, heading, bodyHtml);
         }
 
         admissionFormRepo.save(form);

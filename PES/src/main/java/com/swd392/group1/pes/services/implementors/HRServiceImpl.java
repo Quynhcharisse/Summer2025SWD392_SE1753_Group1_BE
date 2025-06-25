@@ -86,22 +86,26 @@ public class HRServiceImpl implements HRService {
         account.setStatus(newStatus);
         accountRepo.save(account);
 
-        // Gửi email thông báo
-        String subject = action.equalsIgnoreCase("ban") ?
-                "Your Account Has Been Suspended" : "Your Account Has Been Reactivated";
+        // 6. Chuẩn bị email notification
+        String subject = action.equalsIgnoreCase("ban")
+                ? "Your Account Has Been Suspended"
+                : "Your Account Has Been Reactivated";
 
-        String content = action.equalsIgnoreCase("ban") ?
-                "Dear " + account.getName() + ",\n\n" +
-                        "Your account has been suspended due to violation of our terms of service. " +
-                        "If you believe this is a mistake, please contact our support team.\n\n" +
-                        "Best regards,\nPES Team"
-                :
-                "Dear " + account.getName() + ",\n\n" +
-                        "Your account has been reactivated. You can now log in to your account normally.\n\n" +
-                        "Best regards,\nPES Team";
+        String heading = action.equalsIgnoreCase("ban")
+                ? "🚫 Account Suspended"
+                : "✅ Account Reactivated";
+
+        String bodyHtml = action.equalsIgnoreCase("ban")
+                ? Format.getAccountBannedBody(account.getName())
+                : Format.getAccountReactivatedBody(account.getName());
 
         try {
-            mailService.sendMail(account.getEmail(), subject, content);
+            mailService.sendMail(
+                    account.getEmail(),
+                    subject,
+                    heading,
+                    bodyHtml
+            );
         } catch (Exception e) {
             log.error("Failed to send notification email to {} for action {}: {}",
                     account.getEmail(), action, e.getMessage());
@@ -150,10 +154,20 @@ public class HRServiceImpl implements HRService {
                         .build()
         );
 
+        // 3. Chuẩn bị email
+        String subject = "[PES] New Teacher Account Created";
+        String heading = "🎓 New Teacher Account Created";
+        String bodyHtml = Format.getTeacherBody(
+                account.getEmail(),
+                rawPassword
+        );
+
+        // 4. Gửi mail (MailServiceImpl đã tự catch/log lỗi)
         mailService.sendMail(
                 account.getEmail(),
-                "[PES]_New Teacher Account Created",
-                Format.getTeacherFormat(account.getEmail(), rawPassword)
+                subject,
+                heading,
+                bodyHtml
         );
 
         return ResponseEntity.status(HttpStatus.CREATED).body(
