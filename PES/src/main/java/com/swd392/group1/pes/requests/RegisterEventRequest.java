@@ -7,14 +7,14 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.experimental.FieldDefaults;
 
+import java.util.List;
+
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
 @FieldDefaults(level = AccessLevel.PRIVATE)
-public class UpdateSyllabusRequest {
-    String subject;
-    String description;
-    int numberOfWeek;
-    String grade;
+public class RegisterEventRequest {
+    String eventId;
+    List<String> studentIds;
 }

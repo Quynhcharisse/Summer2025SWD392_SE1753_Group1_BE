@@ -5,6 +5,7 @@ import com.swd392.group1.pes.requests.LoginRequest;
 import com.swd392.group1.pes.requests.RegisterRequest;
 import com.swd392.group1.pes.response.ResponseObject;
 import com.swd392.group1.pes.services.AuthService;
+import com.swd392.group1.pes.services.EducationService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -21,6 +22,8 @@ import org.springframework.web.bind.annotation.RestController;
 public class AuthController {
 
     private final AuthService authService;
+
+    private final EducationService educationService;
 
     @PostMapping("/login")
     public ResponseEntity<ResponseObject> login (@RequestBody LoginRequest request, HttpServletResponse response) {
@@ -46,4 +49,10 @@ public class AuthController {
     public ResponseEntity<ResponseObject> forgotPassword (@RequestBody ForgotPasswordRequest request){
         return authService.forgotPassword(request);
     }
+
+    @GetMapping("/event/active")
+    public ResponseEntity<ResponseObject> viewActiveEvents() {
+        return educationService.viewActiveEvents();
+    }
+
 }

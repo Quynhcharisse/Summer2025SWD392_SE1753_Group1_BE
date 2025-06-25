@@ -2,9 +2,10 @@ package com.swd392.group1.pes.validations.EducationValidation;
 
 import com.swd392.group1.pes.repositories.EventRepo;
 import com.swd392.group1.pes.requests.CreateEventRequest;
-import com.swd392.group1.pes.requests.UpdateEventRequest;
+import com.swd392.group1.pes.requests.RegisterEventRequest;
 
 import java.time.Duration;
+import java.util.List;
 
 
 public class EventValidation {
@@ -49,6 +50,10 @@ public class EventValidation {
         if (request.getRegistrationDeadline() == null) {
             return "Registration Deadline Time is required";
         }
+        // Ensure registration deadline is at least 3 days before start time
+        if (!request.getRegistrationDeadline().isBefore(request.getStartTime())) {
+            return "Registration deadline must be before the event start time";
+        }
 
         if (request.getAttachmentImg() == null || request.getAttachmentImg().trim().isEmpty()) {
             return "Event image is required";
@@ -64,67 +69,55 @@ public class EventValidation {
 
         return "";
     }
-
-    public static String validateUpdate(String id, UpdateEventRequest request) {
-
-        if(!checkEventId(id).isEmpty()){
-           return checkEventId(id);
+    public static String validateRegisterEvent(RegisterEventRequest request) {
+        // 1. Kiểm tra eventId
+        String err = checkEventId(request.getEventId());
+        if (!err.isEmpty()) {
+            return err;
         }
 
-        if (request.getName() == null || request.getName().trim().isEmpty()) {
-            return "Event name is required";
-        }
-        if (request.getName().length() > 100) {
-            return "Event name must not exceed 100 characters";
-        }
-
-        if (request.getStartTime() == null) {
-            return "Start time is required";
-        }
-        if (request.getEndTime() == null) {
-            return "End time is required";
-        }
-        if (request.getStartTime().isAfter(request.getEndTime())) {
-            return "Start time must be before end time";
+        // 2. Kiểm tra danh sách studentIds có tồn tại, không rỗng
+        List<String> ids = request.getStudentIds();
+        if (ids == null || ids.isEmpty()) {
+            return "Student list must not be empty";
         }
 
-        if (request.getLocation() == null || request.getLocation().trim().isEmpty()) {
-            return "Location is required";
+        // 3. Với mỗi studentId, kiểm tra định dạng và giá trị
+        for (String sid : ids) {
+            String studentErr = checkStudentId(sid);
+            if (!studentErr.isEmpty()) {
+                return String.format("Invalid studentId '%s': %s", sid, studentErr);
+            }
         }
 
-        if (request.getLocation().length() > 200) {
-            return "Location must not exceed 200 characters";
-        }
+        return "";
+    }
 
-        if (request.getDescription() == null || request.getDescription().trim().isEmpty()) {
-            return "Event description is required";
+    public static  String checkStudentId(String id)
+    {
+        // ID is empty
+        if(id.isEmpty()){
+            return "Student Id cannot be empty";
         }
-
-        if (request.getRegistrationDeadline() == null) {
-            return "Registration Deadline Time is required";
+        // ID wrong format
+        try {
+            Integer.parseInt(id);
+        } catch (IllegalArgumentException ex) {
+            return "Student Id must be a number";
         }
-
-        if (request.getAttachmentImg() == null || request.getAttachmentImg().trim().isEmpty()) {
-            return "Event image is required";
-        }
-
-        if (request.getHostName() == null || request.getHostName().trim().isEmpty()) {
-            return "Host Event Name is required";
-        }
-
         return "";
     }
 
     public static String checkEventId(String id){
         // ID is empty
         if(id.isEmpty()){
-            return "Id cannot be empty";
+            return "Event Id cannot be empty";
         }
         // ID wrong format
         try {
             Integer.parseInt(id);
         } catch (IllegalArgumentException ex) {
-            return "Id must be a number";
+            return "Event Id must be a number";
         }
         return "";
     }

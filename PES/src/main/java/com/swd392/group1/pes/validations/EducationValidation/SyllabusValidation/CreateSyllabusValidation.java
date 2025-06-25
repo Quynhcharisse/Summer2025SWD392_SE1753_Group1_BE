@@ -7,45 +7,43 @@ import com.swd392.group1.pes.requests.CreateSyllabusRequest;
 import java.util.Arrays;
 
 public class CreateSyllabusValidation {
-    public static String validate(CreateSyllabusRequest request, SyllabusRepo syllabusRepo){
+    public static String validate(CreateSyllabusRequest request, SyllabusRepo syllabusRepo) {
 
-        // Syllabus da ton tai
-        if(syllabusRepo.existsBySubjectIgnoreCase(request.getSubject()))
+        if (syllabusRepo.existsBySubjectIgnoreCase(request.getSubject()))
             return "Syllabus already exists";
 
-        // Syllabus's subject không điền
-        if(request.getSubject().trim().isEmpty()){
+
+        if (request.getSubject().trim().isEmpty()) {
             return "Subject cannot be empty";
         }
 
         //  Description không điền
-        if(request.getDescription().trim().isEmpty()){
+        if (request.getDescription().trim().isEmpty()) {
             return "Description should not be empty";
         }
 
-
-        if( request.getMaxNumberOfWeek() <= 0 ){
+        if (request.getNumberOfWeek() <= 0) {
             return "Number of weeks must be greater than 0";
         }
 
-        if (request.getMaxNumberOfWeek() >= 54) {
-            return "Number of weeks must be less than 54 weeks";
+        if(request.getLessonNames().size() < 3) {
+            return "Please select at least 3 lessons for the syllabus";
         }
 
-        // Cần chọn Grade
-        if (request.getGrade() == null || request.getGrade().trim().isEmpty()) {
-            return "Grade is required";
-        }
+            // Cần chọn Grade
+            if (request.getGrade() == null || request.getGrade().trim().isEmpty()) {
+                return "Grade is required";
+            }
 
-        // Grade được chọn không tồn tại
-        boolean isExistGrade = Arrays.stream(Grade.values())
-                .anyMatch(grade -> grade.getName().equalsIgnoreCase(request.getGrade()));
-        if (!isExistGrade) {
-            return "Selected grade does not exist.";
-        }
-        if(!AssignLessonsValidation.validate(request.getLessonNames()).isEmpty())
-            return AssignLessonsValidation.validate(request.getLessonNames());
+            // Grade được chọn không tồn tại
+            boolean isExistGrade = Arrays.stream(Grade.values())
+                    .anyMatch(grade -> grade.getName().equalsIgnoreCase(request.getGrade()));
+            if (!isExistGrade) {
+                return "Selected grade does not exist.";
+            }
+            if (!AssignLessonsValidation.validate(request.getLessonNames()).isEmpty())
+                return AssignLessonsValidation.validate(request.getLessonNames());
 
-        return "";
+            return "";
+        }
     }
-}

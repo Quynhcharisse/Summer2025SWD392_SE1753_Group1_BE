@@ -4,6 +4,7 @@ import com.swd392.group1.pes.requests.AddChildRequest;
 import com.swd392.group1.pes.requests.CancelAdmissionForm;
 import com.swd392.group1.pes.requests.GetPaymentURLRequest;
 import com.swd392.group1.pes.requests.RefillFormRequest;
+import com.swd392.group1.pes.requests.RegisterEventRequest;
 import com.swd392.group1.pes.requests.SubmitAdmissionFormRequest;
 import com.swd392.group1.pes.requests.UpdateChildRequest;
 import com.swd392.group1.pes.response.ResponseObject;
@@ -81,6 +82,18 @@ public class ParentController {
     @PreAuthorize("hasRole('parent')")
     public ResponseEntity<ResponseObject> getPaymentURL(@RequestBody GetPaymentURLRequest request, HttpServletRequest httpRequest) {
         return parentService.getPaymentURL(request, httpRequest);
+    }
+
+    @PostMapping("/event/register")
+    @PreAuthorize("hasRole('parent')")
+    public ResponseEntity<ResponseObject> registerEvent(@RequestBody RegisterEventRequest request, HttpServletRequest requestHttp) {
+        return parentService.registerEvent(request, requestHttp);
+    }
+
+    @GetMapping("/event/register")
+    @PreAuthorize("hasRole('parent')")
+    public ResponseEntity<ResponseObject> getRegisteredEvents(HttpServletRequest request) {
+        return parentService.getRegisteredEvents(request);
     }
 
 }
