@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title th:text="${title}">Sunshine Preschool</title>
+</head>
+<body style="margin:0;padding:0;background-color:#f9f9f9;font-family:'Helvetica Neue',Arial,sans-serif;color:#333;">
+<div style="max-width:600px;margin:0 auto;background-color:#fff;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,0.1);">
+
+    <!-- HEADER -->
+    <div style="background-color:#1C5A2A;padding:20px;text-align:center;">
+        <img
+                src="cid:logo"
+                alt="Sunshine Preschool Logo"
+                style="max-height:60px;border-radius:50%;"
+        />
+    </div>
+
+    <!-- CONTENT -->
+    <div style="padding:30px;">
+        <h2 th:text="${heading}" style="color:#1C5A2A;margin-top:0;">[Heading]</h2>
+
+        <!-- đây sẽ được Thymeleaf chèn fragment body -->
+        <div th:utext="${body}"></div>
+    </div>
+
+    <!-- FOOTER -->
+    <div style="background-color:#f1f1f1;border-top:1px solid #1C5A2A;padding:20px 30px;font-size:12px;color:#666;text-align:left;">
+        <ul style="list-style:none;padding:0;margin:0;">
+            <li style="margin:8px 0;line-height:1.4;">Sunshine Preschool</li>
+            <li style="margin:8px 0;line-height:1.4;">Providing quality early childhood education in a nurturing environment</li>
+            <li style="margin:8px 0;line-height:1.4;">📍 123 Education Street, Learning City</li>
+            <li style="margin:8px 0;line-height:1.4;">📞 (555) 123-4567 | ✉️ info@sunshinepreschool.edu</li>
+            <li style="margin:8px 0;line-height:1.4;text-align:center;">© 2024 Sunshine Preschool. All rights reserved</li>
+        </ul>
+    </div>
+
+</div>
+</body>
+</html>

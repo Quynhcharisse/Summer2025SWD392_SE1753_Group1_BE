@@ -466,29 +466,19 @@ public class AdmissionServiceImpl implements AdmissionService {
             student.setStudent(true);
             studentRepo.save(student);
 
-            try {
-                mailService.sendMail(
-                        parentEmail,
-                        "[PES] Admission Approved",
-                        Format.getAdmissionApproved(student.getName())
-                );
-            } catch (Exception e) {
-                System.err.println("Failed to send approval email: " + e.getMessage());
-            }
+            String subject   = "[PES] Admission Approved";
+            String heading   = "🎉 Admission Approved";
+            String bodyHtml  = Format.getAdmissionApprovedBody(student.getName());
+            mailService.sendMail(parentEmail, subject, heading, bodyHtml);
 
         } else {
             form.setStatus(Status.REJECTED.getValue());
             form.setCancelReason(request.getReason());
 
-            try {
-                mailService.sendMail(
-                        parentEmail,
-                        "[PES] Admission Rejected",
-                        Format.getAdmissionRejected(student.getName(), request.getReason())
-                );
-            } catch (Exception e) {
-                System.err.println("Failed to send rejection email: " + e.getMessage());
-            }
+            String subject   = "[PES] Admission Rejected";
+            String heading   = "❌ Admission Rejected";
+            String bodyHtml  = Format.getAdmissionRejectedBody(student.getName(), request.getReason());
+            mailService.sendMail(parentEmail, subject, heading, bodyHtml);
         }
 
         admissionFormRepo.save(form);

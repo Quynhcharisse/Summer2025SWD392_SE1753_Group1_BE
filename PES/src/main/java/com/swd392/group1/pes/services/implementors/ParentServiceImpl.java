@@ -263,12 +263,20 @@ public class ParentServiceImpl implements ParentService {
 
         admissionFormRepo.save(form);
 
+        // 8. Gửi email notification
+        String subject  = "[PES] Admission Form Submitted";
+        String heading  = "📨 Admission Form Submitted";
+        String bodyHtml = Format.getAdmissionSubmittedBody(
+                account.getName(),
+                LocalDate.now().toString()
+        );
         // 8. Gửi email
         try {
             mailService.sendMail(
                     account.getEmail(),
-                    "[PES]_Admission Form Submitted",
-                    Format.getAdmissionFormSubmitted(account.getName(), LocalDate.now().toString())
+                    subject,
+                    heading,
+                    bodyHtml
             );
         } catch (Exception e) {
             System.err.println("Failed to send email notification: " + e.getMessage());
@@ -486,12 +494,21 @@ public class ParentServiceImpl implements ParentService {
 
         admissionFormRepo.save(form);
 
+        // 8. Gửi email notification
+        String subject  = "[PES] Admission Form Resubmitted";
+        String heading  = "🔄 Admission Form Resubmitted";
+        String bodyHtml = Format.getAdmissionRefilledBody(
+                account.getName(),
+                LocalDate.now().toString()
+        );
+
         // 8. Gửi email xác nhận
         try {
             mailService.sendMail(
-                            account.getEmail(),
-                            "[PES]_Admission Form Resubmitted",
-                            Format.getAdmissionFormResubmitted(account.getName(), LocalDate.now().toString())
+                    account.getEmail(),
+                    subject,
+                    heading,
+                    bodyHtml
             );
         } catch (Exception e) {
             System.err.println("Failed to send email notification: " + e.getMessage());
@@ -564,13 +581,16 @@ public class ParentServiceImpl implements ParentService {
 
         //Gửi email thông báo hủy
         try {
+            String subject  = "[PES] Admission Form Cancelled";
+            String heading  = "❌ Admission Form Cancelled";
+            String bodyHtml = Format.getAdmissionCancelledBody(account.getName());
             mailService.sendMail(
                     account.getEmail(),
-                    "[PES]_Admission Form Cancelled",
-                    Format.getAdmissionFormCancelled(account.getName())
+                    subject,
+                    heading,
+                    bodyHtml
             );
         } catch (Exception e) {
-            // Log lỗi nhưng không ảnh hưởng đến luồng xử lý chính
             System.err.println("Failed to send email notification: " + e.getMessage());
         }
 
