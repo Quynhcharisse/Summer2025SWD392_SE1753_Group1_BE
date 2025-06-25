@@ -1,5 +1,6 @@
 package com.swd392.group1.pes.models;
 
+
 import jakarta.persistence.Entity;
 
 import jakarta.persistence.FetchType;
@@ -40,4 +41,6 @@ public class EventParticipate {
     Event event;
 
     LocalDateTime registeredAt;
+
+
 }

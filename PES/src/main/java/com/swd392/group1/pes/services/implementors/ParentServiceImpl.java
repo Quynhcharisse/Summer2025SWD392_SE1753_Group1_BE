@@ -56,12 +56,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.stream.Collectors;
 import java.util.Random;
 import java.util.SortedMap;
 import java.util.TimeZone;
 import java.util.TreeMap;
 import java.util.function.Function;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -78,8 +78,6 @@ public class ParentServiceImpl implements ParentService {
     private final StudentRepo studentRepo;
 
     private final MailService mailService;
-    private final EventRepo eventRepo;
-    private final EventParticipateRepo eventParticipateRepo;
 
     @Value("${vnpay.return.url}")
     String vnpayReturnUrl;
@@ -87,6 +85,8 @@ public class ParentServiceImpl implements ParentService {
     @Value("${vnpay.hash.key}")
     String hashKey;
 
+    private final EventRepo eventRepo;
+    private final EventParticipateRepo eventParticipateRepo;
 
     @Override
     public ResponseEntity<ResponseObject> viewAdmissionFormList(HttpServletRequest request) {
@@ -982,7 +982,7 @@ public class ParentServiceImpl implements ParentService {
                 .findByStudentParentIdOrderByRegisteredAtDesc(parent.getId())
                 .stream()
                 .map(this::buildEventDetail)
-                .collect(Collectors.toList());
+                .toList();
         return ResponseEntity.ok(
                 new ResponseObject(
                         "Registered events for all your children",

@@ -23,4 +23,5 @@ public interface ParentService {
     ResponseEntity<ResponseObject> getPaymentURL(GetPaymentURLRequest request, HttpServletRequest httpRequest);
     ResponseEntity<ResponseObject> registerEvent(RegisterEventRequest request, HttpServletRequest requestHttp);
     ResponseEntity<ResponseObject> getRegisteredEvents(HttpServletRequest request);
+
 }

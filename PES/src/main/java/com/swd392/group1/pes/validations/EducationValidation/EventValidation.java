@@ -3,6 +3,7 @@ package com.swd392.group1.pes.validations.EducationValidation;
 import com.swd392.group1.pes.repositories.EventRepo;
 import com.swd392.group1.pes.requests.CreateEventRequest;
 import com.swd392.group1.pes.requests.RegisterEventRequest;
+import com.swd392.group1.pes.requests.UpdateEventRequest;
 
 import java.time.Duration;
 import java.util.List;
@@ -50,10 +51,6 @@ public class EventValidation {
         if (request.getRegistrationDeadline() == null) {
             return "Registration Deadline Time is required";
         }
-        // Ensure registration deadline is at least 3 days before start time
-        if (!request.getRegistrationDeadline().isBefore(request.getStartTime())) {
-            return "Registration deadline must be before the event start time";
-        }
 
         if (request.getAttachmentImg() == null || request.getAttachmentImg().trim().isEmpty()) {
             return "Event image is required";
@@ -69,49 +66,55 @@ public class EventValidation {
 
         return "";
     }
-
     public static String validateRegisterEvent(RegisterEventRequest request) {
-        // 1. eventId cũ
+        // 1. Kiểm tra eventId
         String err = checkEventId(request.getEventId());
         if (!err.isEmpty()) {
             return err;
         }
-        // 2. studentIds không null và không rỗng
+
+        // 2. Kiểm tra danh sách studentIds có tồn tại, không rỗng
         List<String> ids = request.getStudentIds();
         if (ids == null || ids.isEmpty()) {
-            return "studentIds must not be empty";
+            return "Student list must not be empty";
         }
-        // 3. kiểm tra từng studentId
+
+        // 3. Với mỗi studentId, kiểm tra định dạng và giá trị
         for (String sid : ids) {
             String studentErr = checkStudentId(sid);
             if (!studentErr.isEmpty()) {
                 return String.format("Invalid studentId '%s': %s", sid, studentErr);
             }
         }
+
         return "";
     }
 
-    public static String checkEventId(String eventId) {
-        if (eventId == null || eventId.isBlank()) {
-            return "eventId must not be blank";
-        }
-        try {
-            Integer.parseInt(eventId);
-        } catch (NumberFormatException e) {
-            return "eventId must be a number";
-        }
-        return "";
-    }
-
-    public static String checkStudentId(String studentId) {
-        if (studentId == null || studentId.isBlank()) {
-            return "studentId must not be blank";
+    public static  String checkStudentId(String id)
+    {
+        // ID is empty
+        if(id.isEmpty()){
+            return "Student Id cannot be empty";
         }
         // ID wrong format
         try {
-            Integer.parseInt(studentId);
-        } catch (NumberFormatException e) {
-            return "studentId must be a number";
+            Integer.parseInt(id);
+        } catch (IllegalArgumentException ex) {
+            return "Student Id must be a number";
+        }
+        return "";
+    }
+
+    public static String checkEventId(String id){
+        // ID is empty
+        if(id.isEmpty()){
+            return "Event Id cannot be empty";
+        }
+        // ID wrong format
+        try {
+            Integer.parseInt(id);
+        } catch (IllegalArgumentException ex) {
+            return "Event Id must be a number";
         }
         return "";
     }
