@@ -86,8 +86,14 @@ public class ParentController {
 
     @PostMapping("/event/register")
     @PreAuthorize("hasRole('parent')")
-    public ResponseEntity<ResponseObject> registerEvent(@RequestBody RegisterEventRequest request) {
-        return parentService.registerEvent(request);
+    public ResponseEntity<ResponseObject> registerEvent(@RequestBody RegisterEventRequest request, HttpServletRequest requestHttp) {
+        return parentService.registerEvent(request, requestHttp);
+    }
+
+    @GetMapping("/event/register")
+    @PreAuthorize("hasRole('parent')")
+    public ResponseEntity<ResponseObject> getRegisteredEvents(HttpServletRequest request) {
+        return parentService.getRegisteredEvents(request);
     }
 
 }

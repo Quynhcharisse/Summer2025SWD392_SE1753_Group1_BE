@@ -9,4 +9,6 @@ import java.util.Optional;
 public interface EventParticipateRepo extends JpaRepository<EventParticipate, Integer> {
     Optional<EventParticipate> findByStudentIdAndEventId(Integer studentId, Integer eventId);
     List<EventParticipate> findAllByStudentId(Integer studentId);
+    List<EventParticipate> findByStudentParentIdOrderByRegisteredAtDesc(Integer parentId);
+    List<EventParticipate> findAllByEventId(Integer eventId);
 }

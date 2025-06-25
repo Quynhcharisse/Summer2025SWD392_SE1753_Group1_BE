@@ -1,7 +1,5 @@
 package com.swd392.group1.pes.models;
 
-
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.Entity;
 
 import jakarta.persistence.FetchType;
@@ -18,6 +16,8 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.experimental.FieldDefaults;
 
+import java.time.LocalDateTime;
+
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -33,12 +33,11 @@ public class EventParticipate {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "`student_id`")
-
     Student student;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "`even_id`")
     Event event;
 
-
+    LocalDateTime registeredAt;
 }

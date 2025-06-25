@@ -103,10 +103,11 @@ public class EventValidation {
         return "";
     }
 
-    private static String checkStudentId(String studentId) {
+    public static String checkStudentId(String studentId) {
         if (studentId == null || studentId.isBlank()) {
             return "studentId must not be blank";
         }
+        // ID wrong format
         try {
             Integer.parseInt(studentId);
         } catch (NumberFormatException e) {

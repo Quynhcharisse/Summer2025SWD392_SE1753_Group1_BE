@@ -12,24 +12,15 @@ import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.ResponseEntity;
 
 public interface ParentService {
-
     ResponseEntity<ResponseObject> viewAdmissionFormList(HttpServletRequest request);
-
     ResponseEntity<ResponseObject> submitAdmissionForm(SubmitAdmissionFormRequest request, HttpServletRequest httpRequest);
-
     ResponseEntity<ResponseObject> viewRefillFormList(HttpServletRequest request);
-
     ResponseEntity<ResponseObject> refillForm(RefillFormRequest request, HttpServletRequest httpRequest);
-
     ResponseEntity<ResponseObject> cancelAdmissionForm(CancelAdmissionForm request, HttpServletRequest httpRequest);
-
     ResponseEntity<ResponseObject> viewChild(HttpServletRequest httpRequest);
-
     ResponseEntity<ResponseObject> addChild(AddChildRequest request, HttpServletRequest httpRequest);
-
     ResponseEntity<ResponseObject> updateChild(UpdateChildRequest request, HttpServletRequest httpRequest);
-
-    ResponseEntity<ResponseObject> registerEvent(RegisterEventRequest request);
-
     ResponseEntity<ResponseObject> getPaymentURL(GetPaymentURLRequest request, HttpServletRequest httpRequest);
+    ResponseEntity<ResponseObject> registerEvent(RegisterEventRequest request, HttpServletRequest requestHttp);
+    ResponseEntity<ResponseObject> getRegisteredEvents(HttpServletRequest request);
 }

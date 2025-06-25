@@ -11,4 +11,5 @@ public interface EventRepo extends JpaRepository<Event, Integer> {
   boolean existsByName(String name);
   List<Event> findByStatusAndRegistrationDeadlineLessThanEqual(Status status, LocalDateTime time);
   List<Event> findByStatus(Status status);
+  List<Event> findByStartTimeBetween(LocalDateTime from, LocalDateTime to);
 }
