@@ -3,7 +3,6 @@ package com.swd392.group1.pes.validations.EducationValidation;
 import com.swd392.group1.pes.repositories.EventRepo;
 import com.swd392.group1.pes.requests.CreateEventRequest;
 import com.swd392.group1.pes.requests.RegisterEventRequest;
-import com.swd392.group1.pes.requests.UpdateEventRequest;
 
 import java.time.Duration;
 import java.util.List;
@@ -50,6 +49,10 @@ public class EventValidation {
 
         if (request.getRegistrationDeadline() == null) {
             return "Registration Deadline Time is required";
+        }
+        // Ensure registration deadline is at least 3 days before start time
+        if (!request.getRegistrationDeadline().isBefore(request.getStartTime())) {
+            return "Registration deadline must be before the event start time";
         }
 
         if (request.getAttachmentImg() == null || request.getAttachmentImg().trim().isEmpty()) {
