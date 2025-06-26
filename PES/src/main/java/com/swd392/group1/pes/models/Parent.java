@@ -35,15 +35,10 @@ public class Parent {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     Integer id;
 
-    String address;
-
     @Column(name = "`relationship_to_child`")
     String relationshipToChild;
 
     String job;
-
-    @Column(name = "`residence_proof_url`")
-    String residenceProofUrl;
 
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "`account_id`")

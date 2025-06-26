@@ -58,6 +58,8 @@ public class Account implements UserDetails {
 
     String gender;
 
+    String address;
+
     @Column(name = "avatar_url")
     String avatarUrl;
 

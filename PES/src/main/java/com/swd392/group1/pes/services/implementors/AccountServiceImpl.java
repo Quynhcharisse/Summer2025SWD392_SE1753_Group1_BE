@@ -104,6 +104,7 @@ public class AccountServiceImpl implements AccountService {
         body.put("avatarUrl", account.getAvatarUrl());
         body.put("role", account.getRole());
         body.put("createdAt", account.getCreatedAt());
+        body.put("address", account.getAddress());
         body.put("status", account.getStatus());
 
         return ResponseEntity.status(HttpStatus.OK).body(
@@ -157,6 +158,7 @@ public class AccountServiceImpl implements AccountService {
         account.setPhone(request.getPhone());
         account.setGender(request.getGender());
         account.setAvatarUrl(request.getAvatarUrl());
+        account.setAddress(request.getAddress());
 
         accountRepo.save(account);
 

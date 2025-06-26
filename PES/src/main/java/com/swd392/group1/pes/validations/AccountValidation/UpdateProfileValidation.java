@@ -5,14 +5,14 @@ import com.swd392.group1.pes.requests.UpdateProfileRequest;
 public class UpdateProfileValidation {
     public static String validate(UpdateProfileRequest request) {
         // Name validation
-        if (request.getName() == null || request.getName().trim().isEmpty()) {
+        if (request.getName() == null || request.getName().isEmpty()) {
             return "Name is required.";
         }
-        if (!request.getName().matches("^[a-zA-Z\\s'-]+$")) {
-            return "Name can only contain letters, spaces, hyphens, and apostrophes.";
+ 
+        if (!request.getName().trim().matches("^[A-Za-z\\s]+$")) {
+            return "Name must only contain English letters (A–Z or a–z) and spaces. Numbers and special characters are not allowed.";
         }
-        int nameLength = request.getName().trim().length();
-        if (nameLength < 2 || nameLength > 50) {
+        if (request.getName().trim().length() < 2 || request.getName().trim().length() > 50) {
             return "Name must be between 2 and 50 characters.";
         }
 

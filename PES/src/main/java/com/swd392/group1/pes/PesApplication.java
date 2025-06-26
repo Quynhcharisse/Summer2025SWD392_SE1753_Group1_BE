@@ -118,6 +118,7 @@ public class PesApplication {
                         .gender("male")
                         .identityNumber("070404000033")
                         .phone("0705646041")
+                        .address("66/11 Le Trong Tan, Binh Hung Hoa")
                         .firstLogin(true)
                         .role(Role.PARENT)
                         .status(Status.ACCOUNT_ACTIVE.getValue())
@@ -127,10 +128,8 @@ public class PesApplication {
 
                 Parent parent1 = Parent.builder()
                         .account(parent)
-                        .address("66/11 Le Trong Tan, Binh Hung Hoa")
                         .job("IT")
                         .relationshipToChild("father")
-                        .residenceProofUrl("666/11 Le trong tan, Binh Hung Hoa")
                         .build();
 
                 parentRepo.save(parent1);
