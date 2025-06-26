@@ -169,11 +169,11 @@ public class AuthServiceImpl implements AuthService {
         account.setRole(Role.PARENT);
         account.setStatus(Status.ACCOUNT_ACTIVE.getValue());
         account.setCreatedAt(LocalDate.now());
+        account.setAddress(request.getAddress());
 
         accountRepo.save(account);
 
         Parent parent = Parent.builder()
-                .address(request.getAddress())
                 .job(request.getJob())
                 .relationshipToChild(request.getRelationshipToChild())
                 .account(account)
