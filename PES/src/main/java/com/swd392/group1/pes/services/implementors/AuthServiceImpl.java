@@ -187,6 +187,7 @@ public class AuthServiceImpl implements AuthService {
         mailService.sendMail(
                 account.getEmail(),
                 "[PES] Account Registration Successful",
+                "🎉 Account Created Successfully",
                 Format.getParentRegisterFormat(account.getName(), account.getEmail())
         );
 
@@ -229,6 +230,7 @@ public class AuthServiceImpl implements AuthService {
         mailService.sendMail(
                 account.getEmail(),
                 "[PES] Password Changed Successfully",
+                "🔒 Password Changed",
                 Format.getPasswordChangedFormat(account.getName())
         );
 
