@@ -10,6 +10,8 @@ import org.springframework.http.ResponseEntity;
 public interface AdmissionService {
     ResponseEntity<ResponseObject> createAdmissionTerm(CreateAdmissionTermRequest request);
 
+    ResponseEntity<ResponseObject> updateTermStatus(UpdateAdmissionTermRequest request);
+
     ResponseEntity<ResponseObject> viewAdmissionTerm();
 
     ResponseEntity<ResponseObject> createExtraTerm(CreateExtraTermRequest request);
@@ -19,4 +21,6 @@ public interface AdmissionService {
     ResponseEntity<ResponseObject> getDefaultFeeByGrade(String grade);
 
     ResponseEntity<ResponseObject> processAdmissionFormList(ProcessAdmissionFormRequest request);
+
+    ResponseEntity<ResponseObject> getAllYear();
 }

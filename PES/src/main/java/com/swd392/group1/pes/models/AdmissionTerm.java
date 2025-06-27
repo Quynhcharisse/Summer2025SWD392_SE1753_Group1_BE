@@ -1,7 +1,6 @@
 package com.swd392.group1.pes.models;
 
 import com.swd392.group1.pes.enums.Grade;
-import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -13,7 +12,6 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
-import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
@@ -24,7 +22,6 @@ import lombok.NoArgsConstructor;
 import lombok.ToString;
 import lombok.experimental.FieldDefaults;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -51,8 +48,14 @@ public class AdmissionTerm {
 
     Integer year;
 
+    @Column(name = "`students_per_class`")
+    Integer studentsPerClass; // số học sinh tự quy định = 20 người
+
+    @Column(name = "`expected_classes`")
+    Integer expectedClasses; // Số lớp dự kiến
+
     @Column(name = "`max_number_registration`")
-    int maxNumberRegistration;
+    int maxNumberRegistration; // tự gán tự động
 
     @Enumerated(EnumType.STRING)
     Grade grade;
@@ -70,9 +73,4 @@ public class AdmissionTerm {
     @EqualsAndHashCode.Exclude
     @ToString.Exclude
     AdmissionTerm parentTerm;
-
-    @OneToOne(mappedBy = "admissionTerm", fetch = FetchType.LAZY)
-    @EqualsAndHashCode.Exclude
-    @ToString.Exclude
-    AdmissionFee admissionFee;
 }

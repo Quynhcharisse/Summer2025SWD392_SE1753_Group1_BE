@@ -1,19 +1,19 @@
 package com.swd392.group1.pes.services.implementors;
 
 import com.swd392.group1.pes.email.Format;
+import com.swd392.group1.pes.enums.Fees;
 import com.swd392.group1.pes.enums.Grade;
 import com.swd392.group1.pes.enums.Status;
-import com.swd392.group1.pes.models.AdmissionFee;
 import com.swd392.group1.pes.models.AdmissionForm;
 import com.swd392.group1.pes.models.AdmissionTerm;
 import com.swd392.group1.pes.models.Student;
-import com.swd392.group1.pes.repositories.AdmissionFeeRepo;
 import com.swd392.group1.pes.repositories.AdmissionFormRepo;
 import com.swd392.group1.pes.repositories.AdmissionTermRepo;
 import com.swd392.group1.pes.repositories.StudentRepo;
 import com.swd392.group1.pes.requests.CreateAdmissionTermRequest;
 import com.swd392.group1.pes.requests.CreateExtraTermRequest;
 import com.swd392.group1.pes.requests.ProcessAdmissionFormRequest;
+import com.swd392.group1.pes.requests.UpdateAdmissionTermRequest;
 import com.swd392.group1.pes.response.ResponseObject;
 import com.swd392.group1.pes.services.AdmissionService;
 import com.swd392.group1.pes.services.MailService;
@@ -39,7 +39,6 @@ public class AdmissionServiceImpl implements AdmissionService {
     private final AdmissionFormRepo admissionFormRepo;
     private final AdmissionTermRepo admissionTermRepo;
     private final MailService mailService;
-    private final AdmissionFeeRepo admissionFeeRepo;
 
     @Override
     public ResponseEntity<ResponseObject> createAdmissionTerm(CreateAdmissionTermRequest request) {
@@ -86,22 +85,19 @@ public class AdmissionServiceImpl implements AdmissionService {
         }
 
         // Nếu hợp lệ, tiếp tục tạo term
-        AdmissionTerm term = admissionTermRepo.save(
+        admissionTermRepo.save(
                 AdmissionTerm.builder()
                         .name(name)
                         .grade(Grade.valueOf(request.getGrade().toUpperCase()))
                         .startDate(request.getStartDate())
                         .endDate(request.getEndDate())
                         .year(LocalDateTime.now().getYear())
-                        .maxNumberRegistration(request.getMaxNumberRegistration())
+                        .studentsPerClass(20)
+                        .expectedClasses(request.getExpectedClasses())
+                        .maxNumberRegistration(calculateMaxRegistration(request.getExpectedClasses()))
                         .status(Status.INACTIVE_TERM.getValue())
                         .build()
         );
-
-        // 6. Gán phí mặc định cho grade này bằng logic tách riêng
-        ResponseEntity<ResponseObject> feeResult = handleDefaultFeeLogic(term);
-        if (feeResult != null) return feeResult;
-
 
         return ResponseEntity.status(HttpStatus.OK).body(
                 ResponseObject.builder()
@@ -112,49 +108,59 @@ public class AdmissionServiceImpl implements AdmissionService {
         );
     }
 
-    private boolean datesOverlap(LocalDateTime start1, LocalDateTime end1, LocalDateTime start2, LocalDateTime end2) {
-        return !(end1.isBefore(start2) || start1.isAfter(end2));
-    }
-
     @Override
-    public ResponseEntity<ResponseObject> getDefaultFeeByGrade(String grade) {
-
-        if (!isValidGrade(grade)) {
-            return ResponseEntity.badRequest().body(
+    public ResponseEntity<ResponseObject> updateTermStatus(UpdateAdmissionTermRequest request) {
+        String error = AdmissionTermValidation.updateTermValidate(request);
+        if (!error.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
                     ResponseObject.builder()
-                            .message("Invalid grade: " + grade)
+                            .message(error)
                             .success(false)
                             .data(null)
                             .build()
             );
         }
 
-        Grade g = Grade.valueOf(grade.toUpperCase());
-        AdmissionFee fee = admissionFeeRepo.findFirstByAdmissionTermIsNullAndGrade(g).orElse(null);
-        if (fee == null) {
-            return ResponseEntity.badRequest().body(
+        // 1. Kiểm tra term tồn tại
+        AdmissionTerm term = admissionTermRepo.findById(request.getTermId()).orElse(null);
+        if (term == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
                     ResponseObject.builder()
-                            .message("Default fee not found for grade" + g)
+                            .message("Term not found")
                             .success(false)
                             .data(null)
                             .build()
             );
         }
 
-        Map<String, Object> feeData = new HashMap<>();
-        feeData.put("reservationFee", fee.getReservationFee());
-        feeData.put("serviceFee", fee.getServiceFee());
-        feeData.put("uniformFee", fee.getUniformFee());
-        feeData.put("learningMaterialFee", fee.getLearningMaterialFee());
-        feeData.put("facilityFee", fee.getFacilityFee());
+        if (!term.getStatus().equals(Status.ACTIVE_TERM.getValue())) {
+            return ResponseEntity.badRequest().body(
+                    ResponseObject.builder()
+                            .message("Only active terms can be locked")
+                            .success(false)
+                            .data(null)
+                            .build()
+            );
+        }
+
+        term.setStatus(Status.LOCKED_TERM.getValue());
+        admissionTermRepo.save(term);
 
         return ResponseEntity.ok(
                 ResponseObject.builder()
-                        .message("Default fee fetched successfully")
+                        .message("Term locked successfully")
                         .success(true)
-                        .data(feeData)
-                        .build());
+                        .data(null)
+                        .build()
+        );
+    }
 
+    private int calculateMaxRegistration(int expectedClasses) {
+        return 20 * expectedClasses;
+    }
+
+    private boolean datesOverlap(LocalDateTime start1, LocalDateTime end1, LocalDateTime start2, LocalDateTime end2) {
+        return !(end1.isBefore(start2) || start1.isAfter(end2));
     }
 
     public boolean isValidGrade(String grade) {
@@ -166,51 +172,45 @@ public class AdmissionServiceImpl implements AdmissionService {
         return false;
     }
 
-    private AdmissionFee cloneDefaultFee(AdmissionFee defaultFee, AdmissionTerm term) {
-        return AdmissionFee.builder()
-                .admissionTerm(term)
-                .grade(term.getGrade())
-                .reservationFee(defaultFee.getReservationFee())
-                .serviceFee(defaultFee.getServiceFee())
-                .uniformFee(defaultFee.getUniformFee())
-                .learningMaterialFee(defaultFee.getLearningMaterialFee())
-                .facilityFee(defaultFee.getFacilityFee())
-                .build();
-    }
-
-    private ResponseEntity<ResponseObject> handleDefaultFeeLogic(AdmissionTerm term) {
-        List<AdmissionFee> defaultFees = admissionFeeRepo.findByAdmissionTermIsNullAndGrade(term.getGrade());
-
-        if (defaultFees.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.CONFLICT).body(
+    @Override
+    public ResponseEntity<ResponseObject> getDefaultFeeByGrade(String grade) {
+        if (!isValidGrade(grade)) {
+            return ResponseEntity.badRequest().body(
                     ResponseObject.builder()
-                            .message("Missing default fee for grade: " + term.getGrade())
+                            .message("Invalid grade: " + grade)
                             .success(false)
                             .data(null)
                             .build()
             );
         }
 
-        if (defaultFees.size() > 1) {
-            return ResponseEntity.status(HttpStatus.CONFLICT).body(
-                    ResponseObject.builder()
-                            .message("Multiple default fees found for grade: " + term.getGrade())
-                            .success(false)
-                            .data(null)
-                            .build()
-            );
-        }
-
-        AdmissionFee feeToSave = cloneDefaultFee(defaultFees.get(0), term);
-        admissionFeeRepo.save(feeToSave);
-
-        return null;
+        Grade g = Grade.valueOf(grade.toUpperCase());
+        Map<String, Double> feeData = getFeeMapByGrade(g); // dùng chung
+        return ResponseEntity.ok(
+                ResponseObject.builder()
+                        .message("Default fee fetched successfully")
+                        .success(true)
+                        .data(feeData)
+                        .build()
+        );
     }
+
+    private Map<String, Double> getFeeMapByGrade(Grade grade) {
+        Fees fee = Fees.valueOf(grade.name());
+        return Map.of(
+                "learningMaterialFee", fee.getLearningMaterial(),
+                "reservationFee", fee.getReservation(),
+                "serviceFee", fee.getService(),
+                "uniformFee", fee.getUniform(),
+                "facilityFee", fee.getFacility()
+        );
+    }
+
 
     @Override
     public ResponseEntity<ResponseObject> viewAdmissionTerm() {
 
-        List<AdmissionTerm> terms = admissionTermRepo.findAll();
+        List<AdmissionTerm> terms = admissionTermRepo.findAllByParentTermIsNull();
 
         for (AdmissionTerm term : terms) {
             String timeStatus = updateTermStatus(term);
@@ -237,27 +237,18 @@ public class AdmissionServiceImpl implements AdmissionService {
                             data.put("name", term.getName());
                             data.put("startDate", term.getStartDate());
                             data.put("endDate", term.getEndDate());
-                            data.put("year", term.getYear());
+                            data.put("year", term.getYear() + "-" + (term.getYear() + 1));
+                            data.put("studentsPerClass", term.getStudentsPerClass());
+                            data.put("expectedClasses", term.getExpectedClasses());
                             data.put("maxNumberRegistration", term.getMaxNumberRegistration());
                             data.put("approvedForm", countApprovedFormByTerm(term));
                             data.put("grade", term.getGrade());
                             data.put("status", term.getStatus());
 
 
-                            AdmissionFee fee = admissionFeeRepo.findByAdmissionTerm_Id(term.getId()).orElse(null);
-                            if (fee != null) {
-                                data.put("reservationFee", fee.getReservationFee());
-                                data.put("serviceFee", fee.getServiceFee());
-                                data.put("uniformFee", fee.getUniformFee());
-                                data.put("learningMaterialFee", fee.getLearningMaterialFee());
-                                data.put("facilityFee", fee.getFacilityFee());
-                            } else {
-                                data.put("reservationFee", 0);
-                                data.put("serviceFee", 0);
-                                data.put("uniformFee", 0);
-                                data.put("learningMaterialFee", 0);
-                                data.put("facilityFee", 0);
-                            }
+                            Map<String, Double> feeList = getFeeMapByGrade(term.getGrade());
+                            data.putAll(feeList);
+
                             //gọi lai extra term
                             if (!admissionTermRepo.findAllByParentTerm_Id(term.getId()).isEmpty()) {
                                 data.put("extraTerms", viewExtraTerm(term));
@@ -278,13 +269,16 @@ public class AdmissionServiceImpl implements AdmissionService {
 
     private String updateTermStatus(AdmissionTerm term) {
         LocalDateTime today = LocalDateTime.now();
-        if (today.isBefore(term.getStartDate())) {
-            return Status.INACTIVE_TERM.getValue();
-        } else if (!today.isAfter(term.getEndDate())) {
-            return Status.ACTIVE_TERM.getValue();
-        } else {
-            return Status.LOCKED_TERM.getValue();
+        if (!term.getStatus().equals(Status.LOCKED_TERM.getValue())) {
+            if (today.isBefore(term.getStartDate())) {
+                return Status.INACTIVE_TERM.getValue();
+            } else if (!today.isAfter(term.getEndDate())) {
+                return Status.ACTIVE_TERM.getValue();
+            } else {
+                return Status.LOCKED_TERM.getValue();
+            }
         }
+        return Status.LOCKED_TERM.getValue();
     }
 
     private List<Map<String, Object>> viewExtraTerm(AdmissionTerm parentTerm) {
@@ -306,85 +300,100 @@ public class AdmissionServiceImpl implements AdmissionService {
     }
 
 
-    @Override
-    public ResponseEntity<ResponseObject> createExtraTerm(CreateExtraTermRequest request) {
+        @Override
+        public ResponseEntity<ResponseObject> createExtraTerm(CreateExtraTermRequest request) {
 
-        // 1. Validate các field cơ bản (ngày, số lượng, grade rỗng...)
-        String error = ExtraTermValidation.createExtraTerm(request);
-        if (!error.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
+            // 1. Validate các field cơ bản (ngày, số lượng, grade rỗng...)
+            String error = ExtraTermValidation.createExtraTerm(request);
+            if (!error.isEmpty()) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
+                        ResponseObject.builder()
+                                .message(error)
+                                .success(false)
+                                .data(null)
+                                .build()
+                );
+            }
+
+            // 2. Kiểm tra AdmissionTerm tồn tại
+            AdmissionTerm term = admissionTermRepo.findById(request.getAdmissionTermId()).orElse(null);
+            if (term == null) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
+                        ResponseObject.builder()
+                                .message("Admission term not found")
+                                .success(false)
+                                .data(null)
+                                .build()
+                );
+            }
+
+            List<AdmissionTerm> existingExtraTerms = admissionTermRepo.findAllByParentTerm_Id(term.getId())
+                    .stream()
+                    .filter(et -> !et.getStatus().equals(Status.LOCKED_TERM.getValue()))
+                    .toList();
+
+            if (!existingExtraTerms.isEmpty()) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
+                        ResponseObject.builder()
+                                .message("Only one extra term can exist at a time")
+                                .success(false)
+                                .data(null)
+                                .build()
+                );
+            }
+
+            // 3. Kiểm tra status và chỉ tiêu
+            if (!term.getStatus().equals(Status.LOCKED_TERM.getValue())) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
+                        ResponseObject.builder()
+                                .message("Only locked terms can have extra requests")
+                                .success(false)
+                                .data(null)
+                                .build()
+                );
+            }
+
+            if (countApprovedFormByTerm(term) >= term.getMaxNumberRegistration()) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
+                        ResponseObject.builder()
+                                .message("Term has already reached maximum registration")
+                                .success(false)
+                                .data(null)
+                                .build()
+                );
+            }
+
+            // 4. Tạo extra RequestTerm
+            AdmissionTerm extraTerm = admissionTermRepo.save(AdmissionTerm.builder()
+                    .name("Extra Term - " + term.getGrade().getName() + " " + term.getYear())
+                    .startDate(request.getStartDate())
+                    .endDate(request.getEndDate())
+                    .maxNumberRegistration(countMissingFormAmountByTerm(term))
+                    .year(term.getYear())
+                    .grade(term.getGrade())
+                    .parentTerm(term)
+                    .status(Status.INACTIVE_TERM.getValue())
+                    .build());
+
+            extraTerm.setStatus(updateTermStatus(extraTerm));
+            admissionTermRepo.save(extraTerm);
+
+            return ResponseEntity.status(HttpStatus.CREATED).body(
                     ResponseObject.builder()
-                            .message(error)
-                            .success(false)
+                            .message("Extra term created successfully")
+                            .success(true)
                             .data(null)
                             .build()
             );
         }
 
-        // 2. Kiểm tra AdmissionTerm tồn tại
-        AdmissionTerm term = admissionTermRepo.findById(request.getAdmissionTermId()).orElse(null);
-        if (term == null) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
-                    ResponseObject.builder()
-                            .message("Admission term not found")
-                            .success(false)
-                            .data(null)
-                            .build()
-            );
+        private int countApprovedFormByTerm(AdmissionTerm term) {
+            return (int) term.getAdmissionFormList().stream().filter(form -> form.getStatus().equals(Status.APPROVED.getValue())).count();
         }
 
-        // 3. Kiểm tra status và chỉ tiêu
-        if (!term.getStatus().equals(Status.LOCKED_TERM.getValue())) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
-                    ResponseObject.builder()
-                            .message("Only locked terms can have extra requests")
-                            .success(false)
-                            .data(null)
-                            .build()
-            );
+        private int countMissingFormAmountByTerm(AdmissionTerm term) {
+            return term.getMaxNumberRegistration() - countApprovedFormByTerm(term);
         }
-
-        if (countApprovedFormByTerm(term) >= term.getMaxNumberRegistration()) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
-                    ResponseObject.builder()
-                            .message("Term has already reached maximum registration")
-                            .success(false)
-                            .data(null)
-                            .build()
-            );
-        }
-
-        // 4. Tạo extra RequestTerm
-        AdmissionTerm extraTerm = admissionTermRepo.save(AdmissionTerm.builder()
-                .name("Extra Term - " + term.getGrade().getName() + " " + term.getYear())
-                .startDate(request.getStartDate())
-                .endDate(request.getEndDate())
-                .maxNumberRegistration(countMissingFormAmountByTerm(term))
-                .year(term.getYear())
-                .grade(term.getGrade())
-                .parentTerm(term)
-                .status(Status.INACTIVE_TERM.getValue())
-                .build());
-
-        extraTerm.setStatus(updateTermStatus(extraTerm));
-        admissionTermRepo.save(extraTerm);
-
-        return ResponseEntity.status(HttpStatus.CREATED).body(
-                ResponseObject.builder()
-                        .message("Extra term created successfully")
-                        .success(true)
-                        .data(null)
-                        .build()
-        );
-    }
-
-    private int countApprovedFormByTerm(AdmissionTerm term) {
-        return (int) term.getAdmissionFormList().stream().filter(form -> form.getStatus().equals(Status.APPROVED.getValue())).count();
-    }
-
-    private int countMissingFormAmountByTerm(AdmissionTerm term) {
-        return term.getMaxNumberRegistration() - countApprovedFormByTerm(term);
-    }
 
 
     @Override
@@ -466,18 +475,18 @@ public class AdmissionServiceImpl implements AdmissionService {
             student.setStudent(true);
             studentRepo.save(student);
 
-            String subject   = "[PES] Admission Approved";
-            String heading   = "🎉 Admission Approved";
-            String bodyHtml  = Format.getAdmissionApprovedBody(student.getName());
+            String subject = "[PES] Admission Approved";
+            String heading = "🎉 Admission Approved";
+            String bodyHtml = Format.getAdmissionApprovedBody(student.getName());
             mailService.sendMail(parentEmail, subject, heading, bodyHtml);
 
         } else {
             form.setStatus(Status.REJECTED.getValue());
             form.setCancelReason(request.getReason());
 
-            String subject   = "[PES] Admission Rejected";
-            String heading   = "❌ Admission Rejected";
-            String bodyHtml  = Format.getAdmissionRejectedBody(student.getName(), request.getReason());
+            String subject = "[PES] Admission Rejected";
+            String heading = "❌ Admission Rejected";
+            String bodyHtml = Format.getAdmissionRejectedBody(student.getName(), request.getReason());
             mailService.sendMail(parentEmail, subject, heading, bodyHtml);
         }
 
@@ -488,6 +497,23 @@ public class AdmissionServiceImpl implements AdmissionService {
                         .message(request.isApproved() ? "Form Approved" : "Form Rejected")
                         .success(true)
                         .data(null)
+                        .build()
+        );
+    }
+
+    @Override
+    public ResponseEntity<ResponseObject> getAllYear() {
+        List<Integer> years = admissionTermRepo.findAll()
+                .stream()
+                .map(AdmissionTerm::getYear)
+                .distinct()
+                .sorted()
+                .toList();
+        return ResponseEntity.status(HttpStatus.OK).body(
+                ResponseObject.builder()
+                        .message("")
+                        .success(true)
+                        .data(years)
                         .build()
         );
     }

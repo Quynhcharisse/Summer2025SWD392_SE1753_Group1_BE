@@ -218,15 +218,14 @@ public class HRServiceImpl implements HRService {
                     data.put("gender", parentAcc.getGender());
                     data.put("identityNumber", parentAcc.getIdentityNumber());
                     data.put("avatarUrl", parentAcc.getAvatarUrl());
+                    data.put("address", parentAcc.getAddress());
 
                     // xử lý an toàn khi parentAcc.getParent() có thể null
                     if (parentAcc.getParent() != null) {
                         data.put("job", parentAcc.getParent().getJob());
-                        data.put("address", parentAcc.getParent().getAddress());
                         data.put("relationshipToChild", parentAcc.getParent().getRelationshipToChild());
                     } else {
                         data.put("job", null);
-                        data.put("address", null);
                         data.put("relationshipToChild", null);
                     }
 
