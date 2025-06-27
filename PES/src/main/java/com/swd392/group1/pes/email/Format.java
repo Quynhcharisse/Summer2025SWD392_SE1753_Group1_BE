@@ -84,4 +84,35 @@ public class Format {
                         "<p>Best regards,<br/>Sunshine Preschool</p>";
     }
 
+    /** Fragment khi phụ huynh đăng ký tài khoản thành công */
+    public static String getParentRegisterFormat(String parentName, String email) {
+        return
+                "<p>Dear " + (parentName != null ? parentName : "Parent") + ",</p>\n" +
+                "<p>Your account has been successfully registered with Sunshine Preschool.</p>" +
+                "<ul style=\"padding-left:16px;\">" +
+                "  <li><strong>Email:</strong> " + email + "</li>" +
+                "</ul>" +
+                "<p>You can now <a href=\"http://localhost:5173/auth/login\">sign in to your account</a>.</p>" +
+                "<p>For assistance, contact us at <a href=\"mailto:info@sunshinepreschool.edu\">info@sunshinepreschool.edu</a> or call (555) 123-4567.</p>" +
+                "<p>Best regards,<br/>Sunshine Preschool</p>";
+    }
+
+    /** Fragment khi phụ huynh yêu cầu đổi mật khẩu thành công */
+    public static String getPasswordChangedFormat(String name) {
+        return
+                "<p>Dear " + (name != null ? name : "User") + ",</p>\n" +
+                "<p>Your password has been changed successfully.</p>" +
+                "<p>If you did not perform this action, please contact support immediately.</p>" +
+                "<p>Best regards,<br/>Sunshine Preschool</p>";
+    }
+
+    /** Fragment khi yêu cầu đổi mật khẩu thành công */
+    public static String getRenewPasswordSuccessBody(String name) {
+        return
+                "<p>Dear " + (name != null ? name : "User") + ",</p>\n" +
+                "<p>Your password has been renewed successfully.</p>" +
+                "<p>If you did not perform this action, please contact support immediately.</p>" +
+                "<p>Best regards,<br/>Sunshine Preschool</p>";
+    }
+
 }

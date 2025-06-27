@@ -1,5 +1,6 @@
 package com.swd392.group1.pes.services.implementors;
 
+import com.swd392.group1.pes.email.Format;
 import com.swd392.group1.pes.enums.Role;
 import com.swd392.group1.pes.models.Account;
 import com.swd392.group1.pes.repositories.AccountRepo;
@@ -8,6 +9,7 @@ import com.swd392.group1.pes.requests.UpdateProfileRequest;
 import com.swd392.group1.pes.response.ResponseObject;
 import com.swd392.group1.pes.services.AccountService;
 import com.swd392.group1.pes.services.JWTService;
+import com.swd392.group1.pes.services.MailService;
 import com.swd392.group1.pes.validations.AccountValidation.ResetPasswordValidation;
 import com.swd392.group1.pes.validations.AccountValidation.UpdateProfileValidation;
 import jakarta.servlet.http.HttpServletRequest;
@@ -24,8 +26,8 @@ import java.util.Map;
 public class AccountServiceImpl implements AccountService {
 
     private final AccountRepo accountRepo;
-
     private final JWTService jwtService;
+    private final MailService mailService;
 
     @Override
     public ResponseEntity<ResponseObject> resetPassword(RestPasswordRequest request) {
@@ -69,6 +71,13 @@ public class AccountServiceImpl implements AccountService {
         }
 
         accountRepo.save(account);
+
+        mailService.sendMail(
+                account.getEmail(),
+                "[PES] Password Renewed Successfully",
+                "✅ Password Renewed",
+                Format.getRenewPasswordSuccessBody(account.getName())
+        );
 
         return ResponseEntity.status(HttpStatus.OK).body(
                 ResponseObject.builder()
