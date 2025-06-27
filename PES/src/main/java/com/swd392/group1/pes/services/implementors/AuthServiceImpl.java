@@ -1,5 +1,6 @@
 package com.swd392.group1.pes.services.implementors;
 
+import com.swd392.group1.pes.email.Format;
 import com.swd392.group1.pes.enums.Role;
 import com.swd392.group1.pes.enums.Status;
 import com.swd392.group1.pes.models.Account;
@@ -12,6 +13,7 @@ import com.swd392.group1.pes.requests.RegisterRequest;
 import com.swd392.group1.pes.response.ResponseObject;
 import com.swd392.group1.pes.services.AuthService;
 import com.swd392.group1.pes.services.JWTService;
+import com.swd392.group1.pes.services.MailService;
 import com.swd392.group1.pes.utils.CookieUtil;
 import com.swd392.group1.pes.validations.AuthValidation.LoginValidation;
 import com.swd392.group1.pes.validations.AuthValidation.RegisterValidation;
@@ -43,6 +45,8 @@ public class AuthServiceImpl implements AuthService {
     private final JWTService jwtService;
 
     private final ParentRepo parentRepo;
+
+    private final MailService mailService;
 
     @Override
     public ResponseEntity<ResponseObject> login(LoginRequest request, HttpServletResponse response) {
@@ -180,11 +184,18 @@ public class AuthServiceImpl implements AuthService {
                 .build();
         parentRepo.save(parent);
 
+        mailService.sendMail(
+                account.getEmail(),
+                "[PES] Account Registration Successful",
+                "🎉 Account Created Successfully",
+                Format.getParentRegisterFormat(account.getName(), account.getEmail())
+        );
+
         return ResponseEntity.status(HttpStatus.OK).body(
                 ResponseObject.builder()
                         .message("Register Successfully")
                         .success(true)
-                        .data(account)
+                        .data(null)
                         .build()
         );
     }
@@ -216,11 +227,18 @@ public class AuthServiceImpl implements AuthService {
         account.setPassword(request.getPassword());
         accountRepo.save(account);
 
+        mailService.sendMail(
+                account.getEmail(),
+                "[PES] Password Changed Successfully",
+                "🔒 Password Changed",
+                Format.getPasswordChangedFormat(account.getName())
+        );
+
         return ResponseEntity.status(HttpStatus.OK).body(
                 ResponseObject.builder()
                         .message("Change Password Successfully")
                         .success(true)
-                        .data(account)
+                        .data(null)
                         .build()
         );
     }
