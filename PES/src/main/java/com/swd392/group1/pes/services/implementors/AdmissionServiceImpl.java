@@ -210,7 +210,7 @@ public class AdmissionServiceImpl implements AdmissionService {
     @Override
     public ResponseEntity<ResponseObject> viewAdmissionTerm() {
 
-        List<AdmissionTerm> terms = admissionTermRepo.findAll();
+        List<AdmissionTerm> terms = admissionTermRepo.findAllByParentTermIsNull();
 
         for (AdmissionTerm term : terms) {
             String timeStatus = updateTermStatus(term);
@@ -244,6 +244,7 @@ public class AdmissionServiceImpl implements AdmissionService {
                             data.put("approvedForm", countApprovedFormByTerm(term));
                             data.put("grade", term.getGrade());
                             data.put("status", term.getStatus());
+
 
                             Map<String, Double> feeList = getFeeMapByGrade(term.getGrade());
                             data.putAll(feeList);
@@ -299,85 +300,100 @@ public class AdmissionServiceImpl implements AdmissionService {
     }
 
 
-    @Override
-    public ResponseEntity<ResponseObject> createExtraTerm(CreateExtraTermRequest request) {
+        @Override
+        public ResponseEntity<ResponseObject> createExtraTerm(CreateExtraTermRequest request) {
 
-        // 1. Validate các field cơ bản (ngày, số lượng, grade rỗng...)
-        String error = ExtraTermValidation.createExtraTerm(request);
-        if (!error.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
+            // 1. Validate các field cơ bản (ngày, số lượng, grade rỗng...)
+            String error = ExtraTermValidation.createExtraTerm(request);
+            if (!error.isEmpty()) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
+                        ResponseObject.builder()
+                                .message(error)
+                                .success(false)
+                                .data(null)
+                                .build()
+                );
+            }
+
+            // 2. Kiểm tra AdmissionTerm tồn tại
+            AdmissionTerm term = admissionTermRepo.findById(request.getAdmissionTermId()).orElse(null);
+            if (term == null) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
+                        ResponseObject.builder()
+                                .message("Admission term not found")
+                                .success(false)
+                                .data(null)
+                                .build()
+                );
+            }
+
+            List<AdmissionTerm> existingExtraTerms = admissionTermRepo.findAllByParentTerm_Id(term.getId())
+                    .stream()
+                    .filter(et -> !et.getStatus().equals(Status.LOCKED_TERM.getValue()))
+                    .toList();
+
+            if (!existingExtraTerms.isEmpty()) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
+                        ResponseObject.builder()
+                                .message("Only one extra term can exist at a time")
+                                .success(false)
+                                .data(null)
+                                .build()
+                );
+            }
+
+            // 3. Kiểm tra status và chỉ tiêu
+            if (!term.getStatus().equals(Status.LOCKED_TERM.getValue())) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
+                        ResponseObject.builder()
+                                .message("Only locked terms can have extra requests")
+                                .success(false)
+                                .data(null)
+                                .build()
+                );
+            }
+
+            if (countApprovedFormByTerm(term) >= term.getMaxNumberRegistration()) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
+                        ResponseObject.builder()
+                                .message("Term has already reached maximum registration")
+                                .success(false)
+                                .data(null)
+                                .build()
+                );
+            }
+
+            // 4. Tạo extra RequestTerm
+            AdmissionTerm extraTerm = admissionTermRepo.save(AdmissionTerm.builder()
+                    .name("Extra Term - " + term.getGrade().getName() + " " + term.getYear())
+                    .startDate(request.getStartDate())
+                    .endDate(request.getEndDate())
+                    .maxNumberRegistration(countMissingFormAmountByTerm(term))
+                    .year(term.getYear())
+                    .grade(term.getGrade())
+                    .parentTerm(term)
+                    .status(Status.INACTIVE_TERM.getValue())
+                    .build());
+
+            extraTerm.setStatus(updateTermStatus(extraTerm));
+            admissionTermRepo.save(extraTerm);
+
+            return ResponseEntity.status(HttpStatus.CREATED).body(
                     ResponseObject.builder()
-                            .message(error)
-                            .success(false)
+                            .message("Extra term created successfully")
+                            .success(true)
                             .data(null)
                             .build()
             );
         }
 
-        // 2. Kiểm tra AdmissionTerm tồn tại
-        AdmissionTerm term = admissionTermRepo.findById(request.getAdmissionTermId()).orElse(null);
-        if (term == null) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
-                    ResponseObject.builder()
-                            .message("Admission term not found")
-                            .success(false)
-                            .data(null)
-                            .build()
-            );
+        private int countApprovedFormByTerm(AdmissionTerm term) {
+            return (int) term.getAdmissionFormList().stream().filter(form -> form.getStatus().equals(Status.APPROVED.getValue())).count();
         }
 
-        // 3. Kiểm tra status và chỉ tiêu
-        if (!term.getStatus().equals(Status.LOCKED_TERM.getValue())) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
-                    ResponseObject.builder()
-                            .message("Only locked terms can have extra requests")
-                            .success(false)
-                            .data(null)
-                            .build()
-            );
+        private int countMissingFormAmountByTerm(AdmissionTerm term) {
+            return term.getMaxNumberRegistration() - countApprovedFormByTerm(term);
         }
-
-        if (countApprovedFormByTerm(term) >= term.getMaxNumberRegistration()) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
-                    ResponseObject.builder()
-                            .message("Term has already reached maximum registration")
-                            .success(false)
-                            .data(null)
-                            .build()
-            );
-        }
-
-        // 4. Tạo extra RequestTerm
-        AdmissionTerm extraTerm = admissionTermRepo.save(AdmissionTerm.builder()
-                .name("Extra Term - " + term.getGrade().getName() + " " + term.getYear())
-                .startDate(request.getStartDate())
-                .endDate(request.getEndDate())
-                .maxNumberRegistration(countMissingFormAmountByTerm(term))
-                .year(term.getYear())
-                .grade(term.getGrade())
-                .parentTerm(term)
-                .status(Status.INACTIVE_TERM.getValue())
-                .build());
-
-        extraTerm.setStatus(updateTermStatus(extraTerm));
-        admissionTermRepo.save(extraTerm);
-
-        return ResponseEntity.status(HttpStatus.CREATED).body(
-                ResponseObject.builder()
-                        .message("Extra term created successfully")
-                        .success(true)
-                        .data(null)
-                        .build()
-        );
-    }
-
-    private int countApprovedFormByTerm(AdmissionTerm term) {
-        return (int) term.getAdmissionFormList().stream().filter(form -> form.getStatus().equals(Status.APPROVED.getValue())).count();
-    }
-
-    private int countMissingFormAmountByTerm(AdmissionTerm term) {
-        return term.getMaxNumberRegistration() - countApprovedFormByTerm(term);
-    }
 
 
     @Override
