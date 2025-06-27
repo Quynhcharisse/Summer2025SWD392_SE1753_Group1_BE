@@ -195,7 +195,7 @@ public class AuthServiceImpl implements AuthService {
                 ResponseObject.builder()
                         .message("Register Successfully")
                         .success(true)
-                        .data(account)
+                        .data(null)
                         .build()
         );
     }
