@@ -1,5 +1,8 @@
 package com.swd392.group1.pes.email;
 
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+
 public class Format {
     /** Fragment cho tài khoản giáo viên */
     public static String getTeacherBody(String email, String password) {
@@ -83,5 +86,49 @@ public class Format {
                         "<p>If you experience any issues, please contact our support team at <a href=\"mailto:info@sunshinepreschool.edu\">info@sunshinepreschool.edu</a> or (555) 123-4567.</p>" +
                         "<p>Best regards,<br/>Sunshine Preschool</p>";
     }
+
+    public static String getReminderBody(String parentName,
+                                         String childName,
+                                         String eventName,
+                                         LocalDateTime startTime){
+        String formatStartTime =  startTime.format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"));
+        return
+                "<p>Dear " + parentName + ",</p>\n" +
+                        "<p>This is a friendly reminder that your children \""+childName+"\" is registered for event " + eventName + "which starts at " +formatStartTime+"</p"+
+                        "<p>Please be ready 15 minutes ahead of time.</p>" +
+                        "<p>Best regards,<br/>Sunshine Preschool</p>";
+    }
+
+    public static String getCancelEventForParentBody(String parentName,
+                                            String childName,
+                                            String eventName,
+                                            LocalDateTime startTime,
+                                            String reasons){
+        String formattedStart = startTime.format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"));
+
+        return    "<p>Dear " + parentName + ",</p>"
+                + "<p>We regret to inform you that the event \"" + eventName + "\" scheduled at "
+                + formattedStart
+                + " for your child " + childName
+                + " has been canceled.</p>"
+                + "<p>Reason: " + reasons + "</p>"
+                + "<p>We apologize for any inconvenience caused.</p>"
+                + "<p>Best regards,<br/>SunShine Preschool</p>";
+    }
+
+    public static String getCancelEventForTeacherBody(String teacherName,
+                                                     String eventName,
+                                                     LocalDateTime startTime,
+                                                     String reasons){
+        String formattedStart = startTime.format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"));
+
+        return    "<p>Dear " + teacherName + ",</p>"
+                + "<p>The event \"" + eventName + "\" scheduled at "
+                + formattedStart
+                + " has been cancelled. </p>"
+                + "<p>Reason: " + reasons + "</p>"
+                + "<p>Best regards,<br/>SunShine Preschool</p>";
+    }
+
 
 }

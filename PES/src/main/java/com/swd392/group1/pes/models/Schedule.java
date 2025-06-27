@@ -36,9 +36,7 @@ public class Schedule {
     Integer id;
 
     @Column(name = "`week_number`")
-    int weekNumber;
-
-    String note;
+    String weekName;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "`classes_id`")

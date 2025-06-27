@@ -61,4 +61,6 @@ public class Syllabus {
 
     LocalDateTime createdAt;
 
+    boolean isAssignedToClasses;
+
 }

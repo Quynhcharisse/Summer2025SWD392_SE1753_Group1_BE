@@ -1,6 +1,7 @@
 package com.swd392.group1.pes.services;
 
 import com.swd392.group1.pes.requests.AssignLessonsRequest;
+import com.swd392.group1.pes.requests.CancelEventRequest;
 import com.swd392.group1.pes.requests.CreateEventRequest;
 import com.swd392.group1.pes.requests.CreateLessonRequest;
 import com.swd392.group1.pes.requests.CreateSyllabusRequest;
@@ -25,9 +26,10 @@ public interface EducationService {
     ResponseEntity<ResponseObject> viewLessonNotAssignedOfSyllabus(String id, String searchQuery);
     ResponseEntity<ResponseObject> viewLessonAssignedOfSyllabus(String id, String searchQuery);
     ResponseEntity<ResponseObject> createEvent(CreateEventRequest request);
-    ResponseEntity<ResponseObject> cancelEvent(String id);
+    ResponseEntity<ResponseObject> cancelEvent(String id, CancelEventRequest request);
     ResponseEntity<ResponseObject> viewEventList();
     ResponseEntity<ResponseObject> viewEventDetail(String id);
     ResponseEntity<ResponseObject> viewAssignedTeachersOfEvent(String id);
     ResponseEntity<ResponseObject> viewActiveEvents();
+    ResponseEntity<ResponseObject> viewAllSyllabusesByGrade(String gradeName);
 }

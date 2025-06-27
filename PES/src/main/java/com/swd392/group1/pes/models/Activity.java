@@ -16,7 +16,8 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.experimental.FieldDefaults;
 
-import java.time.LocalDateTime;
+import java.time.DayOfWeek;
+import java.time.LocalTime;
 
 @Data
 @NoArgsConstructor
@@ -31,19 +32,20 @@ public class Activity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     Integer id;
 
+    @Column
+    String name;
+
     @Column(name = "`day_of_week`")
-    String dayOfWeek;
+    DayOfWeek dayOfWeek;
 
     @Column(name = "`start_time`")
-    LocalDateTime startTime;
+    LocalTime startTime;
 
     @Column(name = "`end_time`")
-    LocalDateTime endTime;
+    LocalTime endTime;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "`schedule_id`")
     Schedule schedule;
 
-    @Column(name = "`lesson_id`")
-    int lessonId;
 }

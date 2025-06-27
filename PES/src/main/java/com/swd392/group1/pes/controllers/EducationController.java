@@ -1,6 +1,7 @@
 package com.swd392.group1.pes.controllers;
 
 import com.swd392.group1.pes.requests.AssignLessonsRequest;
+import com.swd392.group1.pes.requests.CancelEventRequest;
 import com.swd392.group1.pes.requests.CreateEventRequest;
 import com.swd392.group1.pes.requests.CreateLessonRequest;
 import com.swd392.group1.pes.requests.CreateSyllabusRequest;
@@ -50,6 +51,13 @@ public class EducationController {
     public ResponseEntity<ResponseObject> viewSyllabusList() {
         return educationService.viewAllSyllabus();
     }
+
+    @GetMapping("/syllabus/listByGrade")
+    @PreAuthorize("hasRole('education')")
+    public ResponseEntity<ResponseObject> viewAllSyllabusesByGrade(@RequestParam String gradeName) {
+        return educationService.viewAllSyllabusesByGrade(gradeName);
+    }
+
 
     @PostMapping("/classes")
     @PreAuthorize("hasRole('education')")
@@ -118,16 +126,10 @@ public class EducationController {
         return educationService.viewEventList();
     }
 
-    @GetMapping("/event/detail")
-    @PreAuthorize("hasRole('education')")
-    public ResponseEntity<ResponseObject> viewEventDetail(@RequestParam String id) {
-        return educationService.viewEventDetail(id);
-    }
-
     @PutMapping("/event/cancel")
     @PreAuthorize("hasRole('education')")
-    public ResponseEntity<ResponseObject> cancelEvent(@RequestParam String id) {
-        return educationService.cancelEvent(id);
+    public ResponseEntity<ResponseObject> cancelEvent(@RequestParam String id, @RequestBody CancelEventRequest cancelEventRequest) {
+        return educationService.cancelEvent(id, cancelEventRequest);
     }
 
     @GetMapping("/event/assign/teachers")

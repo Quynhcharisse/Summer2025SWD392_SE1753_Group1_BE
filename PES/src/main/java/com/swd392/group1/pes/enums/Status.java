@@ -21,6 +21,10 @@ public enum Status {
     EVENT_REGISTRATION_CLOSED("closed"),
     EVENT_CANCELLED("cancelled"),
 
+    CLASS_ACTIVE("active"),
+    CLASS_IN_PROGRESS("in_progress"),
+    CLASS_CLOSED("closed"),
+
     ACTIVE_TERM("active"), // trong khoảng ngày cho phép
     INACTIVE_TERM("inactive"), // chưa đến ngày
     LOCKED_TERM("locked"),

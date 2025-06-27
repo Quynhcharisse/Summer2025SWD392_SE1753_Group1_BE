@@ -1,24 +1,34 @@
 package com.swd392.group1.pes.services.implementors;
 
 
+import com.swd392.group1.pes.email.Format;
 import com.swd392.group1.pes.enums.Grade;
 import com.swd392.group1.pes.enums.Role;
 import com.swd392.group1.pes.enums.Status;
 import com.swd392.group1.pes.models.Account;
+import com.swd392.group1.pes.models.Activity;
+import com.swd392.group1.pes.models.AdmissionForm;
 import com.swd392.group1.pes.models.Classes;
 import com.swd392.group1.pes.models.Event;
+import com.swd392.group1.pes.models.EventParticipate;
 import com.swd392.group1.pes.models.Lesson;
+import com.swd392.group1.pes.models.Parent;
+import com.swd392.group1.pes.models.Schedule;
+import com.swd392.group1.pes.models.Student;
+import com.swd392.group1.pes.models.StudentClass;
 import com.swd392.group1.pes.models.Syllabus;
 import com.swd392.group1.pes.models.SyllabusLesson;
 import com.swd392.group1.pes.models.TeacherEvent;
 import com.swd392.group1.pes.repositories.AccountRepo;
 import com.swd392.group1.pes.repositories.AdmissionFormRepo;
 import com.swd392.group1.pes.repositories.ClassRepo;
+import com.swd392.group1.pes.repositories.EventParticipateRepo;
 import com.swd392.group1.pes.repositories.EventRepo;
 import com.swd392.group1.pes.repositories.LessonRepo;
 import com.swd392.group1.pes.repositories.SyllabusLessonRepo;
 import com.swd392.group1.pes.repositories.SyllabusRepo;
 import com.swd392.group1.pes.repositories.TeacherEventRepo;
+import com.swd392.group1.pes.requests.CancelEventRequest;
 import com.swd392.group1.pes.requests.CreateLessonRequest;
 import com.swd392.group1.pes.requests.AssignLessonsRequest;
 import com.swd392.group1.pes.requests.CreateSyllabusRequest;
@@ -28,6 +38,7 @@ import com.swd392.group1.pes.requests.UpdateSyllabusRequest;
 import com.swd392.group1.pes.response.ResponseObject;
 import com.swd392.group1.pes.services.EducationService;
 import com.swd392.group1.pes.requests.CreateEventRequest;
+import com.swd392.group1.pes.services.MailService;
 import com.swd392.group1.pes.validations.EducationValidation.EventValidation;
 import com.swd392.group1.pes.validations.EducationValidation.LessonValidation;
 import com.swd392.group1.pes.validations.EducationValidation.SyllabusValidation.AssignLessonsValidation;
@@ -39,12 +50,17 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
+import java.time.DayOfWeek;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -64,7 +80,8 @@ public class EducationServiceImpl implements EducationService {
     private final AdmissionFormRepo admissionFormRepo;
     private final AccountRepo accountRepo;
     private final TeacherEventRepo teacherEventRepo;
-
+    private final EventParticipateRepo eventParticipateRepo;
+    private final MailService mailService;
 
     @Override
     public ResponseEntity<ResponseObject> createSyllabus(CreateSyllabusRequest request) {
@@ -455,8 +472,6 @@ public class EducationServiceImpl implements EducationService {
                             .build()
             );
 
-
-
         Lesson lesson = lessonRepo.findById(Integer.parseInt(id)).get();
 
         return ResponseEntity.ok().body(
@@ -833,14 +848,23 @@ public class EducationServiceImpl implements EducationService {
     }
 
     @Override
-    public ResponseEntity<ResponseObject> cancelEvent(String id) {
+    public ResponseEntity<ResponseObject> cancelEvent(String id, CancelEventRequest request) {
         String error = EventValidation.checkEventId(id);
-
         if(!error.isEmpty())
         {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
                     ResponseObject.builder()
                             .message(error)
+                            .success(false)
+                            .data(null)
+                            .build()
+            );
+        }
+
+        if (request.getReason() == null || request.getReason().trim().isEmpty()){
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
+                    ResponseObject.builder()
+                            .message("Reason of cancel event is required")
                             .success(false)
                             .data(null)
                             .build()
@@ -868,8 +892,38 @@ public class EducationServiceImpl implements EducationService {
         }
 
         event.setStatus(Status.EVENT_CANCELLED);
+
         eventRepo.save(event);
 
+        List<EventParticipate> parts = eventParticipateRepo.findAllByEventId(Integer.parseInt(id));
+        for (EventParticipate ep : parts) {
+            Student stu = ep.getStudent();
+            Parent parent = stu.getParent();
+            if (parent != null && parent.getAccount() != null) {
+                String parentEmail = parent.getAccount().getEmail();
+
+                String subject = "[PES] Event Cancelled";
+                String header  = String.format("Event \"%s\" Cancelled", event.getName());
+                String body    = Format.getCancelEventForParentBody(parent.getAccount().getName(),
+                                                            stu.getName(),
+                                                            ep.getEvent().getName(), ep.getEvent().getStartTime(),
+                                                            request.getReason());
+                mailService.sendMail(parentEmail, subject, header, body);
+            }
+        }
+
+        for (TeacherEvent te : event.getTeacherEventList()) {
+            Account teacher = te.getTeacher();
+            if (teacher != null && teacher.getEmail() != null) {
+                String subj = "Event Cancelled";
+                String heading = "Event \"" + event.getName() + "\" Cancelled";
+                String body = Format.getCancelEventForTeacherBody(teacher.getName(),
+                        te.getEvent().getName(),
+                        te.getEvent().getStartTime(),
+                        request.getReason());
+                mailService.sendMail(teacher.getEmail(), subj, heading, body);
+            }
+        }
 
         return ResponseEntity.ok(ResponseObject.builder()
                 .message("Cancel event successfully")
@@ -995,6 +1049,43 @@ public class EducationServiceImpl implements EducationService {
                 .build());
     }
 
+    @Override
+    public ResponseEntity<ResponseObject> viewAllSyllabusesByGrade(String gradeName) {
+        if (gradeName == null || gradeName.trim().isEmpty()) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
+                    ResponseObject.builder()
+                            .message("Grade is required")
+                            .success(false)
+                            .data(null)
+                            .build()
+            );
+        }
+        // Grade được chọn không tồn tại
+        boolean isExistGrade = Arrays.stream(Grade.values())
+                .anyMatch(grade -> grade.getName().equalsIgnoreCase(gradeName));
+        if (!isExistGrade) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
+                    ResponseObject.builder()
+                            .message("Selected grade does not exist.")
+                            .success(false)
+                            .data(null)
+                            .build()
+            );
+        }
+        List<Syllabus> syllabusList = syllabusRepo.findAllByGrade(getGradeFromName(gradeName));
+        List<Map<String,Object>> syllabusesDetail = syllabusList.stream()
+                .sorted(Comparator.comparing(Syllabus::getCreatedAt).reversed())
+                .map(this::buildSyllabusDetail)
+                .toList();
+        return ResponseEntity.ok().body(
+                ResponseObject.builder()
+                        .message("View All Syllabuses By Grade Successfully")
+                        .success(true)
+                        .data(syllabusesDetail)
+                        .build()
+        );
+    }
+
     private Map<String, Object> buildEventDetail(Event event) {
         DateTimeFormatter fmt = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
         Map<String, Object> data = new HashMap<>();
@@ -1015,27 +1106,136 @@ public class EducationServiceImpl implements EducationService {
 
     @Override
     public ResponseEntity<ResponseObject> generateClassesAuto(GenerateClassesRequest request) {
-        int maxStudents = admissionFormRepo.countByAdmissionTerm_IdAndStatusAndTransaction_Status(request.getTermId(), Status.APPROVED.getValue(), Status.TRANSACTION_SUCCESSFUL.getValue());
-        int maxClasses = (int) Math.ceil((double) maxStudents / request.getNumberStudentsOfEachClass());
-        Syllabus syllabus = syllabusRepo.findById(request.getSyllabusId()).get();
-        for (int i = 0; i < maxClasses; i++)
-        {
-            classRepo.save(
-                    Classes.builder()
-//                      .name(request.getGrade()+"_"+String.format("%02d", i+1) + "_" + request.getAcademicYear())
-                            .numberStudent(request.getNumberStudentsOfEachClass())
-//                      .academicYear(request.getAcademicYear())
-                            .startDate(request.getStartDate())
-                            .endDate(request.getEndDate())
-                            .status("NOT VERIFIED")
-//                      .grade(getGradeFromName(request.getGrade()))
-                            .syllabus(syllabus)
-                            .build()
-            );
+        Account teacher = accountRepo.findById(Integer.parseInt(request.getAccountId())).get();
+        Syllabus syllabus = syllabusRepo.findById(Integer.parseInt(request.getSyllabusId())).get();
+        Grade grade = syllabus.getGrade();
+
+        Set<String> validLessonNames = syllabus.getSyllabusLessonList().stream()
+                .map(sl -> sl.getLesson().getTopic())
+                .collect(Collectors.toSet());
+
+        List<String> raws = request.getActivitiesNameByDay();
+        Map<DayOfWeek, List<String>> lessonsByDay = raws.stream()
+                .map(raw -> raw.split("-", 4))
+                .filter(p -> p.length == 4 && p[1].startsWith("LE_"))
+                .collect(Collectors.groupingBy(
+                        p -> DayOfWeek.valueOf(p[0].toUpperCase()),
+                        Collectors.mapping(p -> p[1].substring(3), Collectors.toList())
+                ));
+        for (var e : lessonsByDay.entrySet()) {
+            DayOfWeek dow = e.getKey();
+            List<String> lessons = e.getValue();
+            Set<String> distinct = new HashSet<>(lessons);
+            int totalWeeklyHours = raws.stream()
+                    .map(raw -> raw.split("-", 4))
+                    .filter(parts -> parts.length == 4 && parts[1].startsWith("LE_"))
+                    .mapToInt(parts -> Integer.parseInt(parts[3]) - Integer.parseInt(parts[2]))
+                    .sum();
+            if (totalWeeklyHours != 40) {
+                throw new IllegalArgumentException(
+                        String.format("Total lesson hours per week must be 40, but found %d", totalWeeklyHours)
+                );
+            }
+            if (lessons.size() != 5) {
+                throw new IllegalArgumentException(
+                        String.format("On %s there must be exactly 5 distinct lessons, but found %d",
+                                dow, lessons.size())
+                );
+            }
+            for (String lesson : distinct) {
+                if (!validLessonNames.contains(lesson)) {
+                    throw new IllegalArgumentException(
+                            String.format("Lesson '%s' is not part of the syllabus", lesson)
+                    );
+                }
+            }
         }
+        List<AdmissionForm> approvedForms = admissionFormRepo.findByAdmissionTerm_YearAndStatusAndTransaction_StatusAndAdmissionTerm_Grade(
+                Integer.parseInt(request.getYear()),
+                Status.APPROVED.getValue(),
+                Status.TRANSACTION_SUCCESSFUL.getValue(),
+                grade
+        );
+        List<Student> students = approvedForms.stream()
+                .map(AdmissionForm::getStudent)
+                .toList();
+        int numberOfStudents = students.size();
+        int numberOfStudentsPerClass = 20;
+        int numberOfNeededClasses =  (numberOfStudents + numberOfStudentsPerClass - 1) / numberOfStudentsPerClass;
+        int existing = classRepo
+                .countByAcademicYearAndGrade(
+                        Integer.parseInt(request.getYear()),
+                        grade
+                );
+        List<Classes> toSave = new ArrayList<>();
+
+        for ( int i = existing; i < numberOfNeededClasses; i++ ) {
+            LocalDate start = request.getStartDate();
+            LocalDate end = start.plusWeeks(syllabus.getNumberOfWeek())
+                    .minusDays(1);
+            Classes cls = Classes.builder()
+                    .name(grade + "-" + (i + 1))
+                    .startDate(start)
+                    .endDate(end)
+                    .academicYear(Integer.parseInt(request.getYear()))
+                    .grade(grade)
+                    .status(Status.CLASS_ACTIVE.getValue())
+                    .syllabus(syllabus)
+                    .teacher(teacher)
+                    .build();
+            int from = i * numberOfStudentsPerClass;
+            int to   = Math.min(from + numberOfStudentsPerClass, numberOfStudents);
+            List<StudentClass> scList = new ArrayList<>(to - from);
+            for (int j = from; j < to; j++) {
+                scList.add(StudentClass.builder()
+                        .classes(cls)
+                        .student(students.get(j))
+                        .build());
+            }
+            cls.setStudentClassList(scList);
+            cls.setNumberStudent(scList.size());
+            List<Schedule> scheduleList = new ArrayList<>();
+            for (int week = 1; week <= syllabus.getNumberOfWeek(); week++) {
+                Schedule sch = Schedule.builder()
+                        .weekName("Week - " + week)
+                        .classes(cls)
+                        .build();
+                List<Activity> activities = raws.stream()
+                        .map(raw -> raw.split("-", 4))
+                        .filter(parts -> parts.length == 4)
+                        .map(parts -> {
+                            DayOfWeek dow = DayOfWeek.valueOf(parts[0].toUpperCase());
+                            String token = parts[1];
+                            String lessonTopic = token.startsWith("LE_")
+                                    ? token.substring(3)
+                                    : null;
+                            String activityName = token.startsWith("LE_")
+                                    ? null
+                                    : token;
+                            int startHour = Integer.parseInt(parts[2]);
+                            int endHour = Integer.parseInt(parts[3]);
+
+                            return Activity.builder()
+                                    .name(activityName != null ? activityName : lessonTopic)
+                                    .dayOfWeek(dow)
+                                    .startTime(LocalTime.of(startHour, 0))
+                                    .endTime(LocalTime.of(endHour, 0))
+                                    .schedule(sch)
+                                    .build();
+                        })
+                        .collect(Collectors.toList());
+                sch.setActivityList(activities);
+                scheduleList.add(sch);
+            }
+            cls.setScheduleList(scheduleList);
+            toSave.add(cls);
+        }
+
+      classRepo.saveAll(toSave);
+
         return ResponseEntity.ok(
                 ResponseObject.builder()
-                        .message("Generate Classes Successfully")
+                        .message("Classes generated successfully")
                         .success(true)
                         .data(null)
                         .build()
