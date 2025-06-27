@@ -7,7 +7,6 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.experimental.FieldDefaults;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Data
@@ -18,11 +17,6 @@ import java.time.LocalDateTime;
 public class CreateAdmissionTermRequest {
     LocalDateTime startDate;
     LocalDateTime endDate;
-    int maxNumberRegistration;
+    int expectedClasses; // Số lớp dự kiến
     String grade;
-    double reservationFee;
-    double serviceFee;
-    double uniformFee;
-    double learningMaterialFee;
-    double facilityFee;
 }

@@ -4,12 +4,11 @@ import com.swd392.group1.pes.enums.Grade;
 import com.swd392.group1.pes.enums.Role;
 import com.swd392.group1.pes.enums.Status;
 import com.swd392.group1.pes.models.Account;
-import com.swd392.group1.pes.models.AdmissionFee;
+import com.swd392.group1.pes.models.AdmissionTerm;
 import com.swd392.group1.pes.models.Parent;
 import com.swd392.group1.pes.repositories.AccountRepo;
-import com.swd392.group1.pes.repositories.AdmissionFeeRepo;
+import com.swd392.group1.pes.repositories.AdmissionTermRepo;
 import com.swd392.group1.pes.repositories.ParentRepo;
-
 import com.swd392.group1.pes.utils.RandomPasswordUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.CommandLineRunner;
@@ -18,12 +17,13 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @SpringBootApplication
 @RequiredArgsConstructor
 public class PesApplication {
 
-    private final AdmissionFeeRepo admissionFeeRepo;
+    private final AdmissionTermRepo admissionTermRepo;
     private final ParentRepo parentRepo;
 
     public static void main(String[] args) {
@@ -34,8 +34,7 @@ public class PesApplication {
     public CommandLineRunner initData(AccountRepo accountRepo) {
         return args -> {
 
-            if(!accountRepo.existsByEmail("teacher@gmail.com"))
-            {
+            if (!accountRepo.existsByEmail("teacher@gmail.com")) {
                 Account teacherAccount = accountRepo.save(
                         Account.builder()
                                 .email("teacher@gmail.com")
@@ -108,7 +107,6 @@ public class PesApplication {
             }
 
 
-
             //Tạo sẵn parent
             if (!accountRepo.existsByEmail("parent1@gmail.com")) {
                 Account parent = Account.builder()
@@ -135,26 +133,6 @@ public class PesApplication {
                 parentRepo.save(parent1);
             }
 
-            //Set phí mặc định
-            seedAdmissionFeeIfMissing(Grade.SEED, 800_000, 80_000, 100_000, 100_000, 100_000);
-            seedAdmissionFeeIfMissing(Grade.BUD, 1_000_000, 100_000, 110_000, 110_000, 110_000);
-            seedAdmissionFeeIfMissing(Grade.LEAF, 1_200_000, 120_000, 120_000, 120_000, 120_000);
-
         };
-    }
-
-    private void seedAdmissionFeeIfMissing(Grade grade,
-                                           double reservationFee, double serviceFee,
-                                           double uniformFee, double materialFee, double facilityFee) {
-        if (admissionFeeRepo.findByAdmissionTermIsNullAndGrade(grade).isEmpty()) {
-            admissionFeeRepo.save(AdmissionFee.builder()
-                    .grade(grade)
-                    .reservationFee(reservationFee)
-                    .serviceFee(serviceFee)
-                    .uniformFee(uniformFee)
-                    .learningMaterialFee(materialFee)
-                    .facilityFee(facilityFee)
-                    .build());
-        }
     }
 }
