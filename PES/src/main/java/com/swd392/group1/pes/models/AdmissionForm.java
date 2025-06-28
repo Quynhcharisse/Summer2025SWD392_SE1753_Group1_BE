@@ -68,8 +68,12 @@ public class AdmissionForm {
     @JoinColumn(name = "`term_id`")
     AdmissionTerm admissionTerm;
 
-    @OneToOne(mappedBy = "admissionForm", fetch = FetchType.EAGER, cascade = CascadeType.ALL) // ko dùng cascade
-    @EqualsAndHashCode.Exclude
-    @ToString.Exclude
+//    @OneToOne(mappedBy = "admissionForm", fetch = FetchType.EAGER, cascade = CascadeType.ALL) // ko dùng cascade
+//    @EqualsAndHashCode.Exclude
+//    @ToString.Exclude
+//    Transaction transaction;
+
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "`transaction_id`")
     Transaction transaction;
 }
