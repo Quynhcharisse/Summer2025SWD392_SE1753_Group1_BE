@@ -187,6 +187,13 @@ public class AuthServiceImpl implements AuthService {
                 .build();
         parentRepo.save(parent);
 
+        mailService.sendMail(
+                account.getEmail(),
+                "[PES] Account Registration Successful",
+                "🎉 Account Created Successfully",
+                Format.getParentRegisterFormat(account.getName(), account.getEmail())
+        );
+
         return ResponseEntity.status(HttpStatus.OK).body(
                 ResponseObject.builder()
                         .message("Register Successfully")
@@ -308,6 +315,13 @@ public class AuthServiceImpl implements AuthService {
         account.setCode(null);
         account.setCodeExpiry(null);
         accountRepo.save(account);
+
+        mailService.sendMail(
+                account.getEmail(),
+                "[PES] Password Changed Successfully",
+                "🔒 Password Changed",
+                Format.getPasswordChangedFormat(account.getName())
+        );
 
         return ResponseEntity.status(HttpStatus.OK).body(
                 ResponseObject.builder()
