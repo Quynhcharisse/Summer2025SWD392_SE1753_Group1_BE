@@ -12,6 +12,8 @@ import lombok.experimental.FieldDefaults;
 @AllArgsConstructor
 @Builder
 @FieldDefaults(level = AccessLevel.PRIVATE)
-public class ForgotPasswordRequest {
-    String email;
+public class ResetPassRequest {
+    private String code;
+    private String newPassword;
+    private String confirmPassword;
 }

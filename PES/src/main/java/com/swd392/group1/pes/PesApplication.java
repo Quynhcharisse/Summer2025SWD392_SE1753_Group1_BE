@@ -40,7 +40,7 @@ public class PesApplication {
                 Account teacherAccount = accountRepo.save(
                         Account.builder()
                                 .email("teacher@gmail.com")
-                                .password(RandomPasswordUtil.generateRandomPassword())
+                                .password(RandomPasswordUtil.generateRandomString(8))
                                 .name("Teacher")
                                 .phone("0886122578")
                                 .gender("male")

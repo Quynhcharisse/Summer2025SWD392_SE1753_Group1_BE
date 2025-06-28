@@ -4,6 +4,7 @@ import com.swd392.group1.pes.enums.Status;
 import com.swd392.group1.pes.models.Account;
 import com.swd392.group1.pes.repositories.AccountRepo;
 import com.swd392.group1.pes.requests.ForgotPasswordRequest;
+import com.swd392.group1.pes.requests.ResetPassRequest;
 
 import java.util.regex.Pattern;
 
@@ -22,13 +23,17 @@ public class ForgotPasswordValidation {
             return "No active account found with this email.";
         }
 
+        return "";
+    }
+
+    public static String reset(ResetPassRequest request) {
         // Password required
-        if (request.getPassword() == null || request.getPassword().trim().isEmpty()) {
+        if (request.getNewPassword() == null || request.getNewPassword().trim().isEmpty()) {
             return "Password is required.";
         }
 
         //Password hop le
-        if (request.getPassword().length() < 8) {
+        if (request.getNewPassword().length() < 8) {
             return "Password must be at least 8 characters";
         }
 
@@ -37,16 +42,16 @@ public class ForgotPasswordValidation {
         Pattern upperCasePattern = Pattern.compile(".*[A-Z].*");
         Pattern specialPattern = Pattern.compile(".*[^A-Za-z0-9].*");
 
-        if (!digitPattern.matcher(request.getPassword()).matches()) {
+        if (!digitPattern.matcher(request.getNewPassword()).matches()) {
             return "Password must contain at least one digit.";
         }
-        if (!lowerCasePattern.matcher(request.getPassword()).matches()) {
+        if (!lowerCasePattern.matcher(request.getNewPassword()).matches()) {
             return "Password must contain at least one lowercase letter.";
         }
-        if (!upperCasePattern.matcher(request.getPassword()).matches()) {
+        if (!upperCasePattern.matcher(request.getNewPassword()).matches()) {
             return "Password must contain at least one uppercase letter.";
         }
-        if (!specialPattern.matcher(request.getPassword()).matches()) {
+        if (!specialPattern.matcher(request.getNewPassword()).matches()) {
             return "Password must contain at least one special character.";
         }
 
@@ -56,10 +61,10 @@ public class ForgotPasswordValidation {
         }
 
         // Confirm password matches
-        if (!request.getConfirmPassword().equals(request.getPassword())) {
+        if (!request.getConfirmPassword().equals(request.getNewPassword())) {
             return "Confirm password does not match password.";
         }
 
-        return "";
     }
+
 }
