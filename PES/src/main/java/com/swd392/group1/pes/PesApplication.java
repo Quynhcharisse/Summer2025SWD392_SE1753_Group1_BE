@@ -35,7 +35,7 @@ public class PesApplication {
     }
 
     @Bean
-    public CommandLineRunner initData(AccountRepo accountRepo, StudentRepo studentRepo) {
+    public CommandLineRunner initData(AccountRepo accountRepo) {
         return args -> {
 
             if (!accountRepo.existsByEmail("teacher@gmail.com")) {
