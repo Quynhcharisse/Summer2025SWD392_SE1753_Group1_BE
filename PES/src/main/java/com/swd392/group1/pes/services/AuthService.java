@@ -19,4 +19,8 @@ public interface AuthService {
 
     ResponseEntity<ResponseObject> forgotPassword (ForgotPasswordRequest request);
 
+    ResponseEntity<ResponseObject> sendRegisterOtp(String email);
+
+    ResponseEntity<ResponseObject> verifyRegisterOtp(String email, String otp);
+
 }

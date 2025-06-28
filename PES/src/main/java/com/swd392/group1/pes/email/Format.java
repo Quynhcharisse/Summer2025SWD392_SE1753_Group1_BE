@@ -92,7 +92,6 @@ public class Format {
                 "<ul style=\"padding-left:16px;\">" +
                 "  <li><strong>Email:</strong> " + email + "</li>" +
                 "</ul>" +
-                "<p>You can now <a href=\"http://localhost:5173/auth/login\">sign in to your account</a>.</p>" +
                 "<p>For assistance, contact us at <a href=\"mailto:info@sunshinepreschool.edu\">info@sunshinepreschool.edu</a> or call (555) 123-4567.</p>" +
                 "<p>Best regards,<br/>Sunshine Preschool</p>";
     }
@@ -113,6 +112,12 @@ public class Format {
                 "<p>Your password has been renewed successfully.</p>" +
                 "<p>If you did not perform this action, please contact support immediately.</p>" +
                 "<p>Best regards,<br/>Sunshine Preschool</p>";
+    }
+
+    /** Fragment for registration OTP email */
+    public static String getRegisterOtpBody(String otp, int expiryMinutes) {
+        return "<p>Your OTP code for registration is: <b>" + otp + "</b></p>"
+                + "<p>This code will expire in " + expiryMinutes + " minutes.</p>";
     }
 
 }
