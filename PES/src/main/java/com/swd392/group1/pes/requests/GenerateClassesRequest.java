@@ -19,7 +19,6 @@ public class GenerateClassesRequest {
      String year;
      LocalDate startDate;
      String gradeName;
-     String accountId;
      String syllabusId;
      List<String> activitiesNameByDay;
 }

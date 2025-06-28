@@ -27,8 +27,8 @@ import java.util.List;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@Entity
 @Builder
+@Entity
 @Table(name = "`syllabus`")
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class Syllabus {
@@ -61,6 +61,7 @@ public class Syllabus {
 
     LocalDateTime createdAt;
 
-    boolean isAssignedToClasses;
+    @Column
+    boolean assignedToClasses;
 
 }

@@ -51,6 +51,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 import java.time.DayOfWeek;
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -143,6 +144,7 @@ public class EducationServiceImpl implements EducationService {
                 .hoursOfSyllabus(request.getNumberOfWeek() * 30)
                 .grade(getGradeFromName(request.getGrade()))
                 .createdAt(LocalDateTime.now())
+                .assignedToClasses(false)
                 .build();
 
         List<SyllabusLesson> joins = validLessons.stream()
@@ -167,6 +169,8 @@ public class EducationServiceImpl implements EducationService {
     @Override
     public ResponseEntity<ResponseObject> updateSyllabus(String id, UpdateSyllabusRequest request) {
 
+
+
         String error = UpdateSyllabusValidation.validate(id, request);
 
         if(!error.isEmpty()) {
@@ -189,6 +193,16 @@ public class EducationServiceImpl implements EducationService {
                             .build()
             );
 
+        if(syllabusRepo.findById(Integer.parseInt(id)).get().isAssignedToClasses()){
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(
+                    ResponseObject.builder()
+                            .message("Cannot update syllabus that is already assigned to classes")
+                            .success(false)
+                            .data(null)
+                            .build()
+            );
+        }
+
 
         // ✅ Check subject trùng với syllabus khác
         boolean isSubjectDuplicate = syllabusRepo.existsBySubjectIgnoreCaseAndIdNot(request.getSubject(), Integer.parseInt(id));
@@ -201,6 +215,8 @@ public class EducationServiceImpl implements EducationService {
                             .build()
             );
         }
+
+
 
         List<SyllabusLesson> list = syllabusLessonRepo.findBySyllabusId(Integer.parseInt(id));
         
@@ -306,6 +322,16 @@ public class EducationServiceImpl implements EducationService {
 
 
         Syllabus syllabus = syllabusRepo.findById(Integer.parseInt(id)).get();
+
+        if (syllabus.isAssignedToClasses()){
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(
+                    ResponseObject.builder()
+                            .message("Cannot assign lessons to syllabus because syllabus is already assigned to classes")
+                            .success(false)
+                            .data(null)
+                            .build()
+            );
+        }
 
         // 3. Lấy danh sách Lesson hợp lệ theo topic (theo thứ tự request nếu cần):
         List<Lesson> validLessons = new ArrayList<>();
@@ -554,6 +580,7 @@ public class EducationServiceImpl implements EducationService {
             );
         }
 
+
         Lesson lesson = lessonRepo.findById(Integer.parseInt(id)).orElse(null);
         if (lesson == null) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
@@ -564,6 +591,19 @@ public class EducationServiceImpl implements EducationService {
                             .build()
             );
         }
+        boolean assigned = lesson.getSyllabusLessonList().stream()
+                .map(SyllabusLesson::getSyllabus)
+                .anyMatch(Syllabus::isAssignedToClasses);
+        if(assigned) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(
+                    ResponseObject.builder()
+                            .message("Cannot update lesson that is already assigned to classes")
+                            .success(false)
+                            .data(null)
+                            .build()
+            );
+        }
+
         boolean isLessonDuplicate = lessonRepo.existsByTopicIgnoreCaseAndIdNot(request.getTopic(), Integer.parseInt(id));
         if (isLessonDuplicate) {
             return ResponseEntity.status(HttpStatus.CONFLICT).body(
@@ -1103,17 +1143,39 @@ public class EducationServiceImpl implements EducationService {
     }
 
 
-
     @Override
     public ResponseEntity<ResponseObject> generateClassesAuto(GenerateClassesRequest request) {
-        Account teacher = accountRepo.findById(Integer.parseInt(request.getAccountId())).get();
+        LocalDate startDate = request.getStartDate();
+        if (startDate.isBefore(LocalDate.now())) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(ResponseObject.builder()
+                            .message("Start date cannot be before today: " + LocalDate.now())
+                            .success(false)
+                            .data(null)
+                            .build());
+        }
+        if (startDate.getYear() != Integer.parseInt(request.getYear())) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(ResponseObject.builder()
+                            .message(String.format("Start date must be within the year %s, but was %d", request.getYear(), startDate.getYear()))
+                            .success(false)
+                            .data(null)
+                            .build());
+        }
+
         Syllabus syllabus = syllabusRepo.findById(Integer.parseInt(request.getSyllabusId())).get();
         Grade grade = syllabus.getGrade();
-
+        List<Account> teachers = accountRepo.findByRoleAndStatus(Role.TEACHER, Status.ACCOUNT_ACTIVE.getValue());
+        if (teachers.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ResponseObject.builder()
+                    .message("No teachers available")
+                    .success(true)
+                    .data(null)
+                    .build());
+        }
         Set<String> validLessonNames = syllabus.getSyllabusLessonList().stream()
                 .map(sl -> sl.getLesson().getTopic())
                 .collect(Collectors.toSet());
-
         List<String> raws = request.getActivitiesNameByDay();
         Map<DayOfWeek, List<String>> lessonsByDay = raws.stream()
                 .map(raw -> raw.split("-", 4))
@@ -1129,24 +1191,34 @@ public class EducationServiceImpl implements EducationService {
             int totalWeeklyHours = raws.stream()
                     .map(raw -> raw.split("-", 4))
                     .filter(parts -> parts.length == 4 && parts[1].startsWith("LE_"))
-                    .mapToInt(parts -> Integer.parseInt(parts[3]) - Integer.parseInt(parts[2]))
+                    .mapToInt(parts ->{
+                    LocalTime start = LocalTime.parse(parts[2]);
+                    LocalTime end   = LocalTime.parse(parts[3]);
+                    return (int) Duration.between(start, end).toHours();
+                    })
                     .sum();
-            if (totalWeeklyHours != 40) {
-                throw new IllegalArgumentException(
-                        String.format("Total lesson hours per week must be 40, but found %d", totalWeeklyHours)
-                );
-            }
-            if (lessons.size() != 5) {
-                throw new IllegalArgumentException(
-                        String.format("On %s there must be exactly 5 distinct lessons, but found %d",
-                                dow, lessons.size())
-                );
+            if (totalWeeklyHours != 30)
+                return ResponseEntity.status(HttpStatus.CONFLICT).body(ResponseObject.builder()
+                        .message("Total lesson hours per week must be 30, but found "+ totalWeeklyHours)
+                        .success(false)
+                        .data(null)
+                        .build());
+
+            if (lessons.size() != 6) {
+                return ResponseEntity.status(HttpStatus.CONFLICT).body(ResponseObject.builder()
+                        .message(String.format("On %s there must be exactly 6 lessons, but found %d",
+                                dow, lessons.size()))
+                        .success(false)
+                        .data(null)
+                        .build());
             }
             for (String lesson : distinct) {
                 if (!validLessonNames.contains(lesson)) {
-                    throw new IllegalArgumentException(
-                            String.format("Lesson '%s' is not part of the syllabus", lesson)
-                    );
+                    return ResponseEntity.status(HttpStatus.CONFLICT).body(ResponseObject.builder()
+                            .message(String.format("Lesson '%s' is not part of the syllabus", lesson))
+                            .success(false)
+                            .data(null)
+                            .build());
                 }
             }
         }
@@ -1156,6 +1228,7 @@ public class EducationServiceImpl implements EducationService {
                 Status.TRANSACTION_SUCCESSFUL.getValue(),
                 grade
         );
+
         List<Student> students = approvedForms.stream()
                 .map(AdmissionForm::getStudent)
                 .toList();
@@ -1167,21 +1240,37 @@ public class EducationServiceImpl implements EducationService {
                         Integer.parseInt(request.getYear()),
                         grade
                 );
+        int toCreate = numberOfNeededClasses - existing;
+        if (toCreate <= 0) {
+            return ResponseEntity.ok(ResponseObject.builder()
+                    .message("No new classes needed")
+                    .success(true)
+                    .data(null)
+                    .build());
+        }
+        if (teachers.size() < toCreate) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(ResponseObject.builder()
+                    .message(String.format("Only %d teachers available but %d new classes required",
+                            teachers.size(), toCreate))
+                    .success(false)
+                    .data(null)
+                    .build());
+        }
         List<Classes> toSave = new ArrayList<>();
-
         for ( int i = existing; i < numberOfNeededClasses; i++ ) {
+            Account assignedTeacher = teachers.get(i); // assign distinct teacher
             LocalDate start = request.getStartDate();
             LocalDate end = start.plusWeeks(syllabus.getNumberOfWeek())
                     .minusDays(1);
             Classes cls = Classes.builder()
-                    .name(grade + "-" + (i + 1))
+                    .name(grade + "-" + (i + 1)+"-"+request.getYear())
                     .startDate(start)
                     .endDate(end)
                     .academicYear(Integer.parseInt(request.getYear()))
                     .grade(grade)
                     .status(Status.CLASS_ACTIVE.getValue())
+                    .teacher(assignedTeacher)
                     .syllabus(syllabus)
-                    .teacher(teacher)
                     .build();
             int from = i * numberOfStudentsPerClass;
             int to   = Math.min(from + numberOfStudentsPerClass, numberOfStudents);
@@ -1212,27 +1301,32 @@ public class EducationServiceImpl implements EducationService {
                             String activityName = token.startsWith("LE_")
                                     ? null
                                     : token;
-                            int startHour = Integer.parseInt(parts[2]);
-                            int endHour = Integer.parseInt(parts[3]);
-
+                            LocalTime startTime = LocalTime.parse(parts[2]);
+                            LocalTime endTime   = LocalTime.parse(parts[3]);
                             return Activity.builder()
                                     .name(activityName != null ? activityName : lessonTopic)
+                                    .syllabusName(activityName != null ? "N/A" : syllabus.getSubject())
                                     .dayOfWeek(dow)
-                                    .startTime(LocalTime.of(startHour, 0))
-                                    .endTime(LocalTime.of(endHour, 0))
+                                    .startTime(startTime)
+                                    .endTime(endTime)
                                     .schedule(sch)
                                     .build();
                         })
-                        .collect(Collectors.toList());
+                        .toList();
                 sch.setActivityList(activities);
                 scheduleList.add(sch);
             }
             cls.setScheduleList(scheduleList);
             toSave.add(cls);
         }
-
-      classRepo.saveAll(toSave);
-
+        Syllabus prev = syllabusRepo.findByAssignedToClassesAndGrade(true, syllabus.getGrade());
+        if(prev != null){
+            prev.setAssignedToClasses(false);
+            syllabusRepo.save(prev);
+        }
+        syllabus.setAssignedToClasses(true);
+        syllabusRepo.save(syllabus);
+        classRepo.saveAll(toSave);
         return ResponseEntity.ok(
                 ResponseObject.builder()
                         .message("Classes generated successfully")

@@ -6,9 +6,11 @@ import com.swd392.group1.pes.enums.Status;
 import com.swd392.group1.pes.models.Account;
 import com.swd392.group1.pes.models.AdmissionTerm;
 import com.swd392.group1.pes.models.Parent;
+import com.swd392.group1.pes.models.Student;
 import com.swd392.group1.pes.repositories.AccountRepo;
 import com.swd392.group1.pes.repositories.AdmissionTermRepo;
 import com.swd392.group1.pes.repositories.ParentRepo;
+import com.swd392.group1.pes.repositories.StudentRepo;
 import com.swd392.group1.pes.utils.RandomPasswordUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.CommandLineRunner;
@@ -33,7 +35,7 @@ public class PesApplication {
     }
 
     @Bean
-    public CommandLineRunner initData(AccountRepo accountRepo) {
+    public CommandLineRunner initData(AccountRepo accountRepo, StudentRepo studentRepo) {
         return args -> {
 
             if (!accountRepo.existsByEmail("teacher@gmail.com")) {
@@ -107,8 +109,6 @@ public class PesApplication {
                         .build();
                 accountRepo.save(admissionAccount);
             }
-
-
             //Tạo sẵn parent
             if (!accountRepo.existsByEmail("parent1@gmail.com")) {
                 Account parent = Account.builder()
@@ -131,7 +131,6 @@ public class PesApplication {
                         .job("IT")
                         .relationshipToChild("father")
                         .build();
-
                 parentRepo.save(parent1);
             }
 

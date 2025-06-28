@@ -48,4 +48,6 @@ public class Activity {
     @JoinColumn(name = "`schedule_id`")
     Schedule schedule;
 
+    String syllabusName;
+
 }

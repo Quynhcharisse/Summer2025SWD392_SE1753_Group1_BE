@@ -10,4 +10,5 @@ public interface SyllabusRepo extends JpaRepository<Syllabus, Integer> {
     boolean existsBySubjectIgnoreCase(String subject);
     boolean existsBySubjectIgnoreCaseAndIdNot(String subject, Integer id);
     List<Syllabus> findAllByGrade(Grade grade);
+    Syllabus findByAssignedToClassesAndGrade(boolean isTrue, Grade grade);
 }

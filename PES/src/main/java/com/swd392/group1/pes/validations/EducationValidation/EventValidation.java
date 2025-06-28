@@ -31,6 +31,10 @@ public class EventValidation {
             return "End time is required";
         }
 
+        if(!request.getStartTime().isBefore(request.getEndTime())){
+          return "Start time must be before end time";
+        }
+
         Duration duration = Duration.between(request.getStartTime(), request.getEndTime());
         if (duration.isNegative() || duration.isZero() || duration.toMinutes() < 15) {
             return "Event duration must be at least 15 minutes";

@@ -474,7 +474,6 @@ public class AdmissionServiceImpl implements AdmissionService {
             form.setStatus(Status.APPROVED.getValue());
             student.setStudent(true);
             studentRepo.save(student);
-
             String subject = "[PES] Admission Approved";
             String heading = "🎉 Admission Approved";
             String bodyHtml = Format.getAdmissionApprovedBody(student.getName());
@@ -483,7 +482,6 @@ public class AdmissionServiceImpl implements AdmissionService {
         } else {
             form.setStatus(Status.REJECTED.getValue());
             form.setCancelReason(request.getReason());
-
             String subject = "[PES] Admission Rejected";
             String heading = "❌ Admission Rejected";
             String bodyHtml = Format.getAdmissionRejectedBody(student.getName(), request.getReason());

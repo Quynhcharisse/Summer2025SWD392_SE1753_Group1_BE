@@ -61,7 +61,7 @@ public class EducationController {
 
     @PostMapping("/classes")
     @PreAuthorize("hasRole('education')")
-    public ResponseEntity<ResponseObject> generateClassesAuto(GenerateClassesRequest request){
+    public ResponseEntity<ResponseObject> generateClassesAuto(@RequestBody  GenerateClassesRequest request){
         return educationService.generateClassesAuto(request);
     }
 
