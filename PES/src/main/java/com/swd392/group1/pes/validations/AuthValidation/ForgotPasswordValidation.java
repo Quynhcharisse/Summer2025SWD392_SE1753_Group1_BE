@@ -10,13 +10,12 @@ import java.util.regex.Pattern;
 
 public class ForgotPasswordValidation {
     public static String validate(ForgotPasswordRequest request, AccountRepo accountRepo) {
-        Account acc = accountRepo.findByEmailAndStatus(request.getEmail(), Status.ACCOUNT_ACTIVE.getValue()).orElse(null);
-
         // Email required
         if (request.getEmail() == null || request.getEmail().trim().isEmpty()) {
             return "Email is required.";
         }
 
+        Account acc = accountRepo.findByEmailAndStatus(request.getEmail(), Status.ACCOUNT_ACTIVE.getValue()).orElse(null);
 
         // Account must exist and be active
         if (acc == null) {
@@ -65,6 +64,7 @@ public class ForgotPasswordValidation {
             return "Confirm password does not match password.";
         }
 
+        return "";
     }
 
 }

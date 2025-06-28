@@ -115,7 +115,7 @@ public class Format {
                 "<p>Best regards,<br/>Sunshine Preschool</p>";
     }
 
-    /** Fragment cho email reset password */
+    /** Fragment cho email forgot password*/
     public static String getForgotPasswordBody(String code) {
         return
                 "<p>Dear User,</p>\n" +
