@@ -15,8 +15,9 @@ import java.time.LocalDateTime;
 @Builder
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class CreateExtraTermRequest {
-    Integer admissionTermId;
+    int parentTermId;
     LocalDateTime startDate;
     LocalDateTime endDate;
     int maxNumberRegistration;
+    int expectedClasses;
 }

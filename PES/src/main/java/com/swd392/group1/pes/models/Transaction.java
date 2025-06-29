@@ -1,17 +1,7 @@
 package com.swd392.group1.pes.models;
 
-import jakarta.persistence.CascadeType;
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.OneToMany;
-import jakarta.persistence.OneToOne;
-import jakarta.persistence.Table;
+import com.swd392.group1.pes.enums.Status;
+import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -46,14 +36,14 @@ public class Transaction {
     @Column(name = "`receipt_number`")
     String receiptNumber; // Số biên lai
 
-    String status;
+    @Column(name = "`txn_ref`")
+    String txnRef; //Thêm trường txnRef để lưu mã giao dịch VNPay
 
-//    @OneToOne(fetch = FetchType.LAZY)
-//    @JoinColumn(name = "`form_id`")
-//    AdmissionForm admissionForm;
+    @Enumerated(EnumType.STRING)
+    Status status;
 
-    @OneToOne(mappedBy = "transaction", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
-    @EqualsAndHashCode.Exclude
-    @ToString.Exclude
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "`form_id`")
     AdmissionForm admissionForm;
+
 }

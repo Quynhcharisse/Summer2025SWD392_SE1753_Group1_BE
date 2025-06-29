@@ -1,9 +1,6 @@
 package com.swd392.group1.pes.controllers;
 
-import com.swd392.group1.pes.requests.CreateAdmissionTermRequest;
-import com.swd392.group1.pes.requests.CreateExtraTermRequest;
-import com.swd392.group1.pes.requests.ProcessAdmissionFormRequest;
-import com.swd392.group1.pes.requests.UpdateAdmissionTermRequest;
+import com.swd392.group1.pes.requests.*;
 import com.swd392.group1.pes.response.ResponseObject;
 import com.swd392.group1.pes.services.AdmissionService;
 import lombok.RequiredArgsConstructor;
@@ -53,7 +50,6 @@ public class AdmissionController {
     public ResponseEntity<ResponseObject> createExtraTerm(@RequestBody CreateExtraTermRequest request) {
         return admissionService.createExtraTerm(request);
     }
-
 
     @GetMapping("/form/list")
     @PreAuthorize("hasRole('admission')")

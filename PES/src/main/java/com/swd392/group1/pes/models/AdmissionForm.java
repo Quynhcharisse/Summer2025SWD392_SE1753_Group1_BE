@@ -1,17 +1,7 @@
 package com.swd392.group1.pes.models;
 
-import jakarta.persistence.CascadeType;
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.OneToMany;
-import jakarta.persistence.OneToOne;
-import jakarta.persistence.Table;
+import com.swd392.group1.pes.enums.Status;
+import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -54,7 +44,8 @@ public class AdmissionForm {
 
     String note;
 
-    String status;
+    @Enumerated(EnumType.STRING)
+    Status status;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "`student_id`")
@@ -65,15 +56,12 @@ public class AdmissionForm {
     Parent parent;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "`term_id`")
-    AdmissionTerm admissionTerm;
+    @JoinColumn(name = "`term_item_id`")
+    TermItem termItem;
 
-//    @OneToOne(mappedBy = "admissionForm", fetch = FetchType.EAGER, cascade = CascadeType.ALL) // ko dùng cascade
-//    @EqualsAndHashCode.Exclude
-//    @ToString.Exclude
-//    Transaction transaction;
-
-    @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "`transaction_id`")
+    @OneToOne(mappedBy = "admissionForm", fetch = FetchType.EAGER, cascade = CascadeType.ALL) // ko dùng cascade
+    @EqualsAndHashCode.Exclude
+    @ToString.Exclude
     Transaction transaction;
+
 }
