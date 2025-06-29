@@ -16,7 +16,7 @@ public interface EducationService {
     ResponseEntity<ResponseObject> updateSyllabus(String id, UpdateSyllabusRequest request);
     ResponseEntity<ResponseObject> viewSyllabusDetail(String id);
     ResponseEntity<ResponseObject> viewAllSyllabus();
-    //ResponseEntity<ResponseObject> generateClassesAuto(GenerateClassesRequest request);
+    ResponseEntity<ResponseObject> generateClassesAuto(GenerateClassesRequest request);
     ResponseEntity<ResponseObject> assignLessonsToSyllabus(String id, AssignLessonsRequest request);
     ResponseEntity<ResponseObject> viewAssignedSyllabuses(String id);
     ResponseEntity<ResponseObject> viewLessonDetail(String id);

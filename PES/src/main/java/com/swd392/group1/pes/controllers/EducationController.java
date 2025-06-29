@@ -134,8 +134,8 @@ public class EducationController {
 
     @PutMapping("/event/cancel")
     @PreAuthorize("hasRole('education')")
-    public ResponseEntity<ResponseObject> cancelEvent(@RequestParam String id) {
-        return educationService.cancelEvent(id);
+    public ResponseEntity<ResponseObject> cancelEvent(@RequestParam String id, CancelEventRequest cancelEventRequest) {
+        return educationService.cancelEvent(id, cancelEventRequest);
     }
 
     @GetMapping("/event/assign/teachers")
