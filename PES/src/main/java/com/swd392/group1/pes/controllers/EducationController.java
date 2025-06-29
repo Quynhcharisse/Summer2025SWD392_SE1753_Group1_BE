@@ -51,11 +51,11 @@ public class EducationController {
         return educationService.viewAllSyllabus();
     }
 
-    @PostMapping("/classes")
-    @PreAuthorize("hasRole('education')")
-    public ResponseEntity<ResponseObject> generateClassesAuto(GenerateClassesRequest request){
-        return educationService.generateClassesAuto(request);
-    }
+//    @PostMapping("/classes")
+//    @PreAuthorize("hasRole('education')")
+//    public ResponseEntity<ResponseObject> generateClassesAuto(GenerateClassesRequest request){
+//        return educationService.generateClassesAuto(request);
+//    }
 
     @PutMapping("/syllabus/assign/lessons")
     @PreAuthorize("hasRole('education')")

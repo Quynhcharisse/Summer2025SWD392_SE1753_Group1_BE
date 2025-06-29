@@ -14,6 +14,4 @@ import lombok.experimental.FieldDefaults;
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class ForgotPasswordRequest {
     String email;
-    String password;
-    String confirmPassword;
 }

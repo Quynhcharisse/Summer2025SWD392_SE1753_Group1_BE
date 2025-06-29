@@ -129,8 +129,8 @@ public class ChildValidation {
         if (value == null || value.isEmpty()) {
             return name + " is required.";
         }
-        if (!value.matches("(?i)^.+\\.(jpg|jpeg|png|gif|bmp)$")) {
-            return name + " must be a valid image file (.jpg, .png, .jpeg, .gif, .bmp).";
+        if (!value.matches("(?i)^.+\\.(jpg|jpeg|png|gif|bmp|webp)$")) {
+            return name + " must be a valid image file (.jpg, .png, .jpeg, .gif, .bmp, .webp).";
         }
         return "";
     }

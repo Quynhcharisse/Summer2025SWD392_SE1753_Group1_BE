@@ -115,4 +115,17 @@ public class Format {
                 "<p>Best regards,<br/>Sunshine Preschool</p>";
     }
 
+    /** Fragment cho email forgot password*/
+    public static String getForgotPasswordBody(String code) {
+        return
+                "<p>Dear User,</p>\n" +
+                "<p>You have requested to reset your password. Here is your reset code:</p>\n" +
+                "<div style=\"background-color:#f5f5f5;padding:15px;margin:15px 0;text-align:center;\">" +
+                "    <h2 style=\"color:#1C5A2A;letter-spacing:2px;margin:0;\">" + code + "</h2>" +
+                "</div>" +
+                "<p><strong>Important:</strong> This code will expire in 5 minutes.</p>" +
+                "<p>If you did not request this password reset, please ignore this email or contact support.</p>" +
+                "<p>Best regards,<br/>Sunshine Preschool</p>";
+    }
+
 }

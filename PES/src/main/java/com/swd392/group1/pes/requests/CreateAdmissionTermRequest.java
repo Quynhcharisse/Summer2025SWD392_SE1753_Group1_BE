@@ -8,6 +8,7 @@ import lombok.NoArgsConstructor;
 import lombok.experimental.FieldDefaults;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Data
 @NoArgsConstructor
@@ -17,6 +18,16 @@ import java.time.LocalDateTime;
 public class CreateAdmissionTermRequest {
     LocalDateTime startDate;
     LocalDateTime endDate;
-    int expectedClasses; // Số lớp dự kiến
-    String grade;
+    List<TermItem> termItemList;
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Builder
+    @FieldDefaults(level = AccessLevel.PRIVATE)
+    public static class TermItem {
+        int expectedClasses; // Số lớp dự kiến
+        String grade;
+    }
+
 }
