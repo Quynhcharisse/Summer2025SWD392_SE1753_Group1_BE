@@ -19,7 +19,7 @@ public class EditAdmissionFormValidation {
             return "You do not have permission to access this form.";
         }
 
-        if (!form.getStatus().equals(Status.PENDING_APPROVAL.getValue())) {
+        if (!form.getStatus().equals(Status.PENDING_APPROVAL)) {
             return "Only pending-approval forms can be cancelled.";
         }
         return "";

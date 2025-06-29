@@ -12,7 +12,7 @@ public enum Status {
     ACCOUNT_UNBAN("unban"),
 
     DRAFT("draft"),
-    PENDING_APPROVAL ("pending approval"),
+    PENDING_APPROVAL("pending approval"),
     CANCELLED("cancelled"),
     APPROVED("approved"),
     REJECTED("rejected"),
@@ -29,7 +29,18 @@ public enum Status {
     INACTIVE_TERM("inactive"), // chưa đến ngày
     LOCKED_TERM("locked"),
 
-    TRANSACTION_SUCCESSFUL("success");
+    ACTIVE_TERM_ITEM("active"), // trong khoảng ngày cho phép
+    INACTIVE_TERM_ITEM("inactive"), //
+    LOCKED_TERM_ITEM("locked"), //
+
+    // Giao dịch đang chờ xử lý / chờ thanh toán
+    TRANSACTION_PENDING("pending"),
+    // Giao dịch thành công
+    TRANSACTION_SUCCESSFUL("success"),
+    // Giao dịch thất bại (ví dụ: do lỗi từ VNPay, thẻ không đủ tiền, v.v.)
+    TRANSACTION_FAILED("failed"),
+    // Giao dịch bị hủy (có thể do người dùng hoặc hệ thống)
+    TRANSACTION_CANCELLED("cancelled");
 
     private final String value;
 }

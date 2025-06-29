@@ -10,14 +10,16 @@ import com.swd392.group1.pes.repositories.ParentRepo;
 import com.swd392.group1.pes.requests.ForgotPasswordRequest;
 import com.swd392.group1.pes.requests.LoginRequest;
 import com.swd392.group1.pes.requests.RegisterRequest;
+import com.swd392.group1.pes.requests.ResetPassRequest;
 import com.swd392.group1.pes.response.ResponseObject;
 import com.swd392.group1.pes.services.AuthService;
 import com.swd392.group1.pes.services.JWTService;
 import com.swd392.group1.pes.services.MailService;
 import com.swd392.group1.pes.utils.CookieUtil;
+import com.swd392.group1.pes.utils.RandomPasswordUtil;
+import com.swd392.group1.pes.validations.AuthValidation.ForgotPasswordValidation;
 import com.swd392.group1.pes.validations.AuthValidation.LoginValidation;
 import com.swd392.group1.pes.validations.AuthValidation.RegisterValidation;
-import com.swd392.group1.pes.validations.AuthValidation.ForgotPasswordValidation;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -28,6 +30,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -224,7 +227,93 @@ public class AuthServiceImpl implements AuthService {
                             .build()
             );
         }
-        account.setPassword(request.getPassword());
+
+        // Tạo code ngẫu nhiên 7 ký tự
+        String code = RandomPasswordUtil.generateRandomString(7);
+        account.setCode(code);
+        // Set thời gian hết hạn 5 phút
+        account.setCodeExpiry(LocalDateTime.now().plusMinutes(5));
+        accountRepo.save(account);
+
+        // Gửi email chứa code sử dụng format có sẵn
+        String subject = "Reset Your Password";
+        String body = Format.getForgotPasswordBody(code);
+        mailService.sendMail(account.getEmail(), subject, subject, body);
+
+        return ResponseEntity.status(HttpStatus.OK).body(
+                ResponseObject.builder()
+                        .message("Reset code has been sent to your email")
+                        .success(true)
+                        .data(null)
+                        .build()
+        );
+    }
+
+    @Override
+    public ResponseEntity<ResponseObject> verifyCode(String code) {
+        Account account = accountRepo.findByCode(code).orElse(null);
+        
+        if (account == null) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
+                    ResponseObject.builder()
+                            .message("Invalid reset code")
+                            .success(false)
+                            .data(null)
+                            .build()
+            );
+        }
+
+        // Check if code is expired
+        if (account.getCodeExpiry().isBefore(LocalDateTime.now())) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
+                    ResponseObject.builder()
+                            .message("Reset code has expired")
+                            .success(false)
+                            .data(null)
+                            .build()
+            );
+        }
+
+        return ResponseEntity.status(HttpStatus.OK).body(
+                ResponseObject.builder()
+                        .message("Code is valid")
+                        .success(true)
+                        .data(null)
+                        .build()
+        );
+    }
+
+    @Override
+    public ResponseEntity<ResponseObject> resetPass(ResetPassRequest request) {
+        String error = ForgotPasswordValidation.reset(request);
+        if(!error.isEmpty()){
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
+                    ResponseObject.builder()
+                            .message(error)
+                            .success(false)
+                            .data(null)
+                            .build()
+            );
+        }
+
+
+        Account account = accountRepo.findByCode(request.getCode()).orElse(null);
+        
+        if (account == null || account.getCodeExpiry().isBefore(LocalDateTime.now())) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
+                    ResponseObject.builder()
+                            .message("Invalid or expired reset code")
+                            .success(false)
+                            .data(null)
+                            .build()
+            );
+        }
+
+        // Update password
+        account.setPassword(request.getNewPassword()); // chưa cần decode pass
+        // Clear reset code
+        account.setCode(null);
+        account.setCodeExpiry(null);
         accountRepo.save(account);
 
         mailService.sendMail(
@@ -236,7 +325,7 @@ public class AuthServiceImpl implements AuthService {
 
         return ResponseEntity.status(HttpStatus.OK).body(
                 ResponseObject.builder()
-                        .message("Change Password Successfully")
+                        .message("Password has been reset successfully")
                         .success(true)
                         .data(null)
                         .build()

@@ -14,7 +14,7 @@ import lombok.experimental.FieldDefaults;
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class RefillFormRequest {
     int studentId;
-    int admissionTermId;
+    int termItemId;
     String householdRegistrationAddress;
     String childCharacteristicsFormImg;
     String commitmentImg;

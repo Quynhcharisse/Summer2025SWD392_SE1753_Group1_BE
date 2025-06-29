@@ -15,4 +15,6 @@ import lombok.experimental.FieldDefaults;
 public class GetPaymentURLRequest {
     long amount;
     String paymentInfo; //nội dung chuyển khoản
+    int formId; // ID của AdmissionForm liên quan
+    String txnRef;  // Mã giao dịch đã được tạo và lưu vào DB
 }

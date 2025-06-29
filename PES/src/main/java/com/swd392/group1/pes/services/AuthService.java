@@ -2,7 +2,9 @@ package com.swd392.group1.pes.services;
 
 import com.swd392.group1.pes.requests.ForgotPasswordRequest;
 import com.swd392.group1.pes.requests.LoginRequest;
+import com.swd392.group1.pes.requests.OtpVerifyRequest;
 import com.swd392.group1.pes.requests.RegisterRequest;
+import com.swd392.group1.pes.requests.ResetPassRequest;
 import com.swd392.group1.pes.response.ResponseObject;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -18,5 +20,9 @@ public interface AuthService {
     ResponseEntity<ResponseObject> register (RegisterRequest request);
 
     ResponseEntity<ResponseObject> forgotPassword (ForgotPasswordRequest request);
+
+    ResponseEntity<ResponseObject> verifyCode (String code);
+
+    ResponseEntity<ResponseObject> resetPass (ResetPassRequest request);
 
 }

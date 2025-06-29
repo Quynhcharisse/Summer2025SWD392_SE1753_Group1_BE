@@ -126,10 +126,16 @@ public class EducationController {
         return educationService.viewEventList();
     }
 
+    @GetMapping("/event/detail")
+    @PreAuthorize("hasRole('education')")
+    public ResponseEntity<ResponseObject> viewEventDetail(@RequestParam String id) {
+        return educationService.viewEventDetail(id);
+    }
+
     @PutMapping("/event/cancel")
     @PreAuthorize("hasRole('education')")
-    public ResponseEntity<ResponseObject> cancelEvent(@RequestParam String id, @RequestBody CancelEventRequest cancelEventRequest) {
-        return educationService.cancelEvent(id, cancelEventRequest);
+    public ResponseEntity<ResponseObject> cancelEvent(@RequestParam String id) {
+        return educationService.cancelEvent(id);
     }
 
     @GetMapping("/event/assign/teachers")

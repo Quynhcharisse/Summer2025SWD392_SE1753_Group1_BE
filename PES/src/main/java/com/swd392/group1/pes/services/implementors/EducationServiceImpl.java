@@ -130,7 +130,7 @@ public class EducationServiceImpl implements EducationService {
             return ResponseEntity
                     .status(HttpStatus.CONFLICT)
                     .body(ResponseObject.builder()
-                            .message("Cannot create syllabus.\n Total after assignment would be " + totalDuration + " hours per week, but syllabus '"+ request.getSubject() +"' must have exactly 30 hours per week.\n Adjust your lessons accordingly.")
+                            .message("Cannot create syllabus.\n Total after assignment would be " + totalDuration + " hours per week, but syllabus '" + request.getSubject() + "' must have exactly 30 hours per week.\n Adjust your lessons accordingly.")
                             .success(false)
                             .data(null)
                             .build());
@@ -169,11 +169,9 @@ public class EducationServiceImpl implements EducationService {
     @Override
     public ResponseEntity<ResponseObject> updateSyllabus(String id, UpdateSyllabusRequest request) {
 
-
-
         String error = UpdateSyllabusValidation.validate(id, request);
 
-        if(!error.isEmpty()) {
+        if (!error.isEmpty()) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
                     ResponseObject.builder()
                             .message(error)
@@ -184,7 +182,7 @@ public class EducationServiceImpl implements EducationService {
         }
 
         // Syllabus không tồn tại hoặc bị xóa
-        if(syllabusRepo.findById(Integer.parseInt(id)).isEmpty())
+        if (syllabusRepo.findById(Integer.parseInt(id)).isEmpty())
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
                     ResponseObject.builder()
                             .message("Syllabus with id " + id + " does not exist or be deleted")
@@ -216,10 +214,7 @@ public class EducationServiceImpl implements EducationService {
             );
         }
 
-
-
         List<SyllabusLesson> list = syllabusLessonRepo.findBySyllabusId(Integer.parseInt(id));
-        
         syllabusRepo.save(
                 Syllabus.builder()
                         .id(Integer.parseInt(id))
@@ -257,7 +252,7 @@ public class EducationServiceImpl implements EducationService {
             );
 
         // Syllabus không tồn tại hoặc bị xóa
-        if(syllabusRepo.findById(Integer.parseInt(id)).isEmpty())
+        if (syllabusRepo.findById(Integer.parseInt(id)).isEmpty())
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
                     ResponseObject.builder()
                             .message("Syllabus with id " + id + " does not exist or be deleted")
@@ -271,11 +266,11 @@ public class EducationServiceImpl implements EducationService {
         Syllabus syllabus = syllabusRepo.findById(Integer.parseInt(id)).get();
 
         return ResponseEntity.ok().body(
-                   ResponseObject.builder()
-                           .message("View Syllabus Detail Successfully")
-                           .success(true)
-                           .data(buildSyllabusDetail(syllabus))
-                           .build()
+                ResponseObject.builder()
+                        .message("View Syllabus Detail Successfully")
+                        .success(true)
+                        .data(buildSyllabusDetail(syllabus))
+                        .build()
         );
     }
 
@@ -285,7 +280,7 @@ public class EducationServiceImpl implements EducationService {
 
         List<Syllabus> syllabuses = syllabusRepo.findAll();
 
-        List<Map<String,Object>> syllabusesDetail = syllabuses.stream()
+        List<Map<String, Object>> syllabusesDetail = syllabuses.stream()
                 .sorted(Comparator.comparing(Syllabus::getCreatedAt).reversed())
                 .map(this::buildSyllabusDetail)
                 .toList();
@@ -466,7 +461,7 @@ public class EducationServiceImpl implements EducationService {
                 .map(SyllabusLesson::getSyllabus)
                 .map(this::buildSyllabusDetail)
                 .toList();
-        return  ResponseEntity.ok().body(
+        return ResponseEntity.ok().body(
                 ResponseObject.builder()
                         .message("Assigned Syllabuses list retrieved successfully")
                         .success(true)
@@ -497,6 +492,7 @@ public class EducationServiceImpl implements EducationService {
                             .data(null)
                             .build()
             );
+
 
         Lesson lesson = lessonRepo.findById(Integer.parseInt(id)).get();
 
@@ -538,13 +534,13 @@ public class EducationServiceImpl implements EducationService {
             request.setToolsRequired("N/A");
                     }
         Lesson lesson = Lesson.builder()
-                    .topic(request.getTopic())
-                    .description(request.getDescription())
-                    .duration(request.getDuration())
-                    .objective(request.getObjective())
-                    .toolsRequired(request.getToolsRequired())
-                    .createdAt(LocalDateTime.now())
-                    .build();
+                .topic(request.getTopic())
+                .description(request.getDescription())
+                .duration(request.getDuration())
+                .objective(request.getObjective())
+                .toolsRequired(request.getToolsRequired())
+                .createdAt(LocalDateTime.now())
+                .build();
 
         boolean isLessonDuplicate = lessonRepo.existsByTopicIgnoreCase(request.getTopic());
         if (isLessonDuplicate) {
@@ -579,7 +575,6 @@ public class EducationServiceImpl implements EducationService {
                             .build()
             );
         }
-
 
         Lesson lesson = lessonRepo.findById(Integer.parseInt(id)).orElse(null);
         if (lesson == null) {
@@ -759,17 +754,18 @@ public class EducationServiceImpl implements EducationService {
                         .success(true)
                         .data(assignedLessons)
                         .build()
-        );    }
+        );
+    }
 
 
-    private Map<String,Object> buildLessonDetail(Lesson lesson){
-        Map<String,Object> data = new HashMap<>();
+    private Map<String, Object> buildLessonDetail(Lesson lesson) {
+        Map<String, Object> data = new HashMap<>();
         data.put("id", lesson.getId());
-        data.put("topic",lesson.getTopic());
-        data.put("description",lesson.getDescription());
-        data.put("objective",lesson.getObjective());
+        data.put("topic", lesson.getTopic());
+        data.put("description", lesson.getDescription());
+        data.put("objective", lesson.getObjective());
         data.put("duration", lesson.getDuration());
-        data.put("toolsRequired",lesson.getToolsRequired());
+        data.put("toolsRequired", lesson.getToolsRequired());
         return data;
     }
 
@@ -932,7 +928,6 @@ public class EducationServiceImpl implements EducationService {
         }
 
         event.setStatus(Status.EVENT_CANCELLED);
-
         eventRepo.save(event);
 
         List<EventParticipate> parts = eventParticipateRepo.findAllByEventId(Integer.parseInt(id));
@@ -969,7 +964,8 @@ public class EducationServiceImpl implements EducationService {
                 .message("Cancel event successfully")
                 .success(true)
                 .data(null)
-                .build());    }
+                .build());
+    }
 
 
     @Override
@@ -992,8 +988,7 @@ public class EducationServiceImpl implements EducationService {
 
         String error = EventValidation.checkEventId(id);
 
-        if(!error.isEmpty())
-        {
+        if (!error.isEmpty()) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
                     ResponseObject.builder()
                             .message(error)

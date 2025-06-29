@@ -2,7 +2,9 @@ package com.swd392.group1.pes.controllers;
 
 import com.swd392.group1.pes.requests.ForgotPasswordRequest;
 import com.swd392.group1.pes.requests.LoginRequest;
+import com.swd392.group1.pes.requests.OtpVerifyRequest;
 import com.swd392.group1.pes.requests.RegisterRequest;
+import com.swd392.group1.pes.requests.ResetPassRequest;
 import com.swd392.group1.pes.response.ResponseObject;
 import com.swd392.group1.pes.services.AuthService;
 import com.swd392.group1.pes.services.EducationService;
@@ -49,6 +51,16 @@ public class AuthController {
     @PostMapping("/password/forgot")
     public ResponseEntity<ResponseObject> forgotPassword (@RequestBody ForgotPasswordRequest request){
         return authService.forgotPassword(request);
+    }
+
+    @GetMapping("/password/forgot/verify")
+    public ResponseEntity<ResponseObject> verifyCode (@RequestParam("code") String code){
+        return authService.verifyCode (code);
+    }
+
+    @PostMapping("/password/forgot/reset")
+    public ResponseEntity<ResponseObject> resetPass (@RequestBody ResetPassRequest request){
+        return authService.resetPass (request);
     }
 
     @GetMapping("/event/active")
