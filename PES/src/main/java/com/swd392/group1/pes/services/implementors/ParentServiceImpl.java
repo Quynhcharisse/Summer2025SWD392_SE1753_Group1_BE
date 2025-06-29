@@ -84,7 +84,7 @@ public class ParentServiceImpl implements ParentService {
     private final MailService mailService;
 
     @Value("${vnpay.return.url}")
-    String vnpayReturnUrl;
+    String vnpayIpnUrl;
 
     @Value("${vnpay.hash.key}")
     String hashKey;
@@ -934,7 +934,7 @@ public class ParentServiceImpl implements ParentService {
         String locale = "vn";
         String orderInfo = request.getPaymentInfo();
         String orderType = "education";
-        String returnUrl = vnpayReturnUrl;
+        String returnUrl = vnpayIpnUrl;
         cld.add(Calendar.MINUTE, 10);
         String expireDate = formatter.format(cld.getTime());
 
@@ -967,6 +967,7 @@ public class ParentServiceImpl implements ParentService {
         vnpParams.put("vnp_IpAddr", ipAddr);
         vnpParams.put("vnp_CreateDate", createDate);
         vnpParams.put("vnp_ExpireDate", expireDate);
+        vnpParams.put("vnp_IpnUrl", vnpayIpnUrl);
 
         // step 2: build the hash data string
         StringBuilder hashData = new StringBuilder();
