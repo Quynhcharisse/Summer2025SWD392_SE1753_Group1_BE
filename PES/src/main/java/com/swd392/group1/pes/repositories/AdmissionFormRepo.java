@@ -16,7 +16,6 @@ public interface AdmissionFormRepo extends JpaRepository<AdmissionForm, Integer>
 
     List<AdmissionForm> findAllByStudentNotNullAndParent_IdAndStatusIn(int parentId, List<Status> statuses);
 
-//    int countByAdmissionTerm_IdAndStatusAndTransaction_Status(Integer termId, String formStatus, String transactionStatus);
     List<AdmissionForm> findAllByParent_IdAndStudent_Id(int parent_id, int student_id);
     List<AdmissionForm> findByAdmissionTerm_YearAndStatusAndTransaction_StatusAndAdmissionTerm_Grade(
             Integer termYear,
