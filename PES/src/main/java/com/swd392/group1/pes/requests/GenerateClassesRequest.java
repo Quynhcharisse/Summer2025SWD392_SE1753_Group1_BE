@@ -18,7 +18,6 @@ import java.util.List;
 public class GenerateClassesRequest {
      String year;
      LocalDate startDate;
-     String gradeName;
      String syllabusId;
      List<String> activitiesNameByDay;
 }

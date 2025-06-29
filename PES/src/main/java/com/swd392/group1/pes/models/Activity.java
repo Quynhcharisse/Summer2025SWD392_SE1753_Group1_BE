@@ -44,7 +44,7 @@ public class Activity {
     @Column(name = "`end_time`")
     LocalTime endTime;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "`schedule_id`")
     Schedule schedule;
 

@@ -174,5 +174,20 @@ public class Format {
                 + "<p>Best regards,<br/>SunShine Preschool</p>";
     }
 
+    public static String getAssignClassSuccessfulForParentBody(
+            String parentName,
+            String studentName,
+            String className,
+            String teacherName,
+            String startDate
+    ) {
+        return  "<p>Dear " + parentName + ",</p>"
+                + "<p>We are pleased to inform you that your child, <strong>" + studentName + "</strong>, "
+                + "has been successfully assigned to <strong>class " + className + "</strong> for the upcoming academic term.</p>"
+                + "<p>This class will be taught by <strong>teacher " + teacherName + "</strong>.</p>"
+                + "<p>The class will officially start on <strong>" + startDate + "</strong>.</p>"
+                + "<p>If you have any questions or need further information, please do not hesitate to contact us.</p>"
+                + "<p>Sincerely,<br/>The School Administration</p>";
+    }
 
 }

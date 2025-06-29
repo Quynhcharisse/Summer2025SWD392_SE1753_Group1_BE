@@ -80,17 +80,17 @@ public class Account implements UserDetails {
     @OneToMany(mappedBy = "teacher", fetch = FetchType.LAZY)
     @EqualsAndHashCode.Exclude
     @ToString.Exclude
-    List<TeacherEvent> teacherEventList;
+    transient List<TeacherEvent> teacherEventList;
 
     @OneToOne(mappedBy = "account", fetch = FetchType.LAZY)
     @EqualsAndHashCode.Exclude
     @ToString.Exclude
     Parent parent;
 
-    @OneToOne(mappedBy = "teacher", fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "teacher", fetch = FetchType.LAZY)
     @EqualsAndHashCode.Exclude
     @ToString.Exclude
-    Classes classes;
+    transient List<Classes> classes;
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {

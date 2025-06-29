@@ -5,6 +5,7 @@ import com.swd392.group1.pes.requests.CancelEventRequest;
 import com.swd392.group1.pes.requests.CreateEventRequest;
 import com.swd392.group1.pes.requests.CreateLessonRequest;
 import com.swd392.group1.pes.requests.CreateSyllabusRequest;
+import com.swd392.group1.pes.requests.GenerateClassesRequest;
 import com.swd392.group1.pes.requests.UpdateLessonRequest;
 import com.swd392.group1.pes.requests.UpdateSyllabusRequest;
 import com.swd392.group1.pes.response.ResponseObject;
@@ -12,6 +13,7 @@ import com.swd392.group1.pes.services.EducationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -60,8 +62,14 @@ public class EducationController {
 
     @PostMapping("/classes")
     @PreAuthorize("hasRole('education')")
-    public ResponseEntity<ResponseObject> generateClassesAuto(@RequestBody  GenerateClassesRequest request){
+    public ResponseEntity<ResponseObject> generateClassesAuto(@RequestBody GenerateClassesRequest request){
         return educationService.generateClassesAuto(request);
+    }
+
+    @DeleteMapping("/class")
+    @PreAuthorize("hasRole('education')")
+    public ResponseEntity<ResponseObject> deleteClassById (@RequestParam String classId){
+        return educationService.deleteClassById(classId);
     }
 
     @PutMapping("/syllabus/assign/lessons")

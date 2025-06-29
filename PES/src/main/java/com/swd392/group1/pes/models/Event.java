@@ -45,7 +45,7 @@ public class Event {
 
     String location;
 
-    @Column( length = 500, nullable = false)
+    @Column( length = 1000, nullable = false)
     String description;
 
     @Column(name = "`created_at`")
@@ -63,12 +63,12 @@ public class Event {
     @Column(name = "`host_name`")
     String hostName;
 
-    @OneToMany(mappedBy = "event", fetch = FetchType.EAGER, cascade = CascadeType.ALL)
+    @OneToMany(mappedBy = "event", fetch = FetchType.LAZY)
     @EqualsAndHashCode.Exclude
     @ToString.Exclude
     List<TeacherEvent> teacherEventList;
 
-    @OneToMany(mappedBy = "event", fetch = FetchType.EAGER, cascade = CascadeType.ALL)
+    @OneToMany(mappedBy = "event", fetch = FetchType.LAZY)
     @EqualsAndHashCode.Exclude
     @ToString.Exclude
     List<EventParticipate> eventParticipateList;

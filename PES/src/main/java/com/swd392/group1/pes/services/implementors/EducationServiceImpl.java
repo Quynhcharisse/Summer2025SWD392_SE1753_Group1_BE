@@ -38,6 +38,7 @@ import com.swd392.group1.pes.response.ResponseObject;
 import com.swd392.group1.pes.services.EducationService;
 import com.swd392.group1.pes.requests.CreateEventRequest;
 import com.swd392.group1.pes.services.MailService;
+import com.swd392.group1.pes.validations.EducationValidation.ClassValidation;
 import com.swd392.group1.pes.validations.EducationValidation.EventValidation;
 import com.swd392.group1.pes.validations.EducationValidation.LessonValidation;
 import com.swd392.group1.pes.validations.EducationValidation.SyllabusValidation.AssignLessonsValidation;
@@ -48,6 +49,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.DayOfWeek;
 import java.time.Duration;
@@ -143,7 +145,6 @@ public class EducationServiceImpl implements EducationService {
                         .build())
                         .toList();
         syllabus.setSyllabusLessonList(joins);
-
         syllabusRepo.save(syllabus);
 
         return ResponseEntity
@@ -809,7 +810,6 @@ public class EducationServiceImpl implements EducationService {
         for (TeacherEvent te : conflicts) {
             Integer tid = te.getTeacher().getId();
             Event e = te.getEvent();
-            // Thêm event e vào list của tid
             conflictsByTeacher
                     .computeIfAbsent(tid, k -> new ArrayList<>())
                     .add(e);
@@ -1129,6 +1129,19 @@ public class EducationServiceImpl implements EducationService {
 
     @Override
     public ResponseEntity<ResponseObject> generateClassesAuto(GenerateClassesRequest request) {
+
+        String error = ClassValidation.validateCreate(request);
+
+                if(!error.isEmpty())
+                {
+                    return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                            .body(ResponseObject.builder()
+                                    .message(error)
+                                    .success(false)
+                                    .data(null)
+                                    .build());
+                }
+
         LocalDate startDate = request.getStartDate();
         if (startDate.isBefore(LocalDate.now())) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
@@ -1161,6 +1174,44 @@ public class EducationServiceImpl implements EducationService {
                 .map(sl -> sl.getLesson().getTopic())
                 .collect(Collectors.toSet());
         List<String> raws = request.getActivitiesNameByDay();
+        Map<DayOfWeek, List<String[]>> entriesByDay = raws.stream()
+                .map(raw -> raw.split("-", 4))
+                .filter(parts -> parts.length == 4)
+                .collect(Collectors.groupingBy(
+                        parts -> DayOfWeek.valueOf(parts[0].toUpperCase())
+                ));
+        for (var e : entriesByDay.entrySet()) {
+            DayOfWeek dow = e.getKey();
+            List<String[]> activities = e.getValue();
+            int count = e.getValue().size();
+            if (count != 10) {
+                return ResponseEntity.status(HttpStatus.CONFLICT).body(
+                        ResponseObject.builder()
+                                .message(String.format(
+                                        "On %s there must be exactly 10 activities (lessons+extras), but found %d",
+                                        dow, count))
+                                .success(false)
+                                .data(null)
+                                .build()
+                );
+            }
+            Set<String> slotSet = new HashSet<>();
+            for (String[] parts : activities) {
+                // parts[0] = dayOfWeek, parts[2] = startTime, parts[3] = endTime
+                String slotKey = parts[0] + "-" + parts[2] + "-" + parts[3];
+                if (!slotSet.add(slotKey)) {
+                    return ResponseEntity.status(HttpStatus.CONFLICT).body(
+                            ResponseObject.builder()
+                                    .message(String.format(
+                                            "Duplicate slot on %s: start %s - end %s",
+                                            parts[0], parts[2], parts[3]))
+                                    .success(false)
+                                    .data(null)
+                                    .build()
+                    );
+                }
+            }
+        }
         Map<DayOfWeek, List<String>> lessonsByDay = raws.stream()
                 .map(raw -> raw.split("-", 4))
                 .filter(p -> p.length == 4 && p[1].startsWith("LE_"))
@@ -1206,10 +1257,10 @@ public class EducationServiceImpl implements EducationService {
                 }
             }
         }
-        List<AdmissionForm> approvedForms = admissionFormRepo.findByAdmissionTerm_YearAndStatusAndTransaction_StatusAndAdmissionTerm_Grade(
+        List<AdmissionForm> approvedForms = admissionFormRepo.findByTermItem_AdmissionTerm_YearAndStatusAndTransaction_StatusAndTermItem_Grade(
                 Integer.parseInt(request.getYear()),
-                Status.APPROVED.getValue(),
-                Status.TRANSACTION_SUCCESSFUL.getValue(),
+                Status.APPROVED,
+                Status.TRANSACTION_SUCCESSFUL,
                 grade
         );
 
@@ -1311,6 +1362,28 @@ public class EducationServiceImpl implements EducationService {
         syllabus.setAssignedToClasses(true);
         syllabusRepo.save(syllabus);
         classRepo.saveAll(toSave);
+        for (Classes createdClass : toSave) {
+            String className = createdClass.getName();
+            String teacherName = createdClass.getTeacher().getName();
+            String startDateStr = createdClass.getStartDate().toString();
+            // Duyệt từng học sinh trong lớp
+            for (StudentClass sc : createdClass.getStudentClassList()) {
+                Student student = sc.getStudent();
+                Parent parent = student.getParent();
+                if (parent != null && parent.getAccount() != null) {
+                    String parentName = parent.getAccount().getName();
+                    String parentEmail = parent.getAccount().getEmail();
+                    String studentName = student.getName();
+                    String subject = "Thông báo xếp lớp cho học sinh " + studentName;
+                    String header = "Class Assignment Notification";
+                    String body = Format.getAssignClassSuccessfulForParentBody(
+                            parentName, studentName, className, teacherName, startDateStr
+                    );
+
+                    mailService.sendMail(parentEmail, subject, header, body);
+                }
+            }
+        }
         return ResponseEntity.ok(
                 ResponseObject.builder()
                         .message("Classes generated successfully")
@@ -1319,6 +1392,19 @@ public class EducationServiceImpl implements EducationService {
                         .build()
         );
     }
+
+
+    @Transactional
+    public ResponseEntity<ResponseObject> deleteClassById(String classId) {
+        Classes cls = classRepo.findById(Integer.parseInt(classId)).get();
+        classRepo.delete(cls);
+        return  ResponseEntity.ok(ResponseObject.builder()
+                        .success(true)
+                        .message("Delete class successfully")
+                        .data(null)
+                .build());
+    }
+
 
     private Grade getGradeFromName(String name) {
         for (Grade grade : Grade.values()) {
