@@ -54,7 +54,7 @@ public class TermItem {
     Integer expectedClasses; // Số lớp dự kiến
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "term_item_id")
+    @JoinColumn(name = "`term_id`")
     AdmissionTerm admissionTerm;
 
     @OneToMany(mappedBy = "termItem", fetch = FetchType.LAZY)
