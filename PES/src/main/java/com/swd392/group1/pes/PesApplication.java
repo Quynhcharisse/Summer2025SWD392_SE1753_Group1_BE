@@ -42,7 +42,7 @@ public class PesApplication {
                 Account teacherAccount = accountRepo.save(
                         Account.builder()
                                 .email("teacher@gmail.com")
-                                .password(RandomPasswordUtil.generateRandomPassword())
+                                .password(RandomPasswordUtil.generateRandomString(8))
                                 .name("Teacher")
                                 .phone("0886122578")
                                 .gender("male")
@@ -135,35 +135,6 @@ public class PesApplication {
                         .build();
 
                 parentRepo.save(parent1);
-            }
-
-            Random random = new Random();
-            List<Status> statuses = List.of(Status.INACTIVE_TERM, Status.ACTIVE_TERM, Status.LOCKED_TERM);
-
-            for (int year = 2015; year <= 2024; year++) {
-                for (Grade grade : Grade.values()) {
-                    // Kiểm tra nếu đã tồn tại Term cùng năm + grade thì bỏ qua
-                    if (admissionTermRepo.countByYearAndGrade(year, grade) > 0) continue;
-
-                    int expectedClasses = random.nextInt(3) + 2; // từ 2 đến 4 lớp
-                    int studentsPerClass = 20;
-                    int maxNumberRegistration = expectedClasses * studentsPerClass;
-                    Status status = statuses.get(random.nextInt(statuses.size()));
-
-                    AdmissionTerm term = AdmissionTerm.builder()
-                            .name("Admission Term " + grade.getName() + " " + year)
-                            .grade(grade)
-                            .startDate(LocalDateTime.of(year, 3, 1, 8, 0))   // bắt đầu từ 1/3
-                            .endDate(LocalDateTime.of(year, 4, 30, 17, 0))   // kết thúc 30/4
-                            .year(year)
-                            .studentsPerClass(studentsPerClass)
-                            .expectedClasses(expectedClasses)
-                            .maxNumberRegistration(maxNumberRegistration)
-                            .status(status.getValue())
-                            .build();
-
-                    admissionTermRepo.save(term);
-                }
             }
         };
     }

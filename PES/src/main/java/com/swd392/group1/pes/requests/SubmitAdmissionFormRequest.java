@@ -7,8 +7,6 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.experimental.FieldDefaults;
 
-import java.time.LocalDate;
-
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -16,7 +14,7 @@ import java.time.LocalDate;
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class SubmitAdmissionFormRequest {
     int studentId;
-    int admissionTermId;
+    int termItemId;
     String householdRegistrationAddress;
     String childCharacteristicsFormImg;
     String commitmentImg;

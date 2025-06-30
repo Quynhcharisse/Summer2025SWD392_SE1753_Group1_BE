@@ -139,7 +139,8 @@ public class HRServiceImpl implements HRService {
             );
         }
 
-        String rawPassword = RandomPasswordUtil.generateRandomPassword();
+        // Tạo mật khẩu ngẫu nhiên 8 ký tự
+        String rawPassword = RandomPasswordUtil.generateRandomString(8);
 
         Account account = accountRepo.save(
                 Account.builder()

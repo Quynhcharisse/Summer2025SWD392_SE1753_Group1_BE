@@ -54,7 +54,6 @@ public class AdmissionController {
         return admissionService.createExtraTerm(request);
     }
 
-
     @GetMapping("/form/list")
     @PreAuthorize("hasRole('admission')")
     public ResponseEntity<ResponseObject> viewAdmissionFormList() {

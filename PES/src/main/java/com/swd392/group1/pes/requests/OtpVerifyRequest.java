@@ -7,17 +7,12 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.experimental.FieldDefaults;
 
-import java.time.LocalDateTime;
-
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
 @FieldDefaults(level = AccessLevel.PRIVATE)
-public class CreateExtraTermRequest {
-    int parentTermId;
-    LocalDateTime startDate;
-    LocalDateTime endDate;
-    int maxNumberRegistration;
-    int expectedClasses;
+public class OtpVerifyRequest {
+    private String email;
+    private String otp;
 }

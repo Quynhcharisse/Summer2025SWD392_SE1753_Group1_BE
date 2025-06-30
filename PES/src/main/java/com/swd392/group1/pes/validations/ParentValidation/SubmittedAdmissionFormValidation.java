@@ -1,10 +1,60 @@
 package com.swd392.group1.pes.validations.ParentValidation;
 
+import com.swd392.group1.pes.enums.Status;
+import com.swd392.group1.pes.models.AdmissionForm;
+import com.swd392.group1.pes.models.Student;
+import com.swd392.group1.pes.models.TermItem;
+import com.swd392.group1.pes.repositories.AdmissionFormRepo;
+import com.swd392.group1.pes.repositories.StudentRepo;
+import com.swd392.group1.pes.repositories.TermItemRepo;
 import com.swd392.group1.pes.requests.SubmitAdmissionFormRequest;
 
+import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
+import java.util.Arrays;
+import java.util.List;
+
 public class SubmittedAdmissionFormValidation {
-    public static String validate(SubmitAdmissionFormRequest request) {
-        // 1. Địa chỉ hộ khẩu
+    public static String validate(SubmitAdmissionFormRequest request, StudentRepo studentRepo, TermItemRepo termItemRepo, AdmissionFormRepo admissionFormRepo) {
+        //Lấy thông tin student
+        Student student = studentRepo.findById(request.getStudentId()).orElse(null);
+        if (student == null) {
+            return "Student not found after successful validation. This indicates a logical error.";
+        }
+
+        //xem độ tuổi phù hợp của Student (Quan trọng)
+        if (!isAgeValidForGrade(student.getDateOfBirth())) {
+            return "Student's age (" + calculateAge(student.getDateOfBirth()) + " years) does not meet the required age for admission (3-5 years).";
+        }
+
+        //Tìm kỳ tuyển sinh đang ACTIVE
+        TermItem activeTermItem = termItemRepo.findById(request.getTermItemId()).orElse(null);
+        if (activeTermItem == null) {
+            return "Active Term Item not found after successful validation. This indicates a logical error.";
+        }
+
+        if (!activeTermItem.getStatus().equals(Status.ACTIVE_TERM_ITEM) || activeTermItem.getAdmissionTerm() == null || !activeTermItem.getAdmissionTerm().getStatus().equals(Status.ACTIVE_TERM)) {
+            return "The admission term item is not currently open for new admissions or is invalid.";
+        }
+
+        //==> chú ýmột học sinh chỉ được có một đơn đăng ký đang được xử lý hoặc đã hoàn thành cho mỗi kỳ tuyển sinh
+        //xem học sinh đã có form đang hoạt động
+        List<Status> statusesToExcludeForNewSubmission = Arrays.asList(Status.REJECTED, Status.CANCELLED);
+        List<AdmissionForm> activeOrPendingForms = admissionFormRepo.findAllByStudent_IdAndTermItem_IdAndStatusNotIn(
+                student.getId(), activeTermItem.getId(), statusesToExcludeForNewSubmission
+        );
+
+        if (!activeOrPendingForms.isEmpty()) {
+            // Nếu có bất kỳ form nào không phải REJECTED hoặc CANCELLED, không cho phép submit mới
+            // Check cụ thể hơn nếu muốn trả về thông báo khác nhau
+            boolean hasPendingForm = activeOrPendingForms.stream()
+                    .anyMatch(form -> form.getStatus().equals(Status.PENDING_APPROVAL));
+            if (hasPendingForm) {
+                return "This student already has a pending admission form for the current term. New submission is not allowed.";
+            }
+            return "This student already has an active or processed admission form for the current term. New submission is not allowed.";
+        }
+
         if (request.getHouseholdRegistrationAddress() == null || request.getHouseholdRegistrationAddress().trim().isEmpty()) {
             return "Household registration address is required.";
         }
@@ -13,25 +63,22 @@ public class SubmittedAdmissionFormValidation {
             return "Household registration address must not exceed 150 characters.";
         }
 
-        // 2. Hình cam kết
         if (request.getCommitmentImg() == null) {
             return "Commitment image is required.";
         }
 
-        if (!isValidImage(request.getCommitmentImg())) {
+        if (isNotValidImage(request.getCommitmentImg())) {
             return "Commitment image must be a valid image (.jpg, .jpeg, .png, .gif, .bmp, .webp)";
         }
 
-        // 3. Hình đánh giá đặc điểm trẻ
         if (request.getChildCharacteristicsFormImg() == null) {
             return "Child characteristics form image is required.";
         }
 
-        if (!isValidImage(request.getChildCharacteristicsFormImg())) {
+        if (isNotValidImage(request.getChildCharacteristicsFormImg())) {
             return "Child characteristics form image must be a valid image (.jpg, .jpeg, .png, .gif, .bmp, .webp)";
         }
 
-        // 4. Ghi chú (không bắt buộc nhưng có thể giới hạn độ dài)
         if (request.getNote() != null && request.getNote().length() > 300) {
             return "Note must not exceed 300 characters.";
         }
@@ -39,8 +86,19 @@ public class SubmittedAdmissionFormValidation {
         return "";
     }
 
-    private static boolean isValidImage(String fileName) {
-        return fileName.matches("(?i)^.+\\.(jpg|jpeg|png|gif|bmp|webp)$");
+    private static boolean isNotValidImage(String fileName) {
+        return fileName == null || fileName.trim().isEmpty() || !fileName.matches("(?i)^.+\\.(jpg|jpeg|png|gif|bmp|webp)$");
+    }
+
+    private static int calculateAge(LocalDate dob) {
+        LocalDate today = LocalDate.now();
+        return (int) ChronoUnit.YEARS.between(dob, today);
+    }
+
+    private static boolean isAgeValidForGrade(LocalDate dob) {
+        int age = calculateAge(dob);
+        // Giả sử grade yêu cầu tuổi từ 3 đến 5 tròn
+        return age >= 3 && age <= 5;
     }
 }
 

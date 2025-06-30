@@ -5,17 +5,19 @@ import com.swd392.group1.pes.enums.Role;
 import com.swd392.group1.pes.enums.Status;
 import com.swd392.group1.pes.models.Account;
 import com.swd392.group1.pes.models.AdmissionForm;
-import com.swd392.group1.pes.models.AdmissionTerm;
 import com.swd392.group1.pes.models.Event;
 import com.swd392.group1.pes.models.EventParticipate;
 import com.swd392.group1.pes.models.Parent;
 import com.swd392.group1.pes.models.Student;
+import com.swd392.group1.pes.models.TermItem;
+import com.swd392.group1.pes.models.Transaction;
 import com.swd392.group1.pes.repositories.AdmissionFormRepo;
-import com.swd392.group1.pes.repositories.AdmissionTermRepo;
 import com.swd392.group1.pes.repositories.EventParticipateRepo;
 import com.swd392.group1.pes.repositories.EventRepo;
 import com.swd392.group1.pes.repositories.ParentRepo;
 import com.swd392.group1.pes.repositories.StudentRepo;
+import com.swd392.group1.pes.repositories.TermItemRepo;
+import com.swd392.group1.pes.repositories.TransactionRepo;
 import com.swd392.group1.pes.requests.AddChildRequest;
 import com.swd392.group1.pes.requests.CancelAdmissionForm;
 import com.swd392.group1.pes.requests.GetPaymentURLRequest;
@@ -38,7 +40,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
-
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import java.net.URLEncoder;
@@ -49,20 +50,20 @@ import java.time.LocalDateTime;
 import java.time.Period;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
-import java.util.stream.Collectors;
 import java.util.Random;
 import java.util.SortedMap;
 import java.util.TimeZone;
 import java.util.TreeMap;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -72,16 +73,18 @@ public class ParentServiceImpl implements ParentService {
 
     private final AdmissionFormRepo admissionFormRepo;
 
-    private final AdmissionTermRepo admissionTermRepo;
+    private final TermItemRepo termItemRepo;
 
     private final ParentRepo parentRepo;
+
+    private final TransactionRepo transactionRepo;
 
     private final StudentRepo studentRepo;
 
     private final MailService mailService;
 
     @Value("${vnpay.return.url}")
-    String vnpayReturnUrl;
+    String vnpayIpnUrl;
 
     @Value("${vnpay.hash.key}")
     String hashKey;
@@ -167,8 +170,7 @@ public class ParentServiceImpl implements ParentService {
     //submit form
     @Override
     public ResponseEntity<ResponseObject> submitAdmissionForm(SubmitAdmissionFormRequest request, HttpServletRequest httpRequest) {
-
-        // 1. Xác thực người dùng
+        //Xác thực người dùng
         Account account = jwtService.extractAccountFromCookie(httpRequest);
         if (account == null || !account.getRole().equals(Role.PARENT)) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body(
@@ -180,8 +182,8 @@ public class ParentServiceImpl implements ParentService {
             );
         }
 
-        // 2. Validate input
-        String error = SubmittedAdmissionFormValidation.validate(request);
+        //Validate input
+        String error = SubmittedAdmissionFormValidation.validate(request, studentRepo, termItemRepo, admissionFormRepo);
         if (!error.isEmpty()) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
                     ResponseObject.builder()
@@ -192,99 +194,56 @@ public class ParentServiceImpl implements ParentService {
             );
         }
 
-        // 3. Lấy thông tin student
+        //Lấy thông tin student
         Student student = studentRepo.findById(request.getStudentId()).orElse(null);
         if (student == null) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
-                    ResponseObject.builder()
-                            .message("Student not found")
-                            .success(false)
-                            .data(null)
-                            .build()
-            );
-        }
-
-        // 4. Tìm kỳ tuyển sinh đang ACTIVE
-        AdmissionTerm activeTerm = admissionTermRepo.findAll().stream()
-                .filter(t -> t.getStatus().equals(Status.ACTIVE_TERM.getValue()))
-                .findFirst()
-                .orElse(null);
-
-        if (activeTerm == null) {
-            return ResponseEntity.status(HttpStatus.CONFLICT).body(
-                    ResponseObject.builder()
-                            .message("No active admission term currently open")
-                            .success(false)
-                            .data(null)
-                            .build()
-            );
-        }
-
-        // 5. Kiểm tra độ tuổi phù hợp
-        if (!isAgeValidForGrade(student.getDateOfBirth(), activeTerm.getYear())) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
                     ResponseObject.builder()
-                            .message("Student's birth year does not match required age for grade " + activeTerm.getGrade())
-                            .success(false)
-                            .data(null)
-                            .build());
-        }
-
-        // 6. Kiểm tra xem học sinh đã nộp form kỳ này chưa
-        List<AdmissionForm> existingForms = admissionFormRepo
-                .findAllByParent_IdAndStudent_Id(account.getParent().getId(), student.getId()).stream()
-                .filter(form -> form.getAdmissionTerm() != null && Objects.equals(form.getAdmissionTerm().getId(), activeTerm.getId()))
-                .toList();
-
-        boolean hasSubmittedForm = existingForms.stream()
-                .anyMatch(form -> !form.getStatus().equals(Status.REJECTED.getValue()) && !form.getStatus().equals(Status.CANCELLED.getValue()));
-
-        if (hasSubmittedForm) {
-            return ResponseEntity.status(HttpStatus.CONFLICT).body(
-                    ResponseObject.builder()
-                            .message("This student has already been submit in the current admission term.")
+                            .message(error)
                             .success(false)
                             .data(null)
                             .build()
             );
         }
 
-        boolean hasPendingForm = existingForms.stream()
-                .anyMatch(form -> form.getStatus().equals(Status.PENDING_APPROVAL.getValue()));
-
-        if (hasPendingForm) {
-            return ResponseEntity.status(HttpStatus.CONFLICT).body(
+        //Tim ky item term trong ki tuyen sinh ACTIVE
+        TermItem activeTermItem = termItemRepo.findById(request.getTermItemId()).orElse(null);
+        if (activeTermItem == null) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
                     ResponseObject.builder()
-                            .message("You have already submitted a pending form for this student in the current term.")
+                            .message(error)
                             .success(false)
                             .data(null)
                             .build()
             );
         }
 
-        // 7. Lưu form mới
+        // **LOẠI BỎ LOGIC KIỂM TRA FORM ĐÃ NỘP Ở ĐÂY!**
+        // Logic này đã được chuyển hoàn toàn vào SubmittedAdmissionFormValidation.validate()
+        // Nếu validation thành công, thì không có form nào đang hoạt động hoặc chờ duyệt
+        // Lưu form mới
         AdmissionForm form = AdmissionForm.builder()
                 .parent(account.getParent())
                 .student(student)
-                .admissionTerm(activeTerm)
+                .termItem(activeTermItem)
                 .householdRegistrationAddress(request.getHouseholdRegistrationAddress())
                 .commitmentImg(request.getCommitmentImg())
                 .childCharacteristicsFormImg(request.getChildCharacteristicsFormImg())
                 .note(request.getNote())
                 .submittedDate(LocalDate.now())
-                .status(Status.PENDING_APPROVAL.getValue())
+                .status(Status.PENDING_APPROVAL)
                 .build();
 
         admissionFormRepo.save(form);
 
         // 8. Gửi email notification
-        String subject  = "[PES] Admission Form Submitted";
-        String heading  = "📨 Admission Form Submitted";
+        String subject = "[PES] Admission Form Submitted";
+        String heading = "📨 Admission Form Submitted";
         String bodyHtml = Format.getAdmissionSubmittedBody(
                 account.getName(),
                 LocalDate.now().toString()
         );
-        // 8. Gửi email
+        //Gửi email
         try {
             mailService.sendMail(
                     account.getEmail(),
@@ -305,20 +264,9 @@ public class ParentServiceImpl implements ParentService {
         );
     }
 
-    private boolean isAgeValidForGrade(LocalDate dob, int admissionYear) {
-        int birthYear = dob.getYear();
-        int ageAtAdmission = admissionYear - birthYear;
-
-        System.out.println(birthYear);
-        System.out.println(ageAtAdmission);
-        return ageAtAdmission >= 3 && ageAtAdmission <= 5;
-    }
-
-
     //view refill form
     @Override
     public ResponseEntity<ResponseObject> viewRefillFormList(HttpServletRequest request) {
-
         //xac thuc nguoi dung
         Account account = jwtService.extractAccountFromCookie(request);
         if (account == null || !account.getRole().equals(Role.PARENT)) {
@@ -330,21 +278,12 @@ public class ParentServiceImpl implements ParentService {
                             .build()
             );
         }
+//
+//        //Tìm kỳ tuyển sinh đang ACTIVE
+//        TermItem activeTermItem = termItemRepo.findByStatusAndAdmissionTerm_Status(Status.ACTIVE_TERM_ITEM, Status.ACTIVE_TERM).orElse(null);
 
-        // 2. Tìm kỳ tuyển sinh đang ACTIVE
-        AdmissionTerm activeTerm = admissionTermRepo.findAll().stream()
-                .filter(t -> t.getStatus().equals(Status.ACTIVE_TERM.getValue()))
-                .findFirst().orElse(null);
-
-        List<Map<String, Object>> admissionFormList = admissionFormRepo.findAll().stream()
-                //kiểm tra, nếu form ko cos thì vẫn hiện, chứ ko bị crash, //Crash tại form.getParent().getId() ==> trước khi tạo form phải save parent
-                .filter(form -> form.getParent() != null && form.getParent().getId().equals(account.getParent().getId()))
-                .filter(form -> form.getStudent() != null)// bỏ qua các AdmissionForm không có học sinh ==> tránh bị lỗi null
-                .filter(form -> activeTerm != null &&
-                        form.getAdmissionTerm() != null &&
-                        form.getAdmissionTerm().getId().equals(activeTerm.getId()))
-                .filter(form -> form.getStatus().equals(Status.REJECTED.getValue()) ||
-                        form.getStatus().equals(Status.CANCELLED.getValue()))
+        List<Status> statusesIncluded = Arrays.asList(Status.REJECTED, Status.CANCELLED);
+        List<Map<String, Object>> admissionFormList = admissionFormRepo.findAllByStudentNotNullAndParent_IdAndStatusIn(account.getParent().getId(), statusesIncluded).stream()
                 .sorted(Comparator.comparing(AdmissionForm::getSubmittedDate).reversed())// sort form theo ngày chỉnh sửa mới nhất
                 .map(this::getFormDetail)
                 .toList();
@@ -383,8 +322,7 @@ public class ParentServiceImpl implements ParentService {
     //refill form
     @Override
     public ResponseEntity<ResponseObject> refillForm(RefillFormRequest request, HttpServletRequest httpRequest) {
-
-        // 1. Xác thực người dùng
+        //Xác thực người dùng
         Account account = jwtService.extractAccountFromCookie(httpRequest);
         if (account == null || !account.getRole().equals(Role.PARENT)) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body(
@@ -396,8 +334,8 @@ public class ParentServiceImpl implements ParentService {
             );
         }
 
-        // 2. Validate input
-        String error = RefillFormValidation.validate(request);
+        //Validate input
+        String error = RefillFormValidation.validate(request, studentRepo, termItemRepo, admissionFormRepo);
         if (!error.isEmpty()) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
                     ResponseObject.builder()
@@ -411,106 +349,61 @@ public class ParentServiceImpl implements ParentService {
         // 3. Lấy thông tin student
         Student student = studentRepo.findById(request.getStudentId()).orElse(null);
         if (student == null) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
-                    ResponseObject.builder()
-                            .message("Student not found")
-                            .success(false)
-                            .data(null)
-                            .build()
-            );
-        }
-
-        // 4. Tìm kỳ tuyển sinh đang ACTIVE
-        AdmissionTerm activeTerm = admissionTermRepo.findAll().stream()
-                .filter(t -> t.getStatus().equals(Status.ACTIVE_TERM.getValue()))
-                .findFirst()
-                .orElse(null);
-
-        if (activeTerm == null) {
-            return ResponseEntity.status(HttpStatus.CONFLICT).body(
-                    ResponseObject.builder()
-                            .message("No active admission term currently open")
-                            .success(false)
-                            .data(null)
-                            .build()
-            );
-        }
-
-        // 5. Kiểm tra độ tuổi phù hợp
-        if (!isAgeValidForGrade(student.getDateOfBirth(), activeTerm.getYear())) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
                     ResponseObject.builder()
-                            .message("Student's birth year does not match required age for grade " + activeTerm.getGrade())
-                            .success(false)
-                            .data(null)
-                            .build());
-        }
-
-        // 6. kiểm chotra form đã submit kỳ này chưa (ngoại trừ CANCELLED, REJECTED)
-        List<AdmissionForm> existingForms = admissionFormRepo
-                .findAllByParent_IdAndStudent_Id(account.getParent().getId(), student.getId()).stream()
-                .filter(form -> form.getAdmissionTerm() != null && Objects.equals(form.getAdmissionTerm().getId(), activeTerm.getId()))
-                .toList();
-
-        Optional<AdmissionForm> rejectedOrCancelledFormOpt = existingForms.stream()
-                .filter(form -> form.getStatus().equals(Status.REJECTED.getValue()) || form.getStatus().equals(Status.CANCELLED.getValue()))
-                .findFirst();
-
-        boolean hasSubmittedForm = existingForms.stream()
-                .anyMatch(form -> !form.getStatus().equals(Status.REJECTED.getValue()) && !form.getStatus().equals(Status.CANCELLED.getValue()));
-
-        if (hasSubmittedForm) {
-            return ResponseEntity.status(HttpStatus.CONFLICT).body(
-                    ResponseObject.builder()
-                            .message("This student has already been submitted in the current admission term.")
+                            .message(error)
                             .success(false)
                             .data(null)
                             .build()
             );
         }
 
-        boolean hasPendingForm = existingForms.stream()
-                .anyMatch(form -> form.getStatus().equals(Status.PENDING_APPROVAL.getValue()));
-
-        if (hasPendingForm) {
-            return ResponseEntity.status(HttpStatus.CONFLICT).body(
+        //Tìm term item cua ki tuyen sinh đang ACTIVE
+        TermItem activeTermItem = termItemRepo.findById(request.getTermItemId()).orElse(null);
+        if (activeTermItem == null) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
                     ResponseObject.builder()
-                            .message("You have already submitted a pending form for this student in the current term.")
+                            .message(error)
                             .success(false)
                             .data(null)
                             .build()
             );
         }
 
-        // 7. Nếu có form bị cancel hoặc reject thì cập nhật form đó, nếu không thì tạo mới
-        AdmissionForm form;
-        if (rejectedOrCancelledFormOpt.isPresent()) {
-            form = rejectedOrCancelledFormOpt.get();
-            form.setHouseholdRegistrationAddress(request.getHouseholdRegistrationAddress());
-            form.setCommitmentImg(request.getCommitmentImg());
-            form.setChildCharacteristicsFormImg(request.getChildCharacteristicsFormImg());
-            form.setNote(request.getNote());
-            form.setSubmittedDate(LocalDate.now());
-            form.setStatus(Status.PENDING_APPROVAL.getValue());
-        } else {
-            form = AdmissionForm.builder()
-                    .parent(account.getParent())
-                    .student(student)
-                    .admissionTerm(activeTerm)
-                    .householdRegistrationAddress(request.getHouseholdRegistrationAddress())
-                    .commitmentImg(request.getCommitmentImg())
-                    .childCharacteristicsFormImg(request.getChildCharacteristicsFormImg())
-                    .note(request.getNote())
-                    .submittedDate(LocalDate.now())
-                    .status(Status.PENDING_APPROVAL.getValue())
-                    .build();
+        //Tìm form REJECTED hoặc CANCELLED để cập nhật
+        // Validation đã đảm bảo rằng chỉ có ĐÚNG MỘT form
+        // Sử dụng findAllByStudent_IdAndTermItem_IdAndStatusIn để lấy trực tiếp từ DB
+        List<Status> rejectedOrCancelledStatuses = Arrays.asList(Status.REJECTED, Status.CANCELLED);
+        Optional<AdmissionForm> rejectedOrCancelledFormOpt = admissionFormRepo
+                .findAllByStudent_IdAndTermItem_IdAndStatusIn(student.getId(), activeTermItem.getId(), rejectedOrCancelledStatuses)
+                .stream()
+                .findFirst(); //lấy cái đầu tiên đảm bảo chỉ có 1
+
+        // Đây là một kiểm tra an toàn, trên lý thuyết không bao giờ xảy ra nếu validation đúng
+        if (rejectedOrCancelledFormOpt.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body( // Internal Server Error vì validation đã lỗi
+                    ResponseObject.builder()
+                            .message("Failed to find a suitable rejected or cancelled form to refill. Please contact support.")
+                            .success(false)
+                            .data(null)
+                            .build()
+            );
         }
 
-        admissionFormRepo.save(form);
+        //Nếu có form bị cancel hoặc reject thì cập nhật form đó, nếu không thì tạo mới
+        AdmissionForm formToUpdate = rejectedOrCancelledFormOpt.get();
+        formToUpdate.setHouseholdRegistrationAddress(request.getHouseholdRegistrationAddress());
+        formToUpdate.setCommitmentImg(request.getCommitmentImg());
+        formToUpdate.setChildCharacteristicsFormImg(request.getChildCharacteristicsFormImg());
+        formToUpdate.setNote(request.getNote());
+        formToUpdate.setSubmittedDate(LocalDate.now());
+        formToUpdate.setStatus(Status.PENDING_APPROVAL);
 
-        // 8. Gửi email notification
-        String subject  = "[PES] Admission Form Resubmitted";
-        String heading  = "🔄 Admission Form Resubmitted";
+        admissionFormRepo.save(formToUpdate);
+
+        //Gửi email notification
+        String subject = "[PES] Admission Form Resubmitted";
+        String heading = "🔄 Admission Form Resubmitted";
         String bodyHtml = Format.getAdmissionRefilledBody(
                 account.getName(),
                 LocalDate.now().toString()
@@ -542,7 +435,6 @@ public class ParentServiceImpl implements ParentService {
     // cancel form
     @Override
     public ResponseEntity<ResponseObject> cancelAdmissionForm(CancelAdmissionForm request, HttpServletRequest httpRequest) {
-
         // 1. Lấy account từ cookie
         Account account = jwtService.extractAccountFromCookie(httpRequest);
         if (account == null || !account.getRole().equals(Role.PARENT)) {
@@ -580,7 +472,9 @@ public class ParentServiceImpl implements ParentService {
             );
         }
 
-        if (!form.getStatus().equals(Status.PENDING_APPROVAL.getValue().toLowerCase())) {
+        System.out.println(form.getStatus());
+
+        if (!form.getStatus().equals(Status.PENDING_APPROVAL)) {
             return ResponseEntity.status(HttpStatus.CONFLICT).body(
                     ResponseObject.builder()
                             .message("Only pending approval forms can be cancelled.")
@@ -590,13 +484,13 @@ public class ParentServiceImpl implements ParentService {
             );
         }
 
-        form.setStatus(Status.CANCELLED.getValue());
+        form.setStatus(Status.CANCELLED);
         admissionFormRepo.save(form);
 
         //Gửi email thông báo hủy
         try {
-            String subject  = "[PES] Admission Form Cancelled";
-            String heading  = "❌ Admission Form Cancelled";
+            String subject = "[PES] Admission Form Cancelled";
+            String heading = "❌ Admission Form Cancelled";
             String bodyHtml = Format.getAdmissionCancelledBody(account.getName());
             mailService.sendMail(
                     account.getEmail(),
@@ -787,7 +681,7 @@ public class ParentServiceImpl implements ParentService {
         boolean hasSubmittedForm = student.getAdmissionFormList()
                 .stream()
                 .anyMatch(
-                        form -> !form.getStatus().equals(Status.DRAFT.getValue())
+                        form -> !form.getStatus().equals(Status.DRAFT)
                 );
 
         if (student.isStudent() || hasSubmittedForm) {
@@ -877,8 +771,8 @@ public class ParentServiceImpl implements ParentService {
                 .collect(Collectors.toMap(Student::getId, Function.identity()));
 
         // 4. Validate từng student, early-exit khi gặp lỗi
-        List<EventParticipate> toSave       = new ArrayList<>();
-        List<String>            registered  = new ArrayList<>();
+        List<EventParticipate> toSave = new ArrayList<>();
+        List<String> registered = new ArrayList<>();
 
         for (Integer sid : studentIds) {
             Student stu = studentMap.get(sid);
@@ -896,7 +790,7 @@ public class ParentServiceImpl implements ParentService {
                         .body(ResponseObject.builder()
                                 .success(false)
                                 .message("Cannot register " + stu.getName()
-                                        + ": only SunShine School students can sign up for events")                                .data(null)
+                                        + ": only SunShine School students can sign up for events").data(null)
                                 .build());
             }
 
@@ -964,7 +858,7 @@ public class ParentServiceImpl implements ParentService {
                     "[PES] EVENT REGISTRATION CONFIRMATION",
                     "Event Registration Confirmation",
                     "Dear " + account.getName() + ",\n\n" +
-                    "You have successfully registered the following students for \"" +
+                            "You have successfully registered the following students for \"" +
                             event.getName() + "\":\n- " +
                             String.join("\n- ", registered) +
                             "\n\nThank you,\nSunShine Preschool"
@@ -998,7 +892,7 @@ public class ParentServiceImpl implements ParentService {
                             .data(null)
                             .build());
         }
-        List<Map<String,Object>> result = eventParticipateRepo
+        List<Map<String, Object>> result = eventParticipateRepo
                 .findByStudentParentIdOrderByRegisteredAtDesc(parent.getId())
                 .stream()
                 .map(this::buildEventDetail)
@@ -1012,6 +906,19 @@ public class ParentServiceImpl implements ParentService {
         );
     }
 
+    private Map<String, Object> buildEventDetail(EventParticipate eventParticipate) {
+        DateTimeFormatter fmt = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
+        Map<String, Object> data = new HashMap<>();
+        Event event = eventParticipate.getEvent();
+        Student s = eventParticipate.getStudent();
+        data.put("childName", s.getName());
+        data.put("eventName", event.getName());
+        data.put("startTime", event.getStartTime().format(fmt));
+        data.put("endTime", event.getEndTime().format(fmt));
+        data.put("location", event.getLocation());
+        data.put("registeredAt", eventParticipate.getRegisteredAt());
+        return data;
+    }
 
     @Override
     public ResponseEntity<ResponseObject> getPaymentURL(GetPaymentURLRequest request, HttpServletRequest httpRequest) {
@@ -1027,10 +934,23 @@ public class ParentServiceImpl implements ParentService {
         String locale = "vn";
         String orderInfo = request.getPaymentInfo();
         String orderType = "education";
-        String returnUrl = vnpayReturnUrl;
+        String returnUrl = vnpayIpnUrl;
         cld.add(Calendar.MINUTE, 10);
         String expireDate = formatter.format(cld.getTime());
-        String txnRef = getTxnRef(8);
+
+
+        //String txnRef = getTxnRef(8);
+        String txnRef = request.getTxnRef(); // LẤY txnRef TỪ REQUEST
+        if (txnRef == null || txnRef.isEmpty()) {
+            // Đây là tình huống lỗi, vì initiateVNPayPayment đáng lẽ đã set nó
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(
+                    ResponseObject.builder()
+                            .message("Internal Error: Missing transaction reference for payment URL generation.")
+                            .success(false)
+                            .data(null)
+                            .build()
+            );
+        }
 
         // step 1: put all params into a sorted map
         SortedMap<String, String> vnpParams = new TreeMap<>();
@@ -1047,6 +967,7 @@ public class ParentServiceImpl implements ParentService {
         vnpParams.put("vnp_IpAddr", ipAddr);
         vnpParams.put("vnp_CreateDate", createDate);
         vnpParams.put("vnp_ExpireDate", expireDate);
+        vnpParams.put("vnp_IpnUrl", vnpayIpnUrl);
 
         // step 2: build the hash data string
         StringBuilder hashData = new StringBuilder();
@@ -1118,18 +1039,73 @@ public class ParentServiceImpl implements ParentService {
         return sb.toString();
     }
 
-    private Map<String, Object> buildEventDetail(EventParticipate eventParticipate) {
-        DateTimeFormatter fmt = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
-        Map<String, Object> data = new HashMap<>();
-        Event event = eventParticipate.getEvent();
-        Student s = eventParticipate.getStudent();
-        data.put("childName", s.getName());
-        data.put("eventName", event.getName());
-        data.put("startTime", event.getStartTime().format(fmt));
-        data.put("endTime", event.getEndTime().format(fmt));
-        data.put("location", event.getLocation());
-        data.put("registeredAt", eventParticipate.getRegisteredAt());
-        return data;
-    }
+    @Override
+    public ResponseEntity<ResponseObject> initiateVNPayPayment(GetPaymentURLRequest request, HttpServletRequest httpRequest) {
+        Account acc = jwtService.extractAccountFromCookie(httpRequest);
+        if (acc == null || !acc.getRole().equals(Role.PARENT)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(
+                    ResponseObject.builder()
+                            .message("Forbidden: Only parents can access this resource")
+                            .success(false)
+                            .data(null)
+                            .build());
+        }
 
+        //Kiểm tra formId có được cung cấp không
+        AdmissionForm form = admissionFormRepo.findById(request.getFormId()).orElse(null);
+        if (form == null) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
+                    ResponseObject.builder()
+                            .message("Missing formId in payment request")
+                            .success(false)
+                            .data(null)
+                            .build()
+            );
+        }
+
+        //Tìm AdmissionForm liên quan
+        Optional<AdmissionForm> optionalAdmissionForm = admissionFormRepo.findById(request.getFormId());
+        if (optionalAdmissionForm.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
+                    ResponseObject.builder()
+                            .message("Admission Form not found with ID: " + request.getFormId())
+                            .success(false)
+                            .data(null)
+                            .build()
+            );
+        }
+        AdmissionForm admissionForm = optionalAdmissionForm.get();
+
+        //Tạo txnRef duy nhất cho giao dịch này
+        String newTxnRef = getTxnRef(8); // Sử dụng hàm getTxnRef đã có của bạn
+
+        //Tạo bản ghi Transaction MỚI và lưu vào DB với trạng thái PENDING
+        try {
+            Transaction newTransaction = Transaction.builder()
+                    .admissionForm(admissionForm) // Liên kết giao dịch với AdmissionForm
+                    .amount(request.getAmount())
+                    .description(request.getPaymentInfo())
+                    .status(Status.TRANSACTION_PENDING) // Đặt trạng thái ban đầu là PENDING (từ enum Status của bạn)
+                    .txnRef(newTxnRef) // Gán txnRef đã tạo
+                    .build();
+            transactionRepo.save(newTransaction);
+        } catch (Exception e) {
+            // Xử lý lỗi nếu không thể lưu Transaction
+            System.err.println("Error saving transaction: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(
+                    ResponseObject.builder()
+                            .message("Failed to create payment transaction. Please try again. Error: " + e.getMessage())
+                            .success(false)
+                            .data(null)
+                            .build()
+            );
+        }
+
+        //Gán txnRef đã tạo vào request để truyền cho hàm getPaymentURL
+        request.setTxnRef(newTxnRef); // Đảm bảo GetPaymentURLRequest có setter cho txnRef
+
+        //Gọi hàm getPaymentURL để lấy URL thanh toán.
+        // Hàm này giờ đây sẽ sử dụng txnRef mà chúng ta vừa tạo và lưu.
+        return getPaymentURL(request, httpRequest);
+    }
 }

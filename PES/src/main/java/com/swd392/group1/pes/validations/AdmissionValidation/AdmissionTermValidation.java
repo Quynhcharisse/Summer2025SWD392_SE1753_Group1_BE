@@ -3,27 +3,24 @@ package com.swd392.group1.pes.validations.AdmissionValidation;
 import com.swd392.group1.pes.requests.CreateAdmissionTermRequest;
 import com.swd392.group1.pes.requests.UpdateAdmissionTermRequest;
 
+import java.time.LocalDateTime;
+
 public class AdmissionTermValidation {
     public static String createTermValidate(CreateAdmissionTermRequest request) {
         if (request.getStartDate() == null) {
-            return "Start date and end date are required";
+            return "Start date is required";
         }
 
         if (request.getEndDate() == null) {
-            return "Start date and end date are required";
+            return "End date is required";
         }
 
-        //Ngày bắt đầu phải trước ngày kết thúc
         if (request.getStartDate().isAfter(request.getEndDate())) {
             return "Start date must be before end date";
         }
 
-        if (request.getGrade() == null || request.getGrade().trim().isEmpty()) {
-            return "Grade is required";
-        }
-
-        if (request.getExpectedClasses() <= 0) {
-            return "Expected classes must be greater than 0";
+        if (request.getStartDate().isBefore(LocalDateTime.now())) {
+            return "Start date must be in the future";
         }
 
         return "";

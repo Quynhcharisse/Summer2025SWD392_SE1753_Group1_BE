@@ -18,7 +18,6 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -58,8 +57,6 @@ public class ParentController {
         return parentService.cancelAdmissionForm(request, httpRequest);
     }
 
-    // gôp getChild + submit vô chung tránh gọi API quá nhiều lần
-
     @GetMapping("/child")
     @PreAuthorize("hasRole('parent')")
     public ResponseEntity<ResponseObject> viewChild(HttpServletRequest request) {
@@ -78,11 +75,6 @@ public class ParentController {
         return parentService.updateChild(request, httpRequest);
     }
 
-    @PostMapping("/payment")
-    @PreAuthorize("hasRole('parent')")
-    public ResponseEntity<ResponseObject> getPaymentURL(@RequestBody GetPaymentURLRequest request, HttpServletRequest httpRequest) {
-        return parentService.getPaymentURL(request, httpRequest);
-    }
 
     @PostMapping("/event/register")
     @PreAuthorize("hasRole('parent')")
@@ -96,4 +88,15 @@ public class ParentController {
         return parentService.getRegisteredEvents(request);
     }
 
+    @PostMapping("/payment")
+    @PreAuthorize("hasRole('parent')")
+    public ResponseEntity<ResponseObject> getPaymentURL(@RequestBody GetPaymentURLRequest request, HttpServletRequest httpRequest) {
+        return parentService.getPaymentURL(request, httpRequest);
+    }
+
+    @PostMapping("/payment/initiate")
+    @PreAuthorize("hasRole('parent')") // Thêm dòng này nếu bạn có Spring Security và muốn giới hạn quyền truy cập
+    public ResponseEntity<ResponseObject> initiatePayment(@RequestBody GetPaymentURLRequest request, HttpServletRequest httpRequest) {
+        return parentService.initiateVNPayPayment(request, httpRequest);
+    }
 }

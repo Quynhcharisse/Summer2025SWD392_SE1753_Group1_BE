@@ -1,7 +1,7 @@
 package com.swd392.group1.pes.models;
 
+import com.swd392.group1.pes.enums.Grade;
 import com.swd392.group1.pes.enums.Status;
-import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -12,7 +12,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
-import jakarta.persistence.OneToOne;
+import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
@@ -23,56 +23,42 @@ import lombok.NoArgsConstructor;
 import lombok.ToString;
 import lombok.experimental.FieldDefaults;
 
-import java.time.LocalDate;
+import java.util.List;
 
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
 @Builder
-@Table(name = "`admission_form`")
+@Table(name = "`term_item`")
 @FieldDefaults(level = AccessLevel.PRIVATE)
-public class AdmissionForm {
+public class TermItem {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     Integer id;
 
-    @Column(name = "`cancel_reason`")
-    String cancelReason;
+    @Column(name = "`max_number_registration`")
+    int maxNumberRegistration; // tự gán tự động
 
-    @Column(name = "`submitted_date`")
-    LocalDate submittedDate;
-
-    @Column(name = "`household_registration_address`")
-    String householdRegistrationAddress;
-
-    @Column(name = "`child_characteristics_form_img`")
-    String childCharacteristicsFormImg;
-
-    @Column(name = "`commitment_img`")
-    String commitmentImg ;
-
-    String note;
+    @Enumerated(EnumType.STRING)
+    Grade grade;
 
     @Enumerated(EnumType.STRING)
     Status status;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "`student_id`")
-    Student student;
+    @Column(name = "`students_per_class`")
+    Integer studentsPerClass; // số học sinh tự quy định = 20 người
+
+    @Column(name = "`expected_classes`")
+    Integer expectedClasses; // Số lớp dự kiến
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "`parent_id`")
-    Parent parent;
+    @JoinColumn(name = "`term_id`")
+    AdmissionTerm admissionTerm;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "`term_item_id`")
-    TermItem termItem;
-
-    @OneToOne(mappedBy = "admissionForm", fetch = FetchType.EAGER, cascade = CascadeType.ALL) // ko dùng cascade
+    @OneToMany(mappedBy = "termItem", fetch = FetchType.LAZY)
     @EqualsAndHashCode.Exclude
     @ToString.Exclude
-    Transaction transaction;
-
+    List<AdmissionForm> admissionFormList;
 }

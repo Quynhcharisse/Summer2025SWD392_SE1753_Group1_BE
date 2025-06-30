@@ -1,6 +1,7 @@
 package com.swd392.group1.pes.models;
 
-import com.swd392.group1.pes.enums.Grade;
+import com.swd392.group1.pes.enums.Status;
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -48,29 +49,15 @@ public class AdmissionTerm {
 
     Integer year;
 
-    @Column(name = "`students_per_class`")
-    Integer studentsPerClass; // số học sinh tự quy định = 20 người
-
-    @Column(name = "`expected_classes`")
-    Integer expectedClasses; // Số lớp dự kiến
-
-    @Column(name = "`max_number_registration`")
-    int maxNumberRegistration; // tự gán tự động
-
     @Enumerated(EnumType.STRING)
-    Grade grade;
+    Status status;
 
-    String status;
-
-    @OneToMany(mappedBy = "admissionTerm", fetch = FetchType.LAZY)
-    @EqualsAndHashCode.Exclude
-    @ToString.Exclude
-    List<AdmissionForm> admissionFormList;
-
-    //join chính nó
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "parent_term_id")
+    AdmissionTerm parentTerm;
+
+    @OneToMany(mappedBy = "admissionTerm", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
     @EqualsAndHashCode.Exclude
     @ToString.Exclude
-    AdmissionTerm parentTerm;
+    List<TermItem> termItemList;
 }

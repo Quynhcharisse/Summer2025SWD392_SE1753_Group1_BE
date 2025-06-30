@@ -5,7 +5,6 @@ import com.swd392.group1.pes.requests.CreateEventRequest;
 import com.swd392.group1.pes.requests.CreateLessonRequest;
 import com.swd392.group1.pes.requests.CreateSyllabusRequest;
 import com.swd392.group1.pes.requests.UpdateLessonRequest;
-import com.swd392.group1.pes.requests.GenerateClassesRequest;
 import com.swd392.group1.pes.requests.UpdateSyllabusRequest;
 import com.swd392.group1.pes.response.ResponseObject;
 import com.swd392.group1.pes.services.EducationService;
@@ -51,27 +50,27 @@ public class EducationController {
         return educationService.viewAllSyllabus();
     }
 
-    @PostMapping("/classes")
-    @PreAuthorize("hasRole('education')")
-    public ResponseEntity<ResponseObject> generateClassesAuto(GenerateClassesRequest request){
-        return educationService.generateClassesAuto(request);
-    }
+//    @PostMapping("/classes")
+//    @PreAuthorize("hasRole('education')")
+//    public ResponseEntity<ResponseObject> generateClassesAuto(GenerateClassesRequest request){
+//        return educationService.generateClassesAuto(request);
+//    }
 
     @PutMapping("/syllabus/assign/lessons")
     @PreAuthorize("hasRole('education')")
-    public ResponseEntity<ResponseObject> assignLessons(@RequestParam String id, @RequestBody AssignLessonsRequest request){
+    public ResponseEntity<ResponseObject> assignLessons(@RequestParam String id, @RequestBody AssignLessonsRequest request) {
         return educationService.assignLessonsToSyllabus(id, request);
     }
 
     @GetMapping("/syllabus/unassign/lessons")
     @PreAuthorize("hasRole('education')")
-    public ResponseEntity<ResponseObject> viewLessonNotAssignedOfSyllabus(@RequestParam String id,  @RequestParam(value = "searchQuery", required = false) String searchQuery){
+    public ResponseEntity<ResponseObject> viewLessonNotAssignedOfSyllabus(@RequestParam String id, @RequestParam(value = "searchQuery", required = false) String searchQuery) {
         return educationService.viewLessonNotAssignedOfSyllabus(id, searchQuery);
     }
 
     @GetMapping("/syllabus/assign/lessons")
     @PreAuthorize("hasRole('education')")
-    public ResponseEntity<ResponseObject> viewLessonAssignedOfSyllabus(@RequestParam String id,  @RequestParam(value = "searchQuery", required = false) String searchQuery){
+    public ResponseEntity<ResponseObject> viewLessonAssignedOfSyllabus(@RequestParam String id, @RequestParam(value = "searchQuery", required = false) String searchQuery) {
         return educationService.viewLessonAssignedOfSyllabus(id, searchQuery);
     }
 
