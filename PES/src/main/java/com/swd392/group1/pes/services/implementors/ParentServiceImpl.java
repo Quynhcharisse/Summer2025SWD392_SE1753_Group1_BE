@@ -84,6 +84,9 @@ public class ParentServiceImpl implements ParentService {
     private final MailService mailService;
 
     @Value("${vnpay.return.url}")
+    String vnpayReturnUrl;
+
+    @Value("${vnpay.ipn.url}")
     String vnpayIpnUrl;
 
     @Value("${vnpay.hash.key}")
@@ -230,7 +233,7 @@ public class ParentServiceImpl implements ParentService {
                 .commitmentImg(request.getCommitmentImg())
                 .childCharacteristicsFormImg(request.getChildCharacteristicsFormImg())
                 .note(request.getNote())
-                .submittedDate(LocalDate.now())
+                .submittedDate(LocalDateTime.now())
                 .status(Status.PENDING_APPROVAL)
                 .build();
 
@@ -396,7 +399,7 @@ public class ParentServiceImpl implements ParentService {
         formToUpdate.setCommitmentImg(request.getCommitmentImg());
         formToUpdate.setChildCharacteristicsFormImg(request.getChildCharacteristicsFormImg());
         formToUpdate.setNote(request.getNote());
-        formToUpdate.setSubmittedDate(LocalDate.now());
+        formToUpdate.setSubmittedDate(LocalDateTime.now());
         formToUpdate.setStatus(Status.PENDING_APPROVAL);
 
         admissionFormRepo.save(formToUpdate);
@@ -934,7 +937,7 @@ public class ParentServiceImpl implements ParentService {
         String locale = "vn";
         String orderInfo = request.getPaymentInfo();
         String orderType = "education";
-        String returnUrl = vnpayIpnUrl;
+        String returnUrl = vnpayReturnUrl;
         cld.add(Calendar.MINUTE, 10);
         String expireDate = formatter.format(cld.getTime());
 

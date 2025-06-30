@@ -7,7 +7,6 @@ import com.swd392.group1.pes.repositories.AdmissionFormRepo;
 import com.swd392.group1.pes.requests.CancelAdmissionForm;
 
 public class EditAdmissionFormValidation {
-    // validation cho cancel đơn
     public static String canceledValidate(CancelAdmissionForm request, Account account, AdmissionFormRepo admissionFormRepo) {
         AdmissionForm form = admissionFormRepo.findById(request.getFormId()).orElse(null);
 

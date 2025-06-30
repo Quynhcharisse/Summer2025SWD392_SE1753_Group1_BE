@@ -9,7 +9,6 @@ import java.util.List;
 
 public class ExtraTermValidation {
     public static String createExtraTerm(CreateExtraTermRequest request, AdmissionTermRepo admissionTermRepo) {
-        // 2. Kiểm tra parent term tồn tại
         AdmissionTerm parentTerm = admissionTermRepo.findById(request.getParentTermId()).orElse(null);
         if (parentTerm == null) {
             return "Parent term is required.";
@@ -24,8 +23,6 @@ public class ExtraTermValidation {
             return ("Only one active extra term can exist at a time");
         }
 
-
-        // 3. Kiểm tra status và chỉ tiêu
         if (!parentTerm.getStatus().equals(Status.LOCKED_TERM)) {
             return ("Only locked terms can have extra requests");
         }

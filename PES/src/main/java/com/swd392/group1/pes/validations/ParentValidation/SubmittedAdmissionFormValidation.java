@@ -16,18 +16,15 @@ import java.util.List;
 
 public class SubmittedAdmissionFormValidation {
     public static String validate(SubmitAdmissionFormRequest request, StudentRepo studentRepo, TermItemRepo termItemRepo, AdmissionFormRepo admissionFormRepo) {
-        //Lấy thông tin student
         Student student = studentRepo.findById(request.getStudentId()).orElse(null);
         if (student == null) {
             return "Student not found after successful validation. This indicates a logical error.";
         }
 
-        //xem độ tuổi phù hợp của Student (Quan trọng)
         if (!isAgeValidForGrade(student.getDateOfBirth())) {
             return "Student's age (" + calculateAge(student.getDateOfBirth()) + " years) does not meet the required age for admission (3-5 years).";
         }
 
-        //Tìm kỳ tuyển sinh đang ACTIVE
         TermItem activeTermItem = termItemRepo.findById(request.getTermItemId()).orElse(null);
         if (activeTermItem == null) {
             return "Active Term Item not found after successful validation. This indicates a logical error.";
@@ -37,16 +34,12 @@ public class SubmittedAdmissionFormValidation {
             return "The admission term item is not currently open for new admissions or is invalid.";
         }
 
-        //==> chú ýmột học sinh chỉ được có một đơn đăng ký đang được xử lý hoặc đã hoàn thành cho mỗi kỳ tuyển sinh
-        //xem học sinh đã có form đang hoạt động
         List<Status> statusesToExcludeForNewSubmission = Arrays.asList(Status.REJECTED, Status.CANCELLED);
         List<AdmissionForm> activeOrPendingForms = admissionFormRepo.findAllByStudent_IdAndTermItem_IdAndStatusNotIn(
                 student.getId(), activeTermItem.getId(), statusesToExcludeForNewSubmission
         );
 
         if (!activeOrPendingForms.isEmpty()) {
-            // Nếu có bất kỳ form nào không phải REJECTED hoặc CANCELLED, không cho phép submit mới
-            // Check cụ thể hơn nếu muốn trả về thông báo khác nhau
             boolean hasPendingForm = activeOrPendingForms.stream()
                     .anyMatch(form -> form.getStatus().equals(Status.PENDING_APPROVAL));
             if (hasPendingForm) {
@@ -97,7 +90,6 @@ public class SubmittedAdmissionFormValidation {
 
     private static boolean isAgeValidForGrade(LocalDate dob) {
         int age = calculateAge(dob);
-        // Giả sử grade yêu cầu tuổi từ 3 đến 5 tròn
         return age >= 3 && age <= 5;
     }
 }

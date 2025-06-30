@@ -54,6 +54,8 @@ public class AdmissionTerm {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "parent_term_id")
+    @EqualsAndHashCode.Exclude
+    @ToString.Exclude
     AdmissionTerm parentTerm;
 
     @OneToMany(mappedBy = "admissionTerm", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
