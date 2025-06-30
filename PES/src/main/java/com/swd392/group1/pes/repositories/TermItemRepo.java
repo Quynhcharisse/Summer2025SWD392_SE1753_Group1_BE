@@ -1,13 +1,9 @@
 package com.swd392.group1.pes.repositories;
 
-import com.swd392.group1.pes.enums.Grade;
-import com.swd392.group1.pes.models.AdmissionTerm;
 import com.swd392.group1.pes.models.TermItem;
 import org.springframework.data.jpa.repository.JpaRepository;
 
-import java.util.List;
 import java.util.Optional;
 
 public interface TermItemRepo extends JpaRepository<TermItem, Integer> {
-    Optional<TermItem> findByGradeAndAdmissionTerm(Grade grade, AdmissionTerm mainTerm2025);
 }

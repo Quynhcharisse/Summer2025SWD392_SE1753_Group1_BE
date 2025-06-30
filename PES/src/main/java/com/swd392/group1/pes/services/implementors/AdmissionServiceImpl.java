@@ -34,7 +34,6 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -48,7 +47,7 @@ public class AdmissionServiceImpl implements AdmissionService {
     @Override
     public ResponseEntity<ResponseObject> createAdmissionTerm(CreateAdmissionTermRequest request) {
         // 1. Validate các field cơ bản (ngày, số lượng, grade rỗng...)
-        String error = AdmissionTermValidation.createTermValidate(request);
+        String error = AdmissionTermValidation.createTermValidate(request, admissionTermRepo);
         if (!error.isEmpty()) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
                     ResponseObject.builder()
@@ -61,20 +60,6 @@ public class AdmissionServiceImpl implements AdmissionService {
 
         int currentYear = LocalDate.now().getYear();
         String name = "Admission Term for " + currentYear;
-
-        // --- Bổ sung: Kiểm tra xem term cho năm hiện tại đã tồn tại chưa ---
-        // Sử dụng findByYear thay vì existsByYear để có thể trả về thông tin term nếu cần
-        Optional<AdmissionTerm> existingTerm = admissionTermRepo.findByYear(currentYear);
-        if (existingTerm.isPresent()) {
-            // Nếu term cho năm hiện tại đã tồn tại, trả về lỗi Conflict (409)
-            return ResponseEntity.status(HttpStatus.CONFLICT).body(
-                    ResponseObject.builder()
-                            .message("Admission Term for the year " + currentYear + " already exists. Only one term can be created per year.")
-                            .success(false)
-                            .data(existingTerm.get().getId()) // Có thể trả về ID của term đã tồn tại
-                            .build()
-            );
-        }
 
         // Nếu hợp lệ, tiếp tục tạo term
         AdmissionTerm term = admissionTermRepo.save(
@@ -91,7 +76,6 @@ public class AdmissionServiceImpl implements AdmissionService {
 
 
     private ResponseEntity<ResponseObject> createTermItem(List<CreateAdmissionTermRequest.TermItem> termItemList, AdmissionTerm term) {
-
         for (CreateAdmissionTermRequest.TermItem termItem : termItemList) {
             termItemRepo.save(
                     TermItem.builder()
@@ -334,6 +318,7 @@ public class AdmissionServiceImpl implements AdmissionService {
                         .build()
         );
 
+        //duyệt từng term item trong parentTerm để tạo bản sao thiếu
         for (TermItem termItem : parentTerm.getTermItemList()) {
             if (countMissingFormAmountByTermItem(termItem) > 0) { //dang missing
                 TermItem t = termItemRepo.save(TermItem.builder()
@@ -346,8 +331,14 @@ public class AdmissionServiceImpl implements AdmissionService {
                         .currentRegisteredStudents(0)
                         .build());
 
-                //
+                // tính lại expected class dựa trên số thiếu
                 t.setExpectedClasses(countExpectedClass(t, termItem));
+
+                //nếu đủ số lượng --> lock luôn
+                t.setStatus(countMissingFormAmountByTermItem(termItem) == 0
+                        ? Status.LOCKED_TERM_ITEM
+                        : Status.INACTIVE_TERM_ITEM);
+
                 termItemRepo.save(t);
             }
 

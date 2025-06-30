@@ -86,9 +86,6 @@ public class ParentServiceImpl implements ParentService {
     @Value("${vnpay.return.url}")
     String vnpayReturnUrl;
 
-    @Value("${vnpay.ipn.url}")
-    String vnpayIpnUrl;
-
     @Value("${vnpay.hash.key}")
     String hashKey;
 
@@ -970,7 +967,6 @@ public class ParentServiceImpl implements ParentService {
         vnpParams.put("vnp_IpAddr", ipAddr);
         vnpParams.put("vnp_CreateDate", createDate);
         vnpParams.put("vnp_ExpireDate", expireDate);
-        vnpParams.put("vnp_IpnUrl", vnpayIpnUrl);
 
         // step 2: build the hash data string
         StringBuilder hashData = new StringBuilder();

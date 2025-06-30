@@ -12,4 +12,6 @@ public interface AdmissionTermRepo extends JpaRepository<AdmissionTerm, Integer>
     List<AdmissionTerm> findAllByParentTermIsNull();
 
     Optional<AdmissionTerm> findByYear(int year);
+
+    List<AdmissionTerm> findAllByYear(Integer year);
 }

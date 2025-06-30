@@ -14,17 +14,18 @@ public class ExtraTermValidation {
             return "Parent term is required.";
         }
 
-        List<AdmissionTerm> existingActiveExtraTerms = admissionTermRepo.findAllByParentTerm_Id(parentTerm.getId())
-                .stream()
-                .filter(et -> !et.getStatus().equals(Status.LOCKED_TERM))
-                .toList();
-
-        if (!existingActiveExtraTerms.isEmpty()) {
-            return ("Only one active extra term can exist at a time");
+        // tạo extra term khi term cha bị lock
+        if (!parentTerm.getStatus().equals(Status.LOCKED_TERM)) {
+            return "Only locked terms can have extra requests.";
         }
 
-        if (!parentTerm.getStatus().equals(Status.LOCKED_TERM)) {
-            return ("Only locked terms can have extra requests");
+        // ko tạo nếu chưa form nào đc duyệt
+        boolean hasApproved = parentTerm.getTermItemList().stream()
+                .anyMatch(item -> item.getAdmissionFormList().stream()
+                        .anyMatch(form -> form.getStatus().equals(Status.APPROVED)));
+
+        if (!hasApproved) {
+            return "Cannot create extra term: No approved admission forms in parent term.";
         }
 
         if (request.getStartDate() == null || request.getEndDate() == null) {
@@ -33,6 +34,29 @@ public class ExtraTermValidation {
 
         if (!request.getEndDate().isAfter(request.getStartDate())) {
             return "End date must be after start date.";
+        }
+
+        // ko cho tạo trùng tg với term ba / extra term khác cùng  năm
+        //Nếu chưa có học sinh nào được duyệt (APPROVED)
+        // tạo ExtraTerm là phi logic vì đợt chính còn chưa có kết quả
+        List<AdmissionTerm> termsSameYear = admissionTermRepo.findAllByYear(parentTerm.getYear());
+        for (AdmissionTerm existing : termsSameYear) {
+            if (existing.getId().equals(parentTerm.getId())) continue; // bỏ qua term cha
+
+            boolean overlap = !(request.getEndDate().isBefore(existing.getStartDate()) ||
+                    request.getStartDate().isAfter(existing.getEndDate()));
+            if (overlap) {
+                return "Extra term time overlaps with existing term: " + existing.getName();
+            }
+        }
+
+        List<AdmissionTerm> existingActiveExtraTerms = admissionTermRepo.findAllByParentTerm_Id(parentTerm.getId())
+                .stream()
+                .filter(et -> !et.getStatus().equals(Status.LOCKED_TERM))
+                .toList();
+
+        if (!existingActiveExtraTerms.isEmpty()) {
+            return ("Only one active extra term can exist at a time");
         }
 
         if (request.getMaxNumberRegistration() <= 0) {

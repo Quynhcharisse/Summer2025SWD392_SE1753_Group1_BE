@@ -1,12 +1,16 @@
 package com.swd392.group1.pes.validations.AdmissionValidation;
 
+import com.swd392.group1.pes.enums.Grade;
+import com.swd392.group1.pes.repositories.AdmissionTermRepo;
 import com.swd392.group1.pes.requests.CreateAdmissionTermRequest;
 import com.swd392.group1.pes.requests.UpdateAdmissionTermRequest;
 
 import java.time.LocalDateTime;
+import java.util.HashSet;
+import java.util.Set;
 
 public class AdmissionTermValidation {
-    public static String createTermValidate(CreateAdmissionTermRequest request) {
+    public static String createTermValidate(CreateAdmissionTermRequest request, AdmissionTermRepo admissionTermRepo) {
         if (request.getStartDate() == null) {
             return "Start date is required";
         }
@@ -23,6 +27,36 @@ public class AdmissionTermValidation {
             return "Start date must be in the future";
         }
 
+        //trong 1 term phai it nhat 1 grade trong create term do
+        if(request.getTermItemList() == null || request.getTermItemList().isEmpty()) {
+            return "At least one grade must be included in the term.";
+        }
+
+        Set<String> grades = new HashSet<>();
+
+        for (CreateAdmissionTermRequest.TermItem termItem : request.getTermItemList()) {
+            //expectedClasses > 0
+            if (termItem.getExpectedClasses() <= 0) {
+                return "Expected classes must be greater than 0 for grade: " + termItem.getGrade();
+            }
+
+            //hợp lệ enum
+            try {
+                Grade.valueOf(termItem.getGrade());
+            } catch (IllegalArgumentException e) {
+                return "Invalid grade: " + termItem.getGrade();
+            }
+
+            if (!grades.add(termItem.getGrade())) {
+                return "Duplicate grade found: " + termItem.getGrade();
+            }
+        }
+
+        //ko trùng tg (1 năm chỉ có 1 term được diễn ra)
+        int year = request.getStartDate().getYear();
+        if(admissionTermRepo.findByYear(year).isPresent()) {
+            return "Admission Term for the year " + year  + " already exists. Only one term can be created per year.";
+        }
         return "";
     }
 

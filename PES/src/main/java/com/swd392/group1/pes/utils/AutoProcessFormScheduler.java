@@ -18,13 +18,14 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.Period;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 
 @Component
 @RequiredArgsConstructor
 @Slf4j
-public class AutoAdmissionApprovalScheduler {
+public class AutoProcessFormScheduler {
 
     private final AdmissionFormRepo admissionFormRepo;
     private final StudentRepo studentRepo;
@@ -35,39 +36,35 @@ public class AutoAdmissionApprovalScheduler {
     @Scheduled(fixedDelay = 10000)
     @Transactional(rollbackFor = Exception.class)
     public void autoApprovePendingForms() {
-        log.info("Starting auto-approval process...");
         List<AdmissionForm> pendingForms = admissionFormRepo.findByStatus(Status.PENDING_APPROVAL);
-        log.info("Found {} pending forms to process", pendingForms.size());
-        LocalDate today = LocalDate.now();
+        LocalDateTime today = LocalDateTime.now();
 
         for (AdmissionForm form : pendingForms) {
-            log.info("Processing Form ID: {} for Student: {}", form.getId(), form.getStudent().getName());
             TermItem termItem = form.getTermItem();
-            log.info("Term Item details - ID: {}, Current Students: {}", termItem.getId(), termItem.getCurrentRegisteredStudents());
+            LocalDateTime termStartDate = termItem.getAdmissionTerm().getStartDate();
+            LocalDate termStartDateLocal = termStartDate.toLocalDate(); //vì birth day trẻ chỉ là Local Date
 
             // 1) Kiểm tra deadline
-            if (termItem.getAdmissionTerm().getEndDate().isBefore(today.atStartOfDay())) {
-                log.warn("Form {} rejected - Deadline passed. End date: {}", form.getId(), termItem.getAdmissionTerm().getEndDate());
+            if (termItem.getAdmissionTerm().getEndDate().isBefore(today)) {
                 reject(form, "Hạn nộp hồ sơ đã kết thúc: " + termItem.getAdmissionTerm().getEndDate().toLocalDate());
                 continue;
             }
-            log.info("Form {} passed deadline check", form.getId());
 
-            // 2) Kiểm tra tuổi (3-5 tuổi)
+            // 2) Kiểm tra tuổi (tính theo ngày bắt đầu term)
             LocalDate dob = form.getStudent().getDateOfBirth();
-            int age = calculateAge(dob);
-            log.info("Student age check - DOB: {}, Current Age: {}", dob, age);
+            int ageAtStart = Period.between(dob, termStartDateLocal).getYears();
 
-            if (!isAgeValidForGrade(dob, form.getTermItem().getGrade())) {
+            if (!isAgeValidForGrade(dob, form.getTermItem().getGrade(), termStartDateLocal)) {
                 String reason = String.format(
-                        "Tuổi không hợp lệ: %d tuổi. Yêu cầu cho lớp %s là %d tuổi.",
-                        age, form.getTermItem().getGrade().name(), form.getTermItem().getGrade().getAge()
+                        "Tuổi không hợp lệ: %d tuổi (tính đến ngày %s). Yêu cầu cho lớp %s là %d tuổi.",
+                        ageAtStart,
+                        termStartDate,
+                        form.getTermItem().getGrade().name(),
+                        form.getTermItem().getGrade().getAge()
                 );
-                log.warn("Form {} rejected - Invalid age: {}", form.getId(), age);
                 reject(form, reason);
                 continue;
             }
-            log.info("Form {} passed age validation", form.getId());
 
             // 3) Kiểm tra sức chứa của lớp
             if (!canAcceptMoreStudents(termItem)) {
@@ -75,71 +72,51 @@ public class AutoAdmissionApprovalScheduler {
                         "Lớp '%s' đã đủ số lượng học sinh (%d/%d).",
                         termItem.getGrade().getName(), termItem.getCurrentRegisteredStudents(), termItem.getMaxNumberRegistration()
                 );
-                log.warn("Form {} rejected - Class is full.", form.getId());
                 reject(form, reason);
                 continue;
             }
-            log.info("Form {} passed class capacity check", form.getId());
-
 
             try {
                 // 4) Duyệt và chuyển sang chờ thanh toán
-                log.info("Starting approval process for Form {}", form.getId());
 
-                // Save new student if needed (should be done before updating term item to ensure student ID exists)
                 if (form.getStudent().getId() == null) {
-                    log.info("Saving new student for Form {}", form.getId());
                     studentRepo.save(form.getStudent());
-                    log.info("New student saved with ID: {}", form.getStudent().getId());
                 }
 
-                // Update form status to WAITING_PAYMENT
-                form.setStatus(Status.WAITING_PAYMENT); // Changed to WAITING_PAYMENT
+                form.setStatus(Status.WAITING_PAYMENT);
                 form.setPaymentExpiryDate(LocalDateTime.now().plusDays(2));
-                log.info("Set form {} status to WAITING_PAYMENT with payment expiry: {}", form.getId(), form.getPaymentExpiryDate());
 
-                // Update term item (increment registered students)
                 int oldCount = termItem.getCurrentRegisteredStudents();
                 termItem.setCurrentRegisteredStudents(oldCount + 1);
                 termItemRepo.save(termItem);
-                log.info("Updated term item {} registered students count: {} -> {}",
-                        termItem.getId(), oldCount, termItem.getCurrentRegisteredStudents());
 
-                // Save form
                 admissionFormRepo.save(form);
-                log.info("Successfully saved form {} with updated status", form.getId());
 
-                // Gửi mail thông báo chờ thanh toán
                 try {
                     String subject = "[PES] Hồ sơ nhập học đã được duyệt - Chờ thanh toán";
                     String heading = "✅ Hồ sơ nhập học đã được duyệt - Chờ thanh toán";
-                    String bodyHtml = Format.getAdmissionApprovedBody(form.getStudent().getName()); // Bạn có thể tùy chỉnh hàm này để phù hợp với trạng thái chờ thanh toán
+                    String bodyHtml = Format.getAdmissionApprovedBody(form.getStudent().getName());
                     mailService.sendMail(
                             form.getParent().getAccount().getEmail(),
                             subject,
                             heading,
                             bodyHtml
                     );
-                    log.info("Successfully sent approval/waiting payment email for Form {}", form.getId());
                 } catch (Exception e) {
                     log.error("Failed to send approval/waiting payment email for Form {}: {}", form.getId(), e.getMessage());
-                    // Consider throwing a custom exception here if email sending is critical
                 }
             } catch (Exception e) {
                 log.error("Error processing Form {}: {}", form.getId(), e.getMessage(), e);
-                throw e; // Re-throw to trigger transaction rollback
+                throw e;
             }
         }
-        log.info("Completed auto-approval process");
     }
 
     private void reject(AdmissionForm form, String reason) {
         try {
-            log.info("Rejecting Form {} with reason: {}", form.getId(), reason);
             form.setStatus(Status.REJECTED);
             form.setCancelReason(reason);
             admissionFormRepo.save(form);
-            log.info("Successfully saved rejected form {}", form.getId());
 
             String subject = "[PES] Hồ sơ nhập học bị từ chối";
             String heading = "❌ Hồ sơ nhập học bị từ chối";
@@ -150,22 +127,15 @@ public class AutoAdmissionApprovalScheduler {
                     heading,
                     bodyHtml
             );
-            log.info("Successfully sent rejection email for Form {}", form.getId());
         } catch (Exception e) {
             log.error("Error rejecting Form {}: {}", form.getId(), e.getMessage(), e);
-            throw e; // Re-throw to trigger transaction rollback
+            throw e;
         }
     }
 
-    private static int calculateAge(LocalDate dob) {
-        return (int) ChronoUnit.YEARS.between(dob, LocalDate.now());
-    }
-
-    // This method assumes Grade enum has a getAge() method returning the expected age for that grade.
-    private static boolean isAgeValidForGrade(LocalDate dob, Grade grade) {
-        int age = calculateAge(dob);
-        // Example: Grade.KINDERGARTEN_3_YEARS.getAge() returns 3
-        return age == grade.getAge(); // Simplified based on assumption
+    private static boolean isAgeValidForGrade(LocalDate dob, Grade grade, LocalDate termStartDate) {
+        int ageAtStart = Period.between(dob, termStartDate).getYears();
+        return ageAtStart == grade.getAge();
     }
 
     private boolean canAcceptMoreStudents(TermItem termItem) {
