@@ -3,6 +3,7 @@ package com.swd392.group1.pes.models;
 import com.swd392.group1.pes.enums.Status;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
+import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -24,6 +25,7 @@ import lombok.ToString;
 import lombok.experimental.FieldDefaults;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Data
 @NoArgsConstructor
@@ -42,7 +44,13 @@ public class AdmissionForm {
     String cancelReason;
 
     @Column(name = "`submitted_date`")
-    LocalDate submittedDate;
+    LocalDateTime submittedDate;
+
+    @Column(name = "`approved_date`")
+    LocalDateTime approvedDate; // Thời gian form được Admission Manager duyệt
+
+    @Column(name = "`payment_expiry_date`")
+    LocalDateTime paymentExpiryDate; // Thời gian hết hạn để phụ huynh thanh toán
 
     @Column(name = "`household_registration_address`")
     String householdRegistrationAddress;
@@ -74,5 +82,4 @@ public class AdmissionForm {
     @EqualsAndHashCode.Exclude
     @ToString.Exclude
     Transaction transaction;
-
 }

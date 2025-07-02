@@ -47,13 +47,15 @@ public class AdmissionTerm {
     @Column(name = "`end_date`")
     LocalDateTime endDate;
 
-    Integer year;
+    int year;
 
     @Enumerated(EnumType.STRING)
     Status status;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "parent_term_id")
+    @EqualsAndHashCode.Exclude
+    @ToString.Exclude
     AdmissionTerm parentTerm;
 
     @OneToMany(mappedBy = "admissionTerm", fetch = FetchType.LAZY, cascade = CascadeType.ALL)

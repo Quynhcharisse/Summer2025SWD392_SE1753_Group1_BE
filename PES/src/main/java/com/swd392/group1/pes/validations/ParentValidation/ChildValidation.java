@@ -40,17 +40,14 @@ public class ChildValidation {
             return "Place of birth must be less than 100 characters.";
         }
 
-        // Không được để trống
         if (request.getProfileImage() == null || request.getProfileImage().isEmpty()) {
             return "Profile image is required.";
         }
 
-        // Không được để trống
         if (request.getHouseholdRegistrationImg() == null || request.getHouseholdRegistrationImg().isEmpty()) {
             return "Household registration image is required.";
         }
 
-        // Không được để trống
         if (request.getBirthCertificateImg() == null || request.getBirthCertificateImg().isEmpty()) {
             return "Birth certificate image is required.";
         }

@@ -10,14 +10,12 @@ import java.util.regex.Pattern;
 
 public class ForgotPasswordValidation {
     public static String validate(ForgotPasswordRequest request, AccountRepo accountRepo) {
-        // Email required
         if (request.getEmail() == null || request.getEmail().trim().isEmpty()) {
             return "Email is required.";
         }
 
         Account acc = accountRepo.findByEmailAndStatus(request.getEmail(), Status.ACCOUNT_ACTIVE.getValue()).orElse(null);
 
-        // Account must exist and be active
         if (acc == null) {
             return "No active account found with this email.";
         }
@@ -26,12 +24,10 @@ public class ForgotPasswordValidation {
     }
 
     public static String reset(ResetPassRequest request) {
-        // Password required
         if (request.getNewPassword() == null || request.getNewPassword().trim().isEmpty()) {
             return "Password is required.";
         }
 
-        //Password hop le
         if (request.getNewPassword().length() < 8) {
             return "Password must be at least 8 characters";
         }
@@ -54,12 +50,10 @@ public class ForgotPasswordValidation {
             return "Password must contain at least one special character.";
         }
 
-        // Confirm password required
         if (request.getConfirmPassword() == null || request.getConfirmPassword().trim().isEmpty()) {
             return "Confirm password is required.";
         }
 
-        // Confirm password matches
         if (!request.getConfirmPassword().equals(request.getNewPassword())) {
             return "Confirm password does not match password.";
         }
