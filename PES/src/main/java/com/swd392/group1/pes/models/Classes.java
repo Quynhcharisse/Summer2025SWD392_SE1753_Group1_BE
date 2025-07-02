@@ -45,8 +45,6 @@ public class Classes {
     @Column(name = "`number_student`")
     int numberStudent;
 
-    @Column(name = "`room_number`")
-    String roomNumber;
 
     @Column(name = "`start_date`")
     LocalDate startDate;

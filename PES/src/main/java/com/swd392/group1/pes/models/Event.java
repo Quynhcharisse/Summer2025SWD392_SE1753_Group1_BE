@@ -45,7 +45,7 @@ public class Event {
 
     String location;
 
-    @Column( length = 1000, nullable = false)
+    @Column( length = 5000, nullable = false)
     String description;
 
     @Column(name = "`created_at`")

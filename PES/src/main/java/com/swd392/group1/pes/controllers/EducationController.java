@@ -72,6 +72,24 @@ public class EducationController {
         return educationService.deleteClassById(classId);
     }
 
+    @GetMapping("/class/listByGradeAndYear")
+    @PreAuthorize("hasRole('education')")
+    public ResponseEntity<ResponseObject> viewAllClassesByYearAndGrade (@RequestParam String year, @RequestParam String grade){
+        return educationService.viewAllClassesByYearAndGrade(year, grade);
+    }
+
+    @GetMapping("/class/schedule/list")
+    @PreAuthorize("hasAnyRole('education', 'parent', 'teacher')")
+    public ResponseEntity<ResponseObject> getSchedulesByClassId(@RequestParam String classId){
+        return educationService.getSchedulesByClassId(classId);
+    }
+
+    @GetMapping("/schedule/activity/list")
+    @PreAuthorize("hasAnyRole('education', 'parent', 'teacher')")
+    public ResponseEntity<ResponseObject> getActivitiesByScheduleId(@RequestParam String scheduleId){
+        return educationService.getActivitiesByScheduleId(scheduleId);
+    }
+
     @PutMapping("/syllabus/assign/lessons")
     @PreAuthorize("hasRole('education')")
     public ResponseEntity<ResponseObject> assignLessons(@RequestParam String id, @RequestBody AssignLessonsRequest request) {
@@ -141,7 +159,7 @@ public class EducationController {
 
     @PutMapping("/event/cancel")
     @PreAuthorize("hasRole('education')")
-    public ResponseEntity<ResponseObject> cancelEvent(@RequestParam String id, CancelEventRequest cancelEventRequest) {
+    public ResponseEntity<ResponseObject> cancelEvent(@RequestParam String id, @RequestBody CancelEventRequest cancelEventRequest) {
         return educationService.cancelEvent(id, cancelEventRequest);
     }
 
@@ -149,6 +167,12 @@ public class EducationController {
     @PreAuthorize("hasRole('education')")
     public ResponseEntity<ResponseObject> viewAssignedTeachersOfEvent(@RequestParam String id) {
         return educationService.viewAssignedTeachersOfEvent(id);
+    }
+
+    @GetMapping("/numberOfAvailableStudents")
+    @PreAuthorize("hasRole('education')")
+    public ResponseEntity<ResponseObject> viewNumberOfStudentsNotAssignToAnyClassByYearAdnGrade(@RequestParam String year, @RequestParam String grade){
+        return educationService.viewNumberOfStudentsNotAssignToAnyClassByYearAdnGrade(year, grade);
     }
 
 }

@@ -18,6 +18,9 @@ public interface EducationService {
     ResponseEntity<ResponseObject> viewAllSyllabus();
     ResponseEntity<ResponseObject> generateClassesAuto(GenerateClassesRequest request);
     ResponseEntity<ResponseObject> deleteClassById(String id);
+    ResponseEntity<ResponseObject> viewAllClassesByYearAndGrade(String year, String grade);
+    ResponseEntity<ResponseObject> getSchedulesByClassId(String classId);
+    ResponseEntity<ResponseObject> getActivitiesByScheduleId(String scheduleId);
     ResponseEntity<ResponseObject> assignLessonsToSyllabus(String id, AssignLessonsRequest request);
     ResponseEntity<ResponseObject> viewAssignedSyllabuses(String id);
     ResponseEntity<ResponseObject> viewLessonDetail(String id);
@@ -33,4 +36,6 @@ public interface EducationService {
     ResponseEntity<ResponseObject> viewAssignedTeachersOfEvent(String id);
     ResponseEntity<ResponseObject> viewActiveEvents();
     ResponseEntity<ResponseObject> viewAllSyllabusesByGrade(String gradeName);
+    ResponseEntity<ResponseObject> viewNumberOfStudentsNotAssignToAnyClassByYearAdnGrade(String year, String grade);
+    ResponseEntity<ResponseObject> assignActivitiesToSchedule(String scheduleId);
 }

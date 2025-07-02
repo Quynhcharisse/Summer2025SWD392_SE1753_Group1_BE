@@ -190,4 +190,17 @@ public class Format {
                 + "<p>Sincerely,<br/>The School Administration</p>";
     }
 
+    public static String getAssignClassSuccessfulForTeacherBody(
+            String teacherName, String className, String startDateStr
+    ) {
+        return String.format(
+                "Dear %s,\n\n" +
+                        "Congratulations! You have been assigned as the homeroom teacher for class %s.\n" +
+                        "The class will officially start on %s.\n\n" +
+                        "Please check your teacher portal for more details about your class schedule and student list.\n\n" +
+                        "Best regards,\n" +
+                        "School Administration"
+                , teacherName, className, startDateStr
+        );
+    }
 }
