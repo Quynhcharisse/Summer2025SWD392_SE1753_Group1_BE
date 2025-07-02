@@ -53,6 +53,9 @@ public class TermItem {
     @Column(name = "`expected_classes`")
     Integer expectedClasses; // Số lớp dự kiến
 
+    @Column(name = "`current_registered_students`")
+    Integer currentRegisteredStudents; //Đảm bảo có trường này, khởi tạo là 0
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "`term_id`")
     AdmissionTerm admissionTerm;

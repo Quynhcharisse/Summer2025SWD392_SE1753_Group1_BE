@@ -4,7 +4,6 @@ import com.swd392.group1.pes.requests.UpdateProfileRequest;
 
 public class UpdateProfileValidation {
     public static String validate(UpdateProfileRequest request) {
-        // Name validation
         if (request.getName() == null || request.getName().isEmpty()) {
             return "Name is required.";
         }
@@ -16,7 +15,6 @@ public class UpdateProfileValidation {
             return "Name must be between 2 and 50 characters.";
         }
 
-        // Phone validation
         if (request.getPhone() == null || request.getPhone().trim().isEmpty()) {
             return "Phone number is required.";
         }
@@ -24,7 +22,6 @@ public class UpdateProfileValidation {
             return "Phone number must start with a valid region prefix and be 10 digits.";
         }
 
-        // Gender validation
         if (request.getGender() == null || request.getGender().trim().isEmpty()) {
             return "Gender is required.";
         }

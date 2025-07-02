@@ -21,6 +21,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -151,7 +152,7 @@ public class HRServiceImpl implements HRService {
                         .gender(request.getGender())
                         .status(Status.ACCOUNT_ACTIVE.getValue())
                         .role(Role.TEACHER)
-                        .createdAt(LocalDate.now())
+                        .createdAt(LocalDateTime.now())
                         .build()
         );
 

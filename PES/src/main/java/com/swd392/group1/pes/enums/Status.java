@@ -15,7 +15,9 @@ public enum Status {
     PENDING_APPROVAL("pending approval"),
     CANCELLED("cancelled"),
     APPROVED("approved"),
+    WAITING_PAYMENT("waiting payment"), // Đã duyệt và chờ thanh toán
     REJECTED("rejected"),
+    APPROVED_PAID("approved paid"), // Đã duyệt và đã thanh toán
 
     EVENT_REGISTRATION_ACTIVE("active"),
     EVENT_REGISTRATION_CLOSED("closed"),

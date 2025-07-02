@@ -58,7 +58,7 @@ public class Account implements UserDetails {
     String status;
 
     @Column(name = "`created_at`")
-    LocalDate createdAt;
+    LocalDateTime createdAt;
 
     String name;
 
@@ -82,7 +82,7 @@ public class Account implements UserDetails {
     @ToString.Exclude
     transient List<TeacherEvent> teacherEventList;
 
-    @OneToOne(mappedBy = "account", fetch = FetchType.LAZY)
+    @OneToOne(mappedBy = "account", fetch = FetchType.EAGER)
     @EqualsAndHashCode.Exclude
     @ToString.Exclude
     Parent parent;
