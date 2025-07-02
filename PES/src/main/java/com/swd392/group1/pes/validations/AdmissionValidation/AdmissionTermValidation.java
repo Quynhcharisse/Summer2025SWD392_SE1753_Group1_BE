@@ -27,6 +27,12 @@ public class AdmissionTermValidation {
             return "Start date must be in the future";
         }
 
+        if (request.getStartDate().getYear() != request.getEndDate().getYear()) {
+            return "Start date and end date must be in the same year";
+        }
+
+        System.out.println(request.getStartDate().isBefore(LocalDateTime.now()));
+
         //trong 1 term phai it nhat 1 grade trong create term do
         if(request.getTermItemList() == null || request.getTermItemList().isEmpty()) {
             return "At least one grade must be included in the term.";
@@ -50,12 +56,6 @@ public class AdmissionTermValidation {
             if (!grades.add(termItem.getGrade())) {
                 return "Duplicate grade found: " + termItem.getGrade();
             }
-        }
-
-        //ko trùng tg (1 năm chỉ có 1 term được diễn ra)
-        int year = request.getStartDate().getYear();
-        if(admissionTermRepo.findByYear(year).isPresent()) {
-            return "Admission Term for the year " + year  + " already exists. Only one term can be created per year.";
         }
         return "";
     }

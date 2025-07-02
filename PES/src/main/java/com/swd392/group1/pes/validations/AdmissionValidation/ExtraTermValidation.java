@@ -19,15 +19,6 @@ public class ExtraTermValidation {
             return "Only locked terms can have extra requests.";
         }
 
-        // ko tạo nếu chưa form nào đc duyệt
-        boolean hasApproved = parentTerm.getTermItemList().stream()
-                .anyMatch(item -> item.getAdmissionFormList().stream()
-                        .anyMatch(form -> form.getStatus().equals(Status.APPROVED)));
-
-        if (!hasApproved) {
-            return "Cannot create extra term: No approved admission forms in parent term.";
-        }
-
         if (request.getStartDate() == null || request.getEndDate() == null) {
             return "Start date and end date are required.";
         }

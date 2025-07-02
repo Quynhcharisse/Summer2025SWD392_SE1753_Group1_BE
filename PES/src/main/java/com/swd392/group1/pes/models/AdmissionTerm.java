@@ -47,7 +47,7 @@ public class AdmissionTerm {
     @Column(name = "`end_date`")
     LocalDateTime endDate;
 
-    Integer year;
+    int year;
 
     @Enumerated(EnumType.STRING)
     Status status;

@@ -1,6 +1,7 @@
 package com.swd392.group1.pes.services.implementors;
 
 import com.swd392.group1.pes.email.Format;
+import com.swd392.group1.pes.enums.Grade;
 import com.swd392.group1.pes.enums.Role;
 import com.swd392.group1.pes.enums.Status;
 import com.swd392.group1.pes.models.Account;
@@ -64,6 +65,8 @@ import java.util.TimeZone;
 import java.util.TreeMap;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+
+import static com.swd392.group1.pes.validations.ParentValidation.SubmittedAdmissionFormValidation.calculateAge;
 
 @Service
 @RequiredArgsConstructor
@@ -163,7 +166,7 @@ public class ParentServiceImpl implements ParentService {
         data.put("submittedDate", form.getSubmittedDate());
         data.put("cancelReason", form.getCancelReason());
         data.put("note", form.getNote());
-        data.put("status", form.getStatus());
+        data.put("status", form.getStatus().getValue());
         return data;
     }
 
@@ -206,17 +209,9 @@ public class ParentServiceImpl implements ParentService {
             );
         }
 
-        //Tim ky item term trong ki tuyen sinh ACTIVE
-        TermItem activeTermItem = termItemRepo.findById(request.getTermItemId()).orElse(null);
-        if (activeTermItem == null) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
-                    ResponseObject.builder()
-                            .message(error)
-                            .success(false)
-                            .data(null)
-                            .build()
-            );
-        }
+        Grade grade = calculateAge(student.getDateOfBirth()) == 3 ? Grade.SEED : (calculateAge(student.getDateOfBirth()) == 4 ? Grade.BUD : Grade.LEAF);
+        List<TermItem> activeTermItemList = termItemRepo.findAllByGradeAndStatusAndAdmissionTerm_Year(grade, Status.ACTIVE_TERM_ITEM, LocalDate.now().getYear());
+        TermItem activeTermItem = activeTermItemList.get(0);
 
         // **LOẠI BỎ LOGIC KIỂM TRA FORM ĐÃ NỘP Ở ĐÂY!**
         // Logic này đã được chuyển hoàn toàn vào SubmittedAdmissionFormValidation.validate()

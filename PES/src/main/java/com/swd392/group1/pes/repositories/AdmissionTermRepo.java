@@ -4,14 +4,11 @@ import com.swd392.group1.pes.models.AdmissionTerm;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
-import java.util.Optional;
 
 public interface AdmissionTermRepo extends JpaRepository<AdmissionTerm, Integer> {
     List<AdmissionTerm> findAllByParentTerm_Id(int parentTermId);
 
     List<AdmissionTerm> findAllByParentTermIsNull();
-
-    Optional<AdmissionTerm> findByYear(int year);
 
     List<AdmissionTerm> findAllByYear(Integer year);
 }

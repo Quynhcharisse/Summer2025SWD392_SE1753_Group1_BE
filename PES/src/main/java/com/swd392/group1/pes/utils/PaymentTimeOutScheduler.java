@@ -32,8 +32,8 @@ public class PaymentTimeOutScheduler {
         log.info("Running scheduled task: Checking expired payment forms at {}", LocalDateTime.now());
 
         //Tìm tất cả các form có status APPROVED_WAITING_PAYMENT và đã hết hạn
-        List<AdmissionForm> formsToProcess = admissionFormRepo.findByStatusAndPaymentExpiryDate(
-                Status.APPROVED,
+        List<AdmissionForm> formsToProcess = admissionFormRepo.findByStatusAndPaymentExpiryDateLessThanEqual(
+                Status.WAITING_PAYMENT,
                 LocalDateTime.now()
         );
 

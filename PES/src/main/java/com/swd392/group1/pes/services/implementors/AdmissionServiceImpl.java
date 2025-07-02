@@ -30,6 +30,8 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
@@ -65,8 +67,8 @@ public class AdmissionServiceImpl implements AdmissionService {
         AdmissionTerm term = admissionTermRepo.save(
                 AdmissionTerm.builder()
                         .name(name)
-                        .startDate(request.getStartDate())
-                        .endDate(request.getEndDate())
+                        .startDate((request.getStartDate().atZone(ZoneOffset.UTC).withZoneSameInstant(ZoneId.of("Asia/Ho_Chi_Minh"))).toLocalDateTime())
+                        .endDate((request.getEndDate().atZone(ZoneOffset.UTC).withZoneSameInstant(ZoneId.of("Asia/Ho_Chi_Minh"))).toLocalDateTime())
                         .year(LocalDateTime.now().getYear())
                         .status(Status.INACTIVE_TERM)
                         .build()
@@ -155,10 +157,6 @@ public class AdmissionServiceImpl implements AdmissionService {
         return StudentPerClass.MAX.getValue() * expectedClasses;
     }
 
-    private boolean datesOverlap(LocalDateTime start1, LocalDateTime end1, LocalDateTime start2, LocalDateTime end2) {
-        return !(end1.isBefore(start2) || start1.isAfter(end2));
-    }
-
     @Override
     public ResponseEntity<ResponseObject> getDefaultFeeByGrade(String grade) {
         try {
@@ -239,6 +237,7 @@ public class AdmissionServiceImpl implements AdmissionService {
                             data.put("startDate", term.getStartDate());
                             data.put("endDate", term.getEndDate());
                             data.put("year", term.getYear() + "-" + (term.getYear() + 1));
+                            data.put("status", term.getStatus().getValue());
                             data.put("termItemList", viewTermItemList(term));
 
                             //gọi lai extra term
@@ -416,7 +415,7 @@ public class AdmissionServiceImpl implements AdmissionService {
                             data.put("submittedDate", form.getSubmittedDate());
                             data.put("cancelReason", form.getCancelReason());
                             data.put("note", form.getNote());
-                            data.put("status", form.getStatus());
+                            data.put("status", form.getStatus().getValue());
                             return data;
                         }
                 )

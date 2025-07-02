@@ -19,7 +19,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.Period;
-import java.time.temporal.ChronoUnit;
 import java.util.List;
 
 @Component
@@ -33,10 +32,10 @@ public class AutoProcessFormScheduler {
     private final AdmissionTermRepo admissionTermRepo;
     private final MailService mailService;
 
-    @Scheduled(fixedDelay = 10000)
+    @Scheduled(fixedDelay = 1000)
     @Transactional(rollbackFor = Exception.class)
     public void autoApprovePendingForms() {
-        List<AdmissionForm> pendingForms = admissionFormRepo.findByStatus(Status.PENDING_APPROVAL);
+        List<AdmissionForm> pendingForms = admissionFormRepo.findByStatus(Status.APPROVED);
         LocalDateTime today = LocalDateTime.now();
 
         for (AdmissionForm form : pendingForms) {
@@ -82,6 +81,7 @@ public class AutoProcessFormScheduler {
                 if (form.getStudent().getId() == null) {
                     studentRepo.save(form.getStudent());
                 }
+
 
                 form.setStatus(Status.WAITING_PAYMENT);
                 form.setPaymentExpiryDate(LocalDateTime.now().plusDays(2));

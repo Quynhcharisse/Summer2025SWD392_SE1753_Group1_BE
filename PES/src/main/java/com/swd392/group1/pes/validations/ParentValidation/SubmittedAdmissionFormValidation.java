@@ -1,5 +1,6 @@
 package com.swd392.group1.pes.validations.ParentValidation;
 
+import com.swd392.group1.pes.enums.Grade;
 import com.swd392.group1.pes.enums.Status;
 import com.swd392.group1.pes.models.AdmissionForm;
 import com.swd392.group1.pes.models.Student;
@@ -25,10 +26,14 @@ public class SubmittedAdmissionFormValidation {
             return "Student's age (" + calculateAge(student.getDateOfBirth()) + " years) does not meet the required age for admission (3-5 years).";
         }
 
-        TermItem activeTermItem = termItemRepo.findById(request.getTermItemId()).orElse(null);
-        if (activeTermItem == null) {
+        Grade grade = calculateAge(student.getDateOfBirth()) == 3 ? Grade.SEED : (calculateAge(student.getDateOfBirth()) == 4 ? Grade.BUD : Grade.LEAF);
+        List<TermItem> activeTermItemList = termItemRepo.findAllByGradeAndStatusAndAdmissionTerm_Year(grade, Status.ACTIVE_TERM_ITEM, LocalDate.now().getYear());
+        System.out.println("List ACTIVE TERM: " + activeTermItemList.size());
+        if (activeTermItemList.isEmpty()) {
             return "Active Term Item not found after successful validation. This indicates a logical error.";
         }
+
+        TermItem activeTermItem = activeTermItemList.get(0);
 
         if (!activeTermItem.getStatus().equals(Status.ACTIVE_TERM_ITEM) || activeTermItem.getAdmissionTerm() == null || !activeTermItem.getAdmissionTerm().getStatus().equals(Status.ACTIVE_TERM)) {
             return "The admission term item is not currently open for new admissions or is invalid.";
@@ -83,7 +88,7 @@ public class SubmittedAdmissionFormValidation {
         return fileName == null || fileName.trim().isEmpty() || !fileName.matches("(?i)^.+\\.(jpg|jpeg|png|gif|bmp|webp)$");
     }
 
-    private static int calculateAge(LocalDate dob) {
+    public static int calculateAge(LocalDate dob) {
         LocalDate today = LocalDate.now();
         return (int) ChronoUnit.YEARS.between(dob, today);
     }
@@ -92,5 +97,6 @@ public class SubmittedAdmissionFormValidation {
         int age = calculateAge(dob);
         return age >= 3 && age <= 5;
     }
+
 }
 
