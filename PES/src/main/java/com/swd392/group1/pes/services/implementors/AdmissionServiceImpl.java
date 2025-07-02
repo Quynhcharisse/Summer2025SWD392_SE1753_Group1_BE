@@ -30,6 +30,8 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
@@ -47,7 +49,7 @@ public class AdmissionServiceImpl implements AdmissionService {
     @Override
     public ResponseEntity<ResponseObject> createAdmissionTerm(CreateAdmissionTermRequest request) {
         // 1. Validate các field cơ bản (ngày, số lượng, grade rỗng...)
-        String error = AdmissionTermValidation.createTermValidate(request);
+        String error = AdmissionTermValidation.createTermValidate(request, admissionTermRepo);
         if (!error.isEmpty()) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
                     ResponseObject.builder()
@@ -65,8 +67,8 @@ public class AdmissionServiceImpl implements AdmissionService {
         AdmissionTerm term = admissionTermRepo.save(
                 AdmissionTerm.builder()
                         .name(name)
-                        .startDate(request.getStartDate())
-                        .endDate(request.getEndDate())
+                        .startDate((request.getStartDate().atZone(ZoneOffset.UTC).withZoneSameInstant(ZoneId.of("Asia/Ho_Chi_Minh"))).toLocalDateTime())
+                        .endDate((request.getEndDate().atZone(ZoneOffset.UTC).withZoneSameInstant(ZoneId.of("Asia/Ho_Chi_Minh"))).toLocalDateTime())
                         .year(LocalDateTime.now().getYear())
                         .status(Status.INACTIVE_TERM)
                         .build()
@@ -76,7 +78,6 @@ public class AdmissionServiceImpl implements AdmissionService {
 
 
     private ResponseEntity<ResponseObject> createTermItem(List<CreateAdmissionTermRequest.TermItem> termItemList, AdmissionTerm term) {
-
         for (CreateAdmissionTermRequest.TermItem termItem : termItemList) {
             termItemRepo.save(
                     TermItem.builder()
@@ -86,6 +87,7 @@ public class AdmissionServiceImpl implements AdmissionService {
                             .maxNumberRegistration(calculateMaxRegistration(termItem.getExpectedClasses()))
                             .admissionTerm(term)
                             .status(Status.INACTIVE_TERM_ITEM)
+                            .currentRegisteredStudents(0)
                             .build()
             );
         }
@@ -153,10 +155,6 @@ public class AdmissionServiceImpl implements AdmissionService {
 
     private int calculateMaxRegistration(int expectedClasses) {
         return StudentPerClass.MAX.getValue() * expectedClasses;
-    }
-
-    private boolean datesOverlap(LocalDateTime start1, LocalDateTime end1, LocalDateTime start2, LocalDateTime end2) {
-        return !(end1.isBefore(start2) || start1.isAfter(end2));
     }
 
     @Override
@@ -239,6 +237,7 @@ public class AdmissionServiceImpl implements AdmissionService {
                             data.put("startDate", term.getStartDate());
                             data.put("endDate", term.getEndDate());
                             data.put("year", term.getYear() + "-" + (term.getYear() + 1));
+                            data.put("status", term.getStatus().getValue());
                             data.put("termItemList", viewTermItemList(term));
 
                             //gọi lai extra term
@@ -318,6 +317,7 @@ public class AdmissionServiceImpl implements AdmissionService {
                         .build()
         );
 
+        //duyệt từng term item trong parentTerm để tạo bản sao thiếu
         for (TermItem termItem : parentTerm.getTermItemList()) {
             if (countMissingFormAmountByTermItem(termItem) > 0) { //dang missing
                 TermItem t = termItemRepo.save(TermItem.builder()
@@ -327,10 +327,17 @@ public class AdmissionServiceImpl implements AdmissionService {
                         .maxNumberRegistration(countMissingFormAmountByTermItem(termItem))
                         .admissionTerm(extraTerm)
                         .status(Status.INACTIVE_TERM_ITEM)
+                        .currentRegisteredStudents(0)
                         .build());
 
-                //
+                // tính lại expected class dựa trên số thiếu
                 t.setExpectedClasses(countExpectedClass(t, termItem));
+
+                //nếu đủ số lượng --> lock luôn
+                t.setStatus(countMissingFormAmountByTermItem(termItem) == 0
+                        ? Status.LOCKED_TERM_ITEM
+                        : Status.INACTIVE_TERM_ITEM);
+
                 termItemRepo.save(t);
             }
 
@@ -408,7 +415,7 @@ public class AdmissionServiceImpl implements AdmissionService {
                             data.put("submittedDate", form.getSubmittedDate());
                             data.put("cancelReason", form.getCancelReason());
                             data.put("note", form.getNote());
-                            data.put("status", form.getStatus());
+                            data.put("status", form.getStatus().getValue());
                             return data;
                         }
                 )
@@ -462,9 +469,15 @@ public class AdmissionServiceImpl implements AdmissionService {
         String parentEmail = form.getParent().getAccount().getEmail();
 
         if (request.isApproved()) {
+            // Cập nhật trạng thái thành APPROVED_WAITING_PAYMENT
             form.setStatus(Status.APPROVED);
-            student.setStudent(true);
-            studentRepo.save(student);
+            // Lưu thời gian duyệt form
+            form.setApprovedDate(LocalDateTime.now());
+            // Đặt thời gian hết hạn thanh toán (ví dụ: 2 ngày sau)
+            form.setPaymentExpiryDate(LocalDateTime.now().plusDays(2));
+
+            student.setStudent(true); // Đặt student là true khi form được duyệt
+            studentRepo.save(student); // Lưu thay đổi cho student
 
             String subject = "[PES] Admission Approved";
             String heading = "🎉 Admission Approved";
@@ -485,7 +498,7 @@ public class AdmissionServiceImpl implements AdmissionService {
 
         return ResponseEntity.status(HttpStatus.OK).body(
                 ResponseObject.builder()
-                        .message(request.isApproved() ? "Form Approved" : "Form Rejected")
+                        .message(request.isApproved() ? "Form Approved and awaiting payment" : "Form Rejected")
                         .success(true)
                         .data(null)
                         .build()

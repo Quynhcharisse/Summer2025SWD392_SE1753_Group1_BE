@@ -1,6 +1,7 @@
 package com.swd392.group1.pes.services.implementors;
 
 import com.swd392.group1.pes.email.Format;
+import com.swd392.group1.pes.enums.Grade;
 import com.swd392.group1.pes.enums.Role;
 import com.swd392.group1.pes.enums.Status;
 import com.swd392.group1.pes.models.Account;
@@ -65,6 +66,8 @@ import java.util.TreeMap;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import static com.swd392.group1.pes.validations.ParentValidation.SubmittedAdmissionFormValidation.calculateAge;
+
 @Service
 @RequiredArgsConstructor
 public class ParentServiceImpl implements ParentService {
@@ -84,7 +87,7 @@ public class ParentServiceImpl implements ParentService {
     private final MailService mailService;
 
     @Value("${vnpay.return.url}")
-    String vnpayIpnUrl;
+    String vnpayReturnUrl;
 
     @Value("${vnpay.hash.key}")
     String hashKey;
@@ -163,7 +166,7 @@ public class ParentServiceImpl implements ParentService {
         data.put("submittedDate", form.getSubmittedDate());
         data.put("cancelReason", form.getCancelReason());
         data.put("note", form.getNote());
-        data.put("status", form.getStatus());
+        data.put("status", form.getStatus().getValue());
         return data;
     }
 
@@ -206,17 +209,9 @@ public class ParentServiceImpl implements ParentService {
             );
         }
 
-        //Tim ky item term trong ki tuyen sinh ACTIVE
-        TermItem activeTermItem = termItemRepo.findById(request.getTermItemId()).orElse(null);
-        if (activeTermItem == null) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
-                    ResponseObject.builder()
-                            .message(error)
-                            .success(false)
-                            .data(null)
-                            .build()
-            );
-        }
+        Grade grade = calculateAge(student.getDateOfBirth()) == 3 ? Grade.SEED : (calculateAge(student.getDateOfBirth()) == 4 ? Grade.BUD : Grade.LEAF);
+        List<TermItem> activeTermItemList = termItemRepo.findAllByGradeAndStatusAndAdmissionTerm_Year(grade, Status.ACTIVE_TERM_ITEM, LocalDate.now().getYear());
+        TermItem activeTermItem = activeTermItemList.get(0);
 
         // **LOẠI BỎ LOGIC KIỂM TRA FORM ĐÃ NỘP Ở ĐÂY!**
         // Logic này đã được chuyển hoàn toàn vào SubmittedAdmissionFormValidation.validate()
@@ -230,7 +225,7 @@ public class ParentServiceImpl implements ParentService {
                 .commitmentImg(request.getCommitmentImg())
                 .childCharacteristicsFormImg(request.getChildCharacteristicsFormImg())
                 .note(request.getNote())
-                .submittedDate(LocalDate.now())
+                .submittedDate(LocalDateTime.now())
                 .status(Status.PENDING_APPROVAL)
                 .build();
 
@@ -396,7 +391,7 @@ public class ParentServiceImpl implements ParentService {
         formToUpdate.setCommitmentImg(request.getCommitmentImg());
         formToUpdate.setChildCharacteristicsFormImg(request.getChildCharacteristicsFormImg());
         formToUpdate.setNote(request.getNote());
-        formToUpdate.setSubmittedDate(LocalDate.now());
+        formToUpdate.setSubmittedDate(LocalDateTime.now());
         formToUpdate.setStatus(Status.PENDING_APPROVAL);
 
         admissionFormRepo.save(formToUpdate);
@@ -934,7 +929,7 @@ public class ParentServiceImpl implements ParentService {
         String locale = "vn";
         String orderInfo = request.getPaymentInfo();
         String orderType = "education";
-        String returnUrl = vnpayIpnUrl;
+        String returnUrl = vnpayReturnUrl;
         cld.add(Calendar.MINUTE, 10);
         String expireDate = formatter.format(cld.getTime());
 
@@ -967,7 +962,6 @@ public class ParentServiceImpl implements ParentService {
         vnpParams.put("vnp_IpAddr", ipAddr);
         vnpParams.put("vnp_CreateDate", createDate);
         vnpParams.put("vnp_ExpireDate", expireDate);
-        vnpParams.put("vnp_IpnUrl", vnpayIpnUrl);
 
         // step 2: build the hash data string
         StringBuilder hashData = new StringBuilder();

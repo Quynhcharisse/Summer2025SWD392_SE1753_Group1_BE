@@ -14,7 +14,6 @@ import lombok.experimental.FieldDefaults;
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class SubmitAdmissionFormRequest {
     int studentId;
-    int termItemId;
     String householdRegistrationAddress;
     String childCharacteristicsFormImg;
     String commitmentImg;

@@ -12,8 +12,6 @@ public class AdmissionFormValidation {
             return "Form not found";
         }
 
-        //Khi approved == false → nghĩa là đơn bị từ chối
-        //bắt buộc phải nhap reason
         if (!request.isApproved()) {
             if (request.getReason().trim().isEmpty()) {
                 return "Reject reason is required when form is rejected";

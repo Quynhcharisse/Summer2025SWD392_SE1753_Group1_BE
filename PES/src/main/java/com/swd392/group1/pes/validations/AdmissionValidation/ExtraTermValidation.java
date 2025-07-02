@@ -9,10 +9,36 @@ import java.util.List;
 
 public class ExtraTermValidation {
     public static String createExtraTerm(CreateExtraTermRequest request, AdmissionTermRepo admissionTermRepo) {
-        // 2. Kiểm tra parent term tồn tại
         AdmissionTerm parentTerm = admissionTermRepo.findById(request.getParentTermId()).orElse(null);
         if (parentTerm == null) {
             return "Parent term is required.";
+        }
+
+        // tạo extra term khi term cha bị lock
+        if (!parentTerm.getStatus().equals(Status.LOCKED_TERM)) {
+            return "Only locked terms can have extra requests.";
+        }
+
+        if (request.getStartDate() == null || request.getEndDate() == null) {
+            return "Start date and end date are required.";
+        }
+
+        if (!request.getEndDate().isAfter(request.getStartDate())) {
+            return "End date must be after start date.";
+        }
+
+        // ko cho tạo trùng tg với term ba / extra term khác cùng  năm
+        //Nếu chưa có học sinh nào được duyệt (APPROVED)
+        // tạo ExtraTerm là phi logic vì đợt chính còn chưa có kết quả
+        List<AdmissionTerm> termsSameYear = admissionTermRepo.findAllByYear(parentTerm.getYear());
+        for (AdmissionTerm existing : termsSameYear) {
+            if (existing.getId().equals(parentTerm.getId())) continue; // bỏ qua term cha
+
+            boolean overlap = !(request.getEndDate().isBefore(existing.getStartDate()) ||
+                    request.getStartDate().isAfter(existing.getEndDate()));
+            if (overlap) {
+                return "Extra term time overlaps with existing term: " + existing.getName();
+            }
         }
 
         List<AdmissionTerm> existingActiveExtraTerms = admissionTermRepo.findAllByParentTerm_Id(parentTerm.getId())
@@ -22,20 +48,6 @@ public class ExtraTermValidation {
 
         if (!existingActiveExtraTerms.isEmpty()) {
             return ("Only one active extra term can exist at a time");
-        }
-
-
-        // 3. Kiểm tra status và chỉ tiêu
-        if (!parentTerm.getStatus().equals(Status.LOCKED_TERM)) {
-            return ("Only locked terms can have extra requests");
-        }
-
-        if (request.getStartDate() == null || request.getEndDate() == null) {
-            return "Start date and end date are required.";
-        }
-
-        if (!request.getEndDate().isAfter(request.getStartDate())) {
-            return "End date must be after start date.";
         }
 
         if (request.getMaxNumberRegistration() <= 0) {

@@ -233,7 +233,7 @@ public class AuthServiceImpl implements AuthService {
         account.setIdentityNumber(request.getIdentityNumber());
         account.setRole(Role.PARENT);
         account.setStatus(Status.ACCOUNT_ACTIVE.getValue());
-        account.setCreatedAt(LocalDate.now());
+        account.setCreatedAt(LocalDateTime.now());
         account.setAddress(request.getAddress());
 
         accountRepo.save(account);
