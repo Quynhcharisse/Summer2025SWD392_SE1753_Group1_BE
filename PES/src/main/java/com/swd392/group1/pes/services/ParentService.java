@@ -3,6 +3,7 @@ package com.swd392.group1.pes.services;
 import com.swd392.group1.pes.requests.AddChildRequest;
 import com.swd392.group1.pes.requests.CancelAdmissionForm;
 import com.swd392.group1.pes.requests.GetPaymentURLRequest;
+import com.swd392.group1.pes.requests.InitiateVNPayPaymentRequest;
 import com.swd392.group1.pes.requests.RefillFormRequest;
 import com.swd392.group1.pes.requests.RegisterEventRequest;
 import com.swd392.group1.pes.requests.SubmitAdmissionFormRequest;
@@ -15,8 +16,6 @@ public interface ParentService {
     ResponseEntity<ResponseObject> viewAdmissionFormList(HttpServletRequest request);
 
     ResponseEntity<ResponseObject> submitAdmissionForm(SubmitAdmissionFormRequest request, HttpServletRequest httpRequest);
-
-    ResponseEntity<ResponseObject> viewRefillFormList(HttpServletRequest request);
 
     ResponseEntity<ResponseObject> refillForm(RefillFormRequest request, HttpServletRequest httpRequest);
 
@@ -34,5 +33,5 @@ public interface ParentService {
 
     ResponseEntity<ResponseObject> getPaymentURL(GetPaymentURLRequest request, HttpServletRequest httpRequest);
 
-    ResponseEntity<ResponseObject> initiateVNPayPayment (GetPaymentURLRequest request, HttpServletRequest httpRequest);
+    ResponseEntity<ResponseObject> initiateVNPayPayment (InitiateVNPayPaymentRequest request, HttpServletRequest httpRequest);
 }

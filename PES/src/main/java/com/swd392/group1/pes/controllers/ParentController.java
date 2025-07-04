@@ -3,6 +3,7 @@ package com.swd392.group1.pes.controllers;
 import com.swd392.group1.pes.requests.AddChildRequest;
 import com.swd392.group1.pes.requests.CancelAdmissionForm;
 import com.swd392.group1.pes.requests.GetPaymentURLRequest;
+import com.swd392.group1.pes.requests.InitiateVNPayPaymentRequest;
 import com.swd392.group1.pes.requests.RefillFormRequest;
 import com.swd392.group1.pes.requests.RegisterEventRequest;
 import com.swd392.group1.pes.requests.SubmitAdmissionFormRequest;
@@ -37,12 +38,6 @@ public class ParentController {
     @PreAuthorize("hasRole('parent')")
     public ResponseEntity<ResponseObject> submitAdmissionForm(@RequestBody SubmitAdmissionFormRequest request, HttpServletRequest httpRequest) {
         return parentService.submitAdmissionForm(request, httpRequest);
-    }
-
-    @GetMapping("/form/refill/list")
-    @PreAuthorize("hasRole('parent')")
-    public ResponseEntity<ResponseObject> viewRefillFormList(HttpServletRequest request) {
-        return parentService.viewRefillFormList(request);
     }
 
     @PostMapping("/form/refill")
@@ -96,7 +91,7 @@ public class ParentController {
 
     @PostMapping("/payment/initiate")
     @PreAuthorize("hasRole('parent')") // Thêm dòng này nếu bạn có Spring Security và muốn giới hạn quyền truy cập
-    public ResponseEntity<ResponseObject> initiatePayment(@RequestBody GetPaymentURLRequest request, HttpServletRequest httpRequest) {
+    public ResponseEntity<ResponseObject> initiateVNPayPayment(@RequestBody InitiateVNPayPaymentRequest request, HttpServletRequest httpRequest) {
         return parentService.initiateVNPayPayment(request, httpRequest);
     }
 }

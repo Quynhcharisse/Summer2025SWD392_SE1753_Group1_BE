@@ -12,6 +12,7 @@ public enum Status {
     ACCOUNT_UNBAN("unban"),
 
     DRAFT("draft"),
+    REFILLED("refilled"),
     PENDING_APPROVAL("pending approval"),
     CANCELLED("cancelled"),
     APPROVED("approved"),
@@ -27,9 +28,9 @@ public enum Status {
     INACTIVE_TERM("inactive"), // chưa đến ngày
     LOCKED_TERM("locked"),
 
-    ACTIVE_TERM_ITEM("active"), // trong khoảng ngày cho phép
-    INACTIVE_TERM_ITEM("inactive"), //
-    LOCKED_TERM_ITEM("locked"), //
+    ACTIVE_TERM_ITEM("active term item"), // trong khoảng ngày cho phép
+    INACTIVE_TERM_ITEM("inactive term item"), //
+    LOCKED_TERM_ITEM("locked term item"), //
 
     // Giao dịch đang chờ xử lý / chờ thanh toán
     TRANSACTION_PENDING("pending"),

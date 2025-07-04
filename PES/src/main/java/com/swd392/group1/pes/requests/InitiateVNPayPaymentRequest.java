@@ -12,6 +12,8 @@ import lombok.experimental.FieldDefaults;
 @AllArgsConstructor
 @Builder
 @FieldDefaults(level = AccessLevel.PRIVATE)
-public class GetPaymentURLRequest {
+public class InitiateVNPayPaymentRequest {
     int formId;
+    String description;
+    String transactionInfo;
 }

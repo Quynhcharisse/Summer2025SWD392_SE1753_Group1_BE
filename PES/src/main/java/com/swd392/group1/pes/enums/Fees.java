@@ -11,9 +11,9 @@ public enum Fees {
     BUD(110000, 1000000, 100000, 110000, 110000),
     LEAF(120000, 1200000, 120000, 120000, 120000);
 
-    private final double learningMaterial;
-    private final double reservation;
-    private final double service;
-    private final double uniform;
-    private final double facility;
+    private final long learningMaterial;
+    private final long reservation;
+    private final long service;
+    private final long uniform;
+    private final long facility;
 }

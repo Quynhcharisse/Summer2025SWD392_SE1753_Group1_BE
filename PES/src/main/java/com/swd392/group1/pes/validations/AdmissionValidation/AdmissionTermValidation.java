@@ -31,7 +31,10 @@ public class AdmissionTermValidation {
             return "Start date and end date must be in the same year";
         }
 
-        System.out.println(request.getStartDate().isBefore(LocalDateTime.now()));
+        int year = request.getStartDate().getYear();
+        if (admissionTermRepo.existsByYear(year)) {
+            return "Admission term for year " + year + " already exists.";
+        }
 
         //trong 1 term phai it nhat 1 grade trong create term do
         if(request.getTermItemList() == null || request.getTermItemList().isEmpty()) {
