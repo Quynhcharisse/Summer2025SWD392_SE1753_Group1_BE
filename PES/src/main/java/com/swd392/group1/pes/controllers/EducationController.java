@@ -175,4 +175,9 @@ public class EducationController {
         return educationService.viewNumberOfStudentsNotAssignToAnyClassByYearAdnGrade(year, grade);
     }
 
+    @GetMapping("/assignedStudentOfClass/list")
+    @PreAuthorize("hasRole('education')")
+    public ResponseEntity<ResponseObject> viewAssignedStudentsOfClass(@RequestParam String classId){
+        return educationService.viewAssignedStudentsOfClass(classId);
+    }
 }

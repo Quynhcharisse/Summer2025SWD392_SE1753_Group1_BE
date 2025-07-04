@@ -1,6 +1,7 @@
 package com.swd392.group1.pes.services.implementors;
 
 import com.swd392.group1.pes.email.Format;
+import com.swd392.group1.pes.enums.Fees;
 import com.swd392.group1.pes.enums.Grade;
 import com.swd392.group1.pes.enums.Role;
 import com.swd392.group1.pes.enums.Status;
@@ -22,6 +23,7 @@ import com.swd392.group1.pes.repositories.TransactionRepo;
 import com.swd392.group1.pes.requests.AddChildRequest;
 import com.swd392.group1.pes.requests.CancelAdmissionForm;
 import com.swd392.group1.pes.requests.GetPaymentURLRequest;
+import com.swd392.group1.pes.requests.InitiateVNPayPaymentRequest;
 import com.swd392.group1.pes.requests.RefillFormRequest;
 import com.swd392.group1.pes.requests.RegisterEventRequest;
 import com.swd392.group1.pes.requests.SubmitAdmissionFormRequest;
@@ -33,7 +35,6 @@ import com.swd392.group1.pes.services.ParentService;
 import com.swd392.group1.pes.validations.EducationValidation.EventValidation;
 import com.swd392.group1.pes.validations.ParentValidation.ChildValidation;
 import com.swd392.group1.pes.validations.ParentValidation.EditAdmissionFormValidation;
-import com.swd392.group1.pes.validations.ParentValidation.RefillFormValidation;
 import com.swd392.group1.pes.validations.ParentValidation.SubmittedAdmissionFormValidation;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
@@ -41,6 +42,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import java.net.URLEncoder;
@@ -51,7 +53,6 @@ import java.time.LocalDateTime;
 import java.time.Period;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Comparator;
 import java.util.Date;
@@ -118,6 +119,7 @@ public class ParentServiceImpl implements ParentService {
                 .map(this::getFormDetail)
                 .toList();
 
+
         List<Map<String, Object>> studentList = studentRepo.findAllByParent_Id(account.getParent().getId()).stream()
                 .map(student -> {
                     Map<String, Object> studentDetail = new HashMap<>();
@@ -131,6 +133,7 @@ public class ParentServiceImpl implements ParentService {
                     studentDetail.put("birthCertificateImg", student.getBirthCertificateImg());
                     studentDetail.put("isStudent", student.isStudent());
                     studentDetail.put("hadForm", !student.getAdmissionFormList().isEmpty());//trong từng học sinh check đã tạo form chưa
+
                     return studentDetail;
                 })
                 .toList();
@@ -149,6 +152,19 @@ public class ParentServiceImpl implements ParentService {
         );
     }
 
+    private long sumFee(Grade grade) {
+        if (grade.equals(Grade.SEED)) {
+            Fees fee = Fees.SEED;
+            return fee.getLearningMaterial() + fee.getReservation() + fee.getService() + fee.getUniform() + fee.getFacility();
+        } else if (grade.equals(Grade.BUD)) {
+            Fees fee = Fees.BUD;
+            return fee.getLearningMaterial() + fee.getReservation() + fee.getService() + fee.getUniform() + fee.getFacility();
+        } else {
+            Fees fee = Fees.LEAF;
+            return fee.getLearningMaterial() + fee.getReservation() + fee.getService() + fee.getUniform() + fee.getFacility();
+        }
+    }
+
     private Map<String, Object> getFormDetail(AdmissionForm form) {
         Map<String, Object> data = new HashMap<>();
         data.put("id", form.getId());
@@ -165,6 +181,7 @@ public class ParentServiceImpl implements ParentService {
         data.put("householdRegistrationAddress", form.getHouseholdRegistrationAddress());
         data.put("submittedDate", form.getSubmittedDate());
         data.put("cancelReason", form.getCancelReason());
+        data.put("totalFees", sumFee(form.getTermItem().getGrade()));
         data.put("note", form.getNote());
         data.put("status", form.getStatus().getValue());
         return data;
@@ -172,7 +189,8 @@ public class ParentServiceImpl implements ParentService {
 
     //submit form
     @Override
-    public ResponseEntity<ResponseObject> submitAdmissionForm(SubmitAdmissionFormRequest request, HttpServletRequest httpRequest) {
+    public ResponseEntity<ResponseObject> submitAdmissionForm(SubmitAdmissionFormRequest
+                                                                      request, HttpServletRequest httpRequest) {
         //Xác thực người dùng
         Account account = jwtService.extractAccountFromCookie(httpRequest);
         if (account == null || !account.getRole().equals(Role.PARENT)) {
@@ -259,177 +277,39 @@ public class ParentServiceImpl implements ParentService {
         );
     }
 
-    //view refill form
-    @Override
-    public ResponseEntity<ResponseObject> viewRefillFormList(HttpServletRequest request) {
-        //xac thuc nguoi dung
-        Account account = jwtService.extractAccountFromCookie(request);
-        if (account == null || !account.getRole().equals(Role.PARENT)) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(
-                    ResponseObject.builder()
-                            .message("Forbidden: Only parents can access this resource")
-                            .success(false)
-                            .data(null)
-                            .build()
-            );
-        }
-//
-//        //Tìm kỳ tuyển sinh đang ACTIVE
-//        TermItem activeTermItem = termItemRepo.findByStatusAndAdmissionTerm_Status(Status.ACTIVE_TERM_ITEM, Status.ACTIVE_TERM).orElse(null);
-
-        List<Status> statusesIncluded = Arrays.asList(Status.REJECTED, Status.CANCELLED);
-        List<Map<String, Object>> admissionFormList = admissionFormRepo.findAllByStudentNotNullAndParent_IdAndStatusIn(account.getParent().getId(), statusesIncluded).stream()
-                .sorted(Comparator.comparing(AdmissionForm::getSubmittedDate).reversed())// sort form theo ngày chỉnh sửa mới nhất
-                .map(this::getFormDetail)
-                .toList();
-
-        List<Map<String, Object>> studentList = studentRepo.findAllByParent_Id(account.getParent().getId()).stream()
-                .map(student -> {
-                    Map<String, Object> studentDetail = new HashMap<>();
-                    studentDetail.put("id", student.getId());
-                    studentDetail.put("name", student.getName());
-                    studentDetail.put("gender", student.getGender());
-                    studentDetail.put("dateOfBirth", student.getDateOfBirth());
-                    studentDetail.put("placeOfBirth", student.getPlaceOfBirth());
-                    studentDetail.put("profileImage", student.getProfileImage());
-                    studentDetail.put("householdRegistrationImg", student.getHouseholdRegistrationImg());
-                    studentDetail.put("birthCertificateImg", student.getBirthCertificateImg());
-                    studentDetail.put("isStudent", student.isStudent());
-                    studentDetail.put("hadForm", !student.getAdmissionFormList().isEmpty());//trong từng học sinh check đã tạo form chưa
-                    return studentDetail;
-                })
-                .toList();
-
-        Map<String, Object> data = new HashMap<>();
-        data.put("admissionFormList", admissionFormList);
-        data.put("studentList", studentList);
-
-
-        return ResponseEntity.status(HttpStatus.OK).body(
-                ResponseObject.builder()
-                        .message("")
-                        .success(true)
-                        .data(data)
-                        .build()
-        );
-    }
-
     //refill form
     @Override
     public ResponseEntity<ResponseObject> refillForm(RefillFormRequest request, HttpServletRequest httpRequest) {
-        //Xác thực người dùng
-        Account account = jwtService.extractAccountFromCookie(httpRequest);
-        if (account == null || !account.getRole().equals(Role.PARENT)) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(
-                    ResponseObject.builder()
-                            .message("Forbidden: Only parents can access this resource")
-                            .success(false)
-                            .data(null)
-                            .build()
-            );
-        }
+        AdmissionForm form = admissionFormRepo.findById(request.getFormId()).orElse(null);
 
-        //Validate input
-        String error = RefillFormValidation.validate(request, studentRepo, termItemRepo, admissionFormRepo);
-        if (!error.isEmpty()) {
+        if (form == null) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
                     ResponseObject.builder()
-                            .message(error)
+                            .message("Form not found")
                             .success(false)
                             .data(null)
                             .build()
             );
         }
 
-        // 3. Lấy thông tin student
-        Student student = studentRepo.findById(request.getStudentId()).orElse(null);
-        if (student == null) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
-                    ResponseObject.builder()
-                            .message(error)
-                            .success(false)
-                            .data(null)
-                            .build()
-            );
-        }
+        form.setStatus(Status.REFILLED);
+        admissionFormRepo.save(form);
 
-        //Tìm term item cua ki tuyen sinh đang ACTIVE
-        TermItem activeTermItem = termItemRepo.findById(request.getTermItemId()).orElse(null);
-        if (activeTermItem == null) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
-                    ResponseObject.builder()
-                            .message(error)
-                            .success(false)
-                            .data(null)
-                            .build()
-            );
-        }
-
-        //Tìm form REJECTED hoặc CANCELLED để cập nhật
-        // Validation đã đảm bảo rằng chỉ có ĐÚNG MỘT form
-        // Sử dụng findAllByStudent_IdAndTermItem_IdAndStatusIn để lấy trực tiếp từ DB
-        List<Status> rejectedOrCancelledStatuses = Arrays.asList(Status.REJECTED, Status.CANCELLED);
-        Optional<AdmissionForm> rejectedOrCancelledFormOpt = admissionFormRepo
-                .findAllByStudent_IdAndTermItem_IdAndStatusIn(student.getId(), activeTermItem.getId(), rejectedOrCancelledStatuses)
-                .stream()
-                .findFirst(); //lấy cái đầu tiên đảm bảo chỉ có 1
-
-        // Đây là một kiểm tra an toàn, trên lý thuyết không bao giờ xảy ra nếu validation đúng
-        if (rejectedOrCancelledFormOpt.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body( // Internal Server Error vì validation đã lỗi
-                    ResponseObject.builder()
-                            .message("Failed to find a suitable rejected or cancelled form to refill. Please contact support.")
-                            .success(false)
-                            .data(null)
-                            .build()
-            );
-        }
-
-        //Nếu có form bị cancel hoặc reject thì cập nhật form đó, nếu không thì tạo mới
-        AdmissionForm formToUpdate = rejectedOrCancelledFormOpt.get();
-        formToUpdate.setHouseholdRegistrationAddress(request.getHouseholdRegistrationAddress());
-        formToUpdate.setCommitmentImg(request.getCommitmentImg());
-        formToUpdate.setChildCharacteristicsFormImg(request.getChildCharacteristicsFormImg());
-        formToUpdate.setNote(request.getNote());
-        formToUpdate.setSubmittedDate(LocalDateTime.now());
-        formToUpdate.setStatus(Status.PENDING_APPROVAL);
-
-        admissionFormRepo.save(formToUpdate);
-
-        //Gửi email notification
-        String subject = "[PES] Admission Form Resubmitted";
-        String heading = "🔄 Admission Form Resubmitted";
-        String bodyHtml = Format.getAdmissionRefilledBody(
-                account.getName(),
-                LocalDate.now().toString()
-        );
-
-        // 8. Gửi email xác nhận
-        try {
-            mailService.sendMail(
-                    account.getEmail(),
-                    subject,
-                    heading,
-                    bodyHtml
-            );
-        } catch (Exception e) {
-            System.err.println("Failed to send email notification: " + e.getMessage());
-        }
-
-        // 9. Trả về kết quả thành công
-        return ResponseEntity.ok().body(
-                ResponseObject.builder()
-                        .message("Successfully resubmitted")
-                        .success(true)
-                        .data(null)
-                        .build()
-        );
+        SubmitAdmissionFormRequest submitRequest = SubmitAdmissionFormRequest.builder()
+                .studentId(request.getStudentId())
+                .childCharacteristicsFormImg(request.getChildCharacteristicsFormImg())
+                .householdRegistrationAddress(request.getHouseholdRegistrationAddress())
+                .commitmentImg(request.getCommitmentImg())
+                .note(request.getNote())
+                .build();
+        return submitAdmissionForm(submitRequest, httpRequest);
     }
 
 
     // cancel form
     @Override
-    public ResponseEntity<ResponseObject> cancelAdmissionForm(CancelAdmissionForm request, HttpServletRequest httpRequest) {
+    public ResponseEntity<ResponseObject> cancelAdmissionForm(CancelAdmissionForm request, HttpServletRequest
+            httpRequest) {
         // 1. Lấy account từ cookie
         Account account = jwtService.extractAccountFromCookie(httpRequest);
         if (account == null || !account.getRole().equals(Role.PARENT)) {
@@ -711,7 +591,8 @@ public class ParentServiceImpl implements ParentService {
     }
 
     @Override
-    public ResponseEntity<ResponseObject> registerEvent(RegisterEventRequest request, HttpServletRequest requestHttp) {
+    public ResponseEntity<ResponseObject> registerEvent(RegisterEventRequest request, HttpServletRequest
+            requestHttp) {
 
         Account account = jwtService.extractAccountFromCookie(requestHttp);
 
@@ -909,27 +790,31 @@ public class ParentServiceImpl implements ParentService {
     }
 
     @Override
-    public ResponseEntity<ResponseObject> getPaymentURL(GetPaymentURLRequest request, HttpServletRequest httpRequest) {
+    public ResponseEntity<ResponseObject> getPaymentURL(GetPaymentURLRequest request, HttpServletRequest
+            httpRequest) {
         String version = "2.1.1";
         String command = "pay";
         String tmnCode = "NSLIVTOU";
-        long amount = request.getAmount() * 100;
+
+        AdmissionForm form = admissionFormRepo.findById(request.getFormId()).orElse(null);
+        assert form != null;
+
+        long amount = sumFee(form.getTermItem().getGrade()) * 100;
         Calendar cld = Calendar.getInstance(TimeZone.getTimeZone("Etc/GMT+7"));
         SimpleDateFormat formatter = new SimpleDateFormat("yyyyMMddHHmmss");
         String createDate = formatter.format(cld.getTime());
         String currCode = "VND";
         String ipAddr = "127.0.0.1";
         String locale = "vn";
-        String orderInfo = request.getPaymentInfo();
+        String orderInfo = "Thanh toán học phí đầu vào cho năm học " + LocalDate.now().getYear() + " - " + (LocalDate.now().getYear() + 1);
         String orderType = "education";
         String returnUrl = vnpayReturnUrl;
         cld.add(Calendar.MINUTE, 10);
         String expireDate = formatter.format(cld.getTime());
 
 
-        //String txnRef = getTxnRef(8);
-        String txnRef = request.getTxnRef(); // LẤY txnRef TỪ REQUEST
-        if (txnRef == null || txnRef.isEmpty()) {
+        String txnRef = getTxnRef(8);
+        if (txnRef.isEmpty()) {
             // Đây là tình huống lỗi, vì initiateVNPayPayment đáng lẽ đã set nó
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(
                     ResponseObject.builder()
@@ -945,7 +830,7 @@ public class ParentServiceImpl implements ParentService {
         vnpParams.put("vnp_Version", version);
         vnpParams.put("vnp_Command", command);
         vnpParams.put("vnp_TmnCode", tmnCode);
-        vnpParams.put("vnp_Amount", String.valueOf(amount));
+        vnpParams.put("vnp_Amount", amount + "");
         vnpParams.put("vnp_CurrCode", currCode);
         vnpParams.put("vnp_TxnRef", txnRef);
         vnpParams.put("vnp_OrderInfo", orderInfo);
@@ -1027,7 +912,8 @@ public class ParentServiceImpl implements ParentService {
     }
 
     @Override
-    public ResponseEntity<ResponseObject> initiateVNPayPayment(GetPaymentURLRequest request, HttpServletRequest httpRequest) {
+    public ResponseEntity<ResponseObject> initiateVNPayPayment(InitiateVNPayPaymentRequest
+                                                                       request, HttpServletRequest httpRequest) {
         Account acc = jwtService.extractAccountFromCookie(httpRequest);
         if (acc == null || !acc.getRole().equals(Role.PARENT)) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body(
@@ -1050,32 +936,34 @@ public class ParentServiceImpl implements ParentService {
             );
         }
 
-        //Tìm AdmissionForm liên quan
-        Optional<AdmissionForm> optionalAdmissionForm = admissionFormRepo.findById(request.getFormId());
-        if (optionalAdmissionForm.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
-                    ResponseObject.builder()
-                            .message("Admission Form not found with ID: " + request.getFormId())
-                            .success(false)
-                            .data(null)
-                            .build()
-            );
-        }
-        AdmissionForm admissionForm = optionalAdmissionForm.get();
-
-        //Tạo txnRef duy nhất cho giao dịch này
-        String newTxnRef = getTxnRef(8); // Sử dụng hàm getTxnRef đã có của bạn
-
+        // Sinh txnRef tại backend
+        String txnRef = getTxnRef(8);
         //Tạo bản ghi Transaction MỚI và lưu vào DB với trạng thái PENDING
         try {
-            Transaction newTransaction = Transaction.builder()
-                    .admissionForm(admissionForm) // Liên kết giao dịch với AdmissionForm
-                    .amount(request.getAmount())
-                    .description(request.getPaymentInfo())
-                    .status(Status.TRANSACTION_PENDING) // Đặt trạng thái ban đầu là PENDING (từ enum Status của bạn)
-                    .txnRef(newTxnRef) // Gán txnRef đã tạo
+            Transaction transaction = Transaction.builder()
+                    .admissionForm(form) // Liên kết giao dịch với AdmissionForm
+                    .amount(sumFee(form.getTermItem().getGrade()))
+                    .vnpTransactionNo(request.getTransactionInfo()) // Khi tạo mới, vnpTransactionNo luôn null (chỉ cập nhật khi callback từ VNPay)
+                    .description(request.getTransactionInfo())
+                    .status(Status.APPROVED_PAID) // Đặt trạng thái ban đầu là PENDING (từ enum Status của bạn)
+                    .paymentDate(LocalDate.now())
+                    .txnRef(txnRef)  // Gán txnRef do backend sinh ở trên
                     .build();
-            transactionRepo.save(newTransaction);
+            transactionRepo.save(transaction);
+
+            Map<String, Object> data = new HashMap<>();
+            data.put("txnRef", txnRef);
+            data.put("transactionId", transaction.getId());
+            data.put("amount", transaction.getAmount());
+
+            return ResponseEntity.ok(
+                    ResponseObject.builder()
+                            .message("Transaction created, ready for payment.")
+                            .success(true)
+                            .data(data)
+                            .build()
+            );
+
         } catch (Exception e) {
             // Xử lý lỗi nếu không thể lưu Transaction
             System.err.println("Error saving transaction: " + e.getMessage());
@@ -1088,11 +976,5 @@ public class ParentServiceImpl implements ParentService {
             );
         }
 
-        //Gán txnRef đã tạo vào request để truyền cho hàm getPaymentURL
-        request.setTxnRef(newTxnRef); // Đảm bảo GetPaymentURLRequest có setter cho txnRef
-
-        //Gọi hàm getPaymentURL để lấy URL thanh toán.
-        // Hàm này giờ đây sẽ sử dụng txnRef mà chúng ta vừa tạo và lưu.
-        return getPaymentURL(request, httpRequest);
     }
 }

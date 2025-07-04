@@ -3,6 +3,7 @@ package com.swd392.group1.pes.validations.EducationValidation;
 import com.swd392.group1.pes.enums.Grade;
 import com.swd392.group1.pes.requests.GenerateClassesRequest;
 
+import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.util.Arrays;
 import java.util.List;
@@ -51,7 +52,11 @@ public class ClassValidation {
             return String.format("Start date must be within the year %s, but was %d", request.getYear(), startDate.getYear());
         }
 
-            return "";
+        if (startDate.getDayOfWeek() != DayOfWeek.MONDAY) {
+            return "Start date must be a Monday (the first day of the week).";
+        }
+
+        return "";
     }
 
     public static String checkAcademicYearAndGrade(String year, String grade, List<Integer> validYears) {

@@ -17,6 +17,7 @@ import lombok.NoArgsConstructor;
 import lombok.experimental.FieldDefaults;
 
 import java.time.DayOfWeek;
+import java.time.LocalDate;
 import java.time.LocalTime;
 
 @Data
@@ -47,6 +48,8 @@ public class Activity {
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "`schedule_id`")
     Schedule schedule;
+
+    LocalDate date;
 
     String syllabusName;
 

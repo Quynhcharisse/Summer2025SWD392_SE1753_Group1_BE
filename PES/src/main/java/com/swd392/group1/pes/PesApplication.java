@@ -1,15 +1,15 @@
 package com.swd392.group1.pes;
 
-import com.swd392.group1.pes.enums.Grade;
 import com.swd392.group1.pes.enums.Role;
 import com.swd392.group1.pes.enums.Status;
 import com.swd392.group1.pes.models.Account;
-import com.swd392.group1.pes.models.AdmissionTerm;
 import com.swd392.group1.pes.models.Parent;
 import com.swd392.group1.pes.repositories.AccountRepo;
 import com.swd392.group1.pes.repositories.AdmissionFormRepo;
 import com.swd392.group1.pes.repositories.AdmissionTermRepo;
 import com.swd392.group1.pes.repositories.ParentRepo;
+import com.swd392.group1.pes.repositories.StudentRepo;
+import com.swd392.group1.pes.repositories.TermItemRepo;
 import com.swd392.group1.pes.utils.RandomPasswordUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.CommandLineRunner;
@@ -18,9 +18,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.List;
 import java.util.Random;
 
 @SpringBootApplication
@@ -28,12 +26,8 @@ import java.util.Random;
 @EnableScheduling
 public class PesApplication {
 
-    private final AdmissionTermRepo admissionTermRepo;
     private final ParentRepo parentRepo;
     private final AccountRepo accountRepo;
-    private final StudentRepo studentRepo;
-    private final AdmissionFormRepo admissionFormRepo;
-    private final TermItemRepo termItemRepo;
 
     private final Random random = new Random();
 
@@ -132,7 +126,7 @@ public class PesApplication {
                     .firstLogin(true)
                     .role(Role.PARENT)
                     .status(Status.ACCOUNT_ACTIVE.getValue())
-                    .createdAt(LocalDate.now())
+                    .createdAt(LocalDateTime.now())
                     .build();
             accountRepo.save(parent);
 

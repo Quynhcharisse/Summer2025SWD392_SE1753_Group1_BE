@@ -296,7 +296,6 @@ public class EducationServiceImpl implements EducationService {
         );
     }
 
-
     @Override
     public ResponseEntity<ResponseObject> assignLessonsToSyllabus(String id, AssignLessonsRequest request) {
         // 1. Validate request.getLessonNames()
@@ -968,7 +967,6 @@ public class EducationServiceImpl implements EducationService {
                 .build());
     }
 
-
     @Override
     public ResponseEntity<ResponseObject> viewEventList() {
         List<Event> events = eventRepo.findAll();
@@ -982,7 +980,6 @@ public class EducationServiceImpl implements EducationService {
                 .data(eventDetails)
                 .build());
     }
-
 
     @Override
     public ResponseEntity<ResponseObject> viewEventDetail(String id) {
@@ -1176,7 +1173,59 @@ public class EducationServiceImpl implements EducationService {
 
 
     @Override
-    public ResponseEntity<ResponseObject> assignActivitiesToSchedule(String scheduleId) {
+    public ResponseEntity<ResponseObject> viewAssignedStudentsOfClass(String classId) {
+
+        String error = ClassValidation.checkClassId(classId);
+
+        if(!error.isEmpty()){
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
+                    ResponseObject.builder()
+                            .message(error)
+                            .success(false)
+                            .data(null)
+                            .build()
+            );
+        }
+        List<StudentClass> assignedStudentOfClass = studentClassRepo.findByClasses_Id(
+                Integer.parseInt(classId)
+        );
+
+        List<Student> students = assignedStudentOfClass.stream()
+                .map(StudentClass::getStudent)
+                .toList();
+
+        List<Map<String,Object>> studentList = students.stream()
+                .map(this::buildStudentDetail)
+                .toList();
+
+        return ResponseEntity.ok().body(
+                ResponseObject.builder()
+                        .message("View Assigned Students Of Class Successfully")
+                        .success(true)
+                        .data(studentList)
+                        .build()
+        );
+    }
+
+    private Map<String, Object> buildStudentDetail(Student student)
+    {
+        Map<String, Object> studentDetail = new HashMap<>();
+        studentDetail.put("id", student.getId());
+        studentDetail.put("name", student.getName());
+        studentDetail.put("gender", student.getGender());
+        studentDetail.put("dateOfBirth", student.getDateOfBirth());
+        studentDetail.put("placeOfBirth", student.getPlaceOfBirth());
+        return studentDetail;
+    }
+
+    @Override
+    public ResponseEntity<ResponseObject> assignAvailableStudentsAuto() {
+        return null;
+    }
+
+    @Override
+    public ResponseEntity<ResponseObject> viewClassDetailOfChild(String childId) {
+
         return null;
     }
 
@@ -1349,7 +1398,7 @@ public class EducationServiceImpl implements EducationService {
         int numberOfStudentsPerClass = 20;
         int numberOfNeededClasses = (studentsToAssign.size() + numberOfStudentsPerClass - 1) / numberOfStudentsPerClass;
         int totalClassIfCreate = existing + numberOfNeededClasses;
-        int expectedClass = termItemRepo.findByAdmissionTerm_Year(Integer.parseInt(request.getYear())).getExpectedClasses();
+        int expectedClass = termItemRepo.findByAdmissionTerm_YearAndGrade(Integer.parseInt(request.getYear()),syllabus.getGrade()).getExpectedClasses();
         if (totalClassIfCreate > expectedClass) {
             return ResponseEntity.status(HttpStatus.CONFLICT).body(ResponseObject.builder()
                     .message(String.format("Number of classes after assignment (%d) exceeds expected classes (%d). Please update your plan or increase expected classes.",
@@ -1408,6 +1457,7 @@ public class EducationServiceImpl implements EducationService {
             cls.setNumberStudent(scList.size());
             List<Schedule> scheduleList = new ArrayList<>();
             for (int week = 1; week <= syllabus.getNumberOfWeek(); week++) {
+                LocalDate mondayOfWeek = start.plusWeeks(week - 1);
                 Schedule sch = Schedule.builder()
                         .weekName("Week - " + week)
                         .classes(cls)
@@ -1425,11 +1475,13 @@ public class EducationServiceImpl implements EducationService {
                                     ? null
                                     : token;
                             LocalTime startTime = LocalTime.parse(parts[2]);
-                            LocalTime endTime   = LocalTime.parse(parts[3]);
+                            LocalTime endTime = LocalTime.parse(parts[3]);
+                            LocalDate activityDate = mondayOfWeek.plusDays(dow.getValue() - 1);
                             return Activity.builder()
                                     .name(activityName != null ? activityName : lessonTopic)
                                     .syllabusName(activityName != null ? "N/A" : syllabus.getSubject())
                                     .dayOfWeek(dow)
+                                    .date(activityDate)
                                     .startTime(startTime)
                                     .endTime(endTime)
                                     .schedule(sch)
@@ -1564,6 +1616,7 @@ public class EducationServiceImpl implements EducationService {
         data.put("dayOfWeek",activity.getDayOfWeek());
         data.put("startTime",activity.getStartTime());
         data.put("endTime", activity.getEndTime());
+        data.put("date", activity.getDate());
         return data;
     }
 
