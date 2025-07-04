@@ -25,17 +25,6 @@ public class Format {
                         "<p>Best regards,<br/>Sunshine Preschool</p>";
     }
 
-    /** Fragment khi phụ huynh refill đơn (resubmit) */
-    public static String getAdmissionRefilledBody(String parentName, String dateTime) {
-        return
-                "<p>Dear " + parentName + ",</p>\n" +
-                        "<p>Your admission form has been <strong>resubmitted</strong> on <strong>" + dateTime + "</strong>.</p>" +
-                        "<p>Our Admissions Team will review the updated information and get back to you shortly.</p>" +
-                        "<p>If you need further assistance, contact us at <a href=\"mailto:info@sunshinepreschool.edu\">info@sunshinepreschool.edu</a> or (555) 123-4567.</p>" +
-                        "<p>Best regards,<br/>Sunshine Preschool</p>";
-    }
-
-
     /** Fragment khi đơn được duyệt */
     public static String getAdmissionApprovedBody(String studentName) {
         return
