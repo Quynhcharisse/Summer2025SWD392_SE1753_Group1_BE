@@ -11,4 +11,6 @@ public interface TransactionRepo extends JpaRepository<Transaction, Integer> {
     Optional<Transaction> findByTxnRef(String txnRef);//truy vấn Transaction theo txnRef
 
     Optional<Transaction> findByAdmissionFormAndStatus(AdmissionForm admissionForm, Status status);
+
+    Transaction findByAdmissionFormIdAndStatus(Integer id, Status status);
 }
