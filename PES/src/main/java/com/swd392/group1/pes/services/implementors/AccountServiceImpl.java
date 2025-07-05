@@ -1,17 +1,16 @@
 package com.swd392.group1.pes.services.implementors;
 
-import com.swd392.group1.pes.email.Format;
+import com.swd392.group1.pes.enums.Status;
+import com.swd392.group1.pes.utils.email.Format;
 import com.swd392.group1.pes.enums.Role;
 import com.swd392.group1.pes.models.Account;
 import com.swd392.group1.pes.repositories.AccountRepo;
-import com.swd392.group1.pes.requests.RestPasswordRequest;
-import com.swd392.group1.pes.requests.UpdateProfileRequest;
-import com.swd392.group1.pes.response.ResponseObject;
+import com.swd392.group1.pes.dto.requests.RestPasswordRequest;
+import com.swd392.group1.pes.dto.requests.UpdateProfileRequest;
+import com.swd392.group1.pes.dto.response.ResponseObject;
 import com.swd392.group1.pes.services.AccountService;
 import com.swd392.group1.pes.services.JWTService;
 import com.swd392.group1.pes.services.MailService;
-import com.swd392.group1.pes.validations.AccountValidation.ResetPasswordValidation;
-import com.swd392.group1.pes.validations.AccountValidation.UpdateProfileValidation;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -20,6 +19,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.regex.Pattern;
 
 @Service
 @RequiredArgsConstructor
@@ -31,7 +31,7 @@ public class AccountServiceImpl implements AccountService {
 
     @Override
     public ResponseEntity<ResponseObject> resetPassword(RestPasswordRequest request) {
-        String error = ResetPasswordValidation.validateResetPassword(request, accountRepo);
+        String error = validateResetPassword(request, accountRepo);
         if (!error.isEmpty()) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
                     ResponseObject.builder()
@@ -86,6 +86,61 @@ public class AccountServiceImpl implements AccountService {
                         .data(account)
                         .build()
         );
+    }
+
+    public static String validateResetPassword(RestPasswordRequest request, AccountRepo accountRepo) {
+        if (request.getEmail() == null || request.getEmail().trim().isEmpty()) {
+            return "Email is required.";
+        }
+
+        Account acc = accountRepo.findByEmailAndStatus(request.getEmail(), Status.ACCOUNT_ACTIVE.getValue()).orElse(null);
+        if (acc == null) {
+            return "No active account found with this email.";
+        }
+
+        if (request.getNewPassword() == null || request.getNewPassword().trim().isEmpty()) {
+            return "New password is required.";
+        }
+
+        if (request.getOldPassword() == null || request.getOldPassword().trim().isEmpty()) {
+            return "Old password is required.";
+        }
+
+        if (request.getNewPassword().equals(request.getOldPassword())) {
+            return "New password must be different from the old password.";
+        }
+
+        if (request.getNewPassword().length() < 8) {
+            return "Password must be at least 8 characters long.";
+        }
+
+        Pattern digitPattern = Pattern.compile(".*\\d.*");
+        Pattern lowerCasePattern = Pattern.compile(".*[a-z].*");
+        Pattern upperCasePattern = Pattern.compile(".*[A-Z].*");
+        Pattern specialPattern = Pattern.compile(".*[^A-Za-z0-9].*");
+
+        if (!digitPattern.matcher(request.getNewPassword()).matches()) {
+            return "Password must contain at least one digit.";
+        }
+        if (!lowerCasePattern.matcher(request.getNewPassword()).matches()) {
+            return "Password must contain at least one lowercase letter.";
+        }
+        if (!upperCasePattern.matcher(request.getNewPassword()).matches()) {
+            return "Password must contain at least one uppercase letter.";
+        }
+        if (!specialPattern.matcher(request.getNewPassword()).matches()) {
+            return "Password must contain at least one special character.";
+        }
+
+        if (request.getConfirmPassword() == null || request.getConfirmPassword().trim().isEmpty()) {
+            return "Confirm password is required.";
+        }
+
+        if (!request.getConfirmPassword().equals(request.getNewPassword())) {
+            return "Confirm password does not match the new password.";
+        }
+
+        return "";
     }
 
 
@@ -152,7 +207,7 @@ public class AccountServiceImpl implements AccountService {
             );
         }
 
-        String error = UpdateProfileValidation.validate(request);
+        String error = updateProfileValidate(request);
         if (!error.isEmpty()) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
                     ResponseObject.builder()
@@ -178,5 +233,35 @@ public class AccountServiceImpl implements AccountService {
                         .data(null)
                         .build()
         );
+    }
+
+    public static String updateProfileValidate(UpdateProfileRequest request) {
+        if (request.getName() == null || request.getName().isEmpty()) {
+            return "Name is required.";
+        }
+
+        if (!request.getName().trim().matches("^[A-Za-z\\s]+$")) {
+            return "Name must only contain English letters (A–Z or a–z) and spaces. Numbers and special characters are not allowed.";
+        }
+        if (request.getName().trim().length() < 2 || request.getName().trim().length() > 50) {
+            return "Name must be between 2 and 50 characters.";
+        }
+
+        if (request.getPhone() == null || request.getPhone().trim().isEmpty()) {
+            return "Phone number is required.";
+        }
+        if (!request.getPhone().matches("^(03|05|07|08|09)\\d{8}$")) {
+            return "Phone number must start with a valid region prefix and be 10 digits.";
+        }
+
+        if (request.getGender() == null || request.getGender().trim().isEmpty()) {
+            return "Gender is required.";
+        }
+        String gender = request.getGender().trim().toLowerCase();
+        if (!gender.equals("male") && !gender.equals("female")) {
+            return "Gender must be male or female.";
+        }
+
+        return "";
     }
 }

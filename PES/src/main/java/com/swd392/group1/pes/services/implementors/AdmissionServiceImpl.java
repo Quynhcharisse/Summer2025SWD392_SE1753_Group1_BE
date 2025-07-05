@@ -1,6 +1,10 @@
 package com.swd392.group1.pes.services.implementors;
 
-import com.swd392.group1.pes.email.Format;
+import com.swd392.group1.pes.dto.requests.CreateAdmissionTermRequest;
+import com.swd392.group1.pes.dto.requests.CreateExtraTermRequest;
+import com.swd392.group1.pes.dto.requests.ProcessAdmissionFormRequest;
+import com.swd392.group1.pes.dto.requests.UpdateAdmissionTermRequest;
+import com.swd392.group1.pes.dto.response.ResponseObject;
 import com.swd392.group1.pes.enums.Fees;
 import com.swd392.group1.pes.enums.Grade;
 import com.swd392.group1.pes.enums.Status;
@@ -13,16 +17,9 @@ import com.swd392.group1.pes.repositories.AdmissionFormRepo;
 import com.swd392.group1.pes.repositories.AdmissionTermRepo;
 import com.swd392.group1.pes.repositories.StudentRepo;
 import com.swd392.group1.pes.repositories.TermItemRepo;
-import com.swd392.group1.pes.requests.CreateAdmissionTermRequest;
-import com.swd392.group1.pes.requests.CreateExtraTermRequest;
-import com.swd392.group1.pes.requests.ProcessAdmissionFormRequest;
-import com.swd392.group1.pes.requests.UpdateAdmissionTermRequest;
-import com.swd392.group1.pes.response.ResponseObject;
 import com.swd392.group1.pes.services.AdmissionService;
 import com.swd392.group1.pes.services.MailService;
-import com.swd392.group1.pes.validations.AdmissionValidation.AdmissionFormValidation;
-import com.swd392.group1.pes.validations.AdmissionValidation.AdmissionTermValidation;
-import com.swd392.group1.pes.validations.AdmissionValidation.ExtraTermValidation;
+import com.swd392.group1.pes.utils.email.Format;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -34,8 +31,10 @@ import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -49,7 +48,7 @@ public class AdmissionServiceImpl implements AdmissionService {
     @Override
     public ResponseEntity<ResponseObject> createAdmissionTerm(CreateAdmissionTermRequest request) {
         // 1. Validate các field cơ bản (ngày, số lượng, grade rỗng...)
-        String error = AdmissionTermValidation.createTermValidate(request, admissionTermRepo);
+        String error = createTermValidate(request, admissionTermRepo);
         if (!error.isEmpty()) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
                     ResponseObject.builder()
@@ -101,10 +100,63 @@ public class AdmissionServiceImpl implements AdmissionService {
         );
     }
 
+    public static String createTermValidate(CreateAdmissionTermRequest request, AdmissionTermRepo admissionTermRepo) {
+        if (request.getStartDate() == null) {
+            return "Start date is required";
+        }
+
+        if (request.getEndDate() == null) {
+            return "End date is required";
+        }
+
+        if (request.getStartDate().isAfter(request.getEndDate())) {
+            return "Start date must be before end date";
+        }
+
+        if (request.getStartDate().isBefore(LocalDateTime.now())) {
+            return "Start date must be in the future";
+        }
+
+        if (request.getStartDate().getYear() != request.getEndDate().getYear()) {
+            return "Start date and end date must be in the same year";
+        }
+
+        int year = request.getStartDate().getYear();
+        if (admissionTermRepo.existsByYear(year)) {
+            return "Admission term for year " + year + " already exists.";
+        }
+
+        //trong 1 term phai it nhat 1 grade trong create term do
+        if (request.getTermItemList() == null || request.getTermItemList().isEmpty()) {
+            return "At least one grade must be included in the term.";
+        }
+
+        Set<String> grades = new HashSet<>();
+
+        for (CreateAdmissionTermRequest.TermItem termItem : request.getTermItemList()) {
+            //expectedClasses > 0
+            if (termItem.getExpectedClasses() <= 0) {
+                return "Expected classes must be greater than 0 for grade: " + termItem.getGrade();
+            }
+
+            //hợp lệ enum
+            try {
+                Grade.valueOf(termItem.getGrade());
+            } catch (IllegalArgumentException e) {
+                return "Invalid grade: " + termItem.getGrade();
+            }
+
+            if (!grades.add(termItem.getGrade())) {
+                return "Duplicate grade found: " + termItem.getGrade();
+            }
+        }
+        return "";
+    }
+
 
     @Override
     public ResponseEntity<ResponseObject> updateTermStatus(UpdateAdmissionTermRequest request) {
-        String error = AdmissionTermValidation.updateTermValidate(request);
+        String error = updateTermValidate(request);
         if (!error.isEmpty()) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
                     ResponseObject.builder()
@@ -152,6 +204,17 @@ public class AdmissionServiceImpl implements AdmissionService {
                         .build()
         );
     }
+
+
+    public static String updateTermValidate(UpdateAdmissionTermRequest request) {
+
+        System.out.println("Term ID: " + request.getTermId());
+        if (request.getTermId() <= 0) {
+            return "Term ID must be a positive number";
+        }
+        return "";
+    }
+
 
     private int calculateMaxRegistration(int expectedClasses) {
         return StudentPerClass.MAX.getValue() * expectedClasses;
@@ -312,7 +375,7 @@ public class AdmissionServiceImpl implements AdmissionService {
     @Override
     public ResponseEntity<ResponseObject> createExtraTerm(CreateExtraTermRequest request) {
         //Validate các field cơ bản (ngày, số lượng, grade rỗng...)
-        String error = ExtraTermValidation.createExtraTerm(request, admissionTermRepo);
+        String error = createExtraTerm(request, admissionTermRepo);
         if (!error.isEmpty()) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
                     ResponseObject.builder()
@@ -384,6 +447,54 @@ public class AdmissionServiceImpl implements AdmissionService {
         );
     }
 
+    public static String createExtraTerm(CreateExtraTermRequest request, AdmissionTermRepo admissionTermRepo) {
+        AdmissionTerm parentTerm = admissionTermRepo.findById(request.getParentTermId()).orElse(null);
+        if (parentTerm == null) {
+            return "Parent term is required.";
+        }
+
+        // tạo extra term khi term cha bị lock
+        if (!parentTerm.getStatus().equals(Status.LOCKED_TERM)) {
+            return "Only locked terms can have extra requests.";
+        }
+
+        if (request.getStartDate() == null || request.getEndDate() == null) {
+            return "Start date and end date are required.";
+        }
+
+        if (!request.getEndDate().isAfter(request.getStartDate())) {
+            return "End date must be after start date.";
+        }
+
+        // ko cho tạo trùng tg với term ba / extra term khác cùng  năm
+        //Nếu chưa có học sinh nào được duyệt (APPROVED)
+        // tạo ExtraTerm là phi logic vì đợt chính còn chưa có kết quả
+        List<AdmissionTerm> termsSameYear = admissionTermRepo.findAllByYear(parentTerm.getYear());
+        for (AdmissionTerm existing : termsSameYear) {
+            if (existing.getId().equals(parentTerm.getId())) continue; // bỏ qua term cha
+
+            boolean overlap = !(request.getEndDate().isBefore(existing.getStartDate()) ||
+                    request.getStartDate().isAfter(existing.getEndDate()));
+            if (overlap) {
+                return "Extra term time overlaps with existing term: " + existing.getName();
+            }
+        }
+
+        List<AdmissionTerm> existingActiveExtraTerms = admissionTermRepo.findAllByParentTerm_Id(parentTerm.getId())
+                .stream()
+                .filter(et -> !et.getStatus().equals(Status.LOCKED_TERM))
+                .toList();
+
+        if (!existingActiveExtraTerms.isEmpty()) {
+            return ("Only one active extra term can exist at a time");
+        }
+
+        if (request.getMaxNumberRegistration() <= 0) {
+            return "Maximum number of registrations must be greater than 0.";
+        }
+        return "";
+    }
+
     private int countApprovedFormByTermItem(TermItem termItem) {
         return (int) termItem.getAdmissionFormList().stream().filter(form -> form.getStatus().equals(Status.APPROVED)).count();
     }
@@ -453,7 +564,7 @@ public class AdmissionServiceImpl implements AdmissionService {
 
     @Override
     public ResponseEntity<ResponseObject> processAdmissionFormList(ProcessAdmissionFormRequest request) {
-        String error = AdmissionFormValidation.processFormByManagerValidate(request, admissionFormRepo);
+        String error = processFormByManagerValidate(request, admissionFormRepo);
         if (!error.isEmpty()) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
                     ResponseObject.builder()
@@ -523,6 +634,25 @@ public class AdmissionServiceImpl implements AdmissionService {
                         .data(null)
                         .build()
         );
+    }
+
+    public static String processFormByManagerValidate(ProcessAdmissionFormRequest request, AdmissionFormRepo admissionFormRepo) {
+        AdmissionForm form = admissionFormRepo.findById(request.getId()).orElse(null);
+
+        if (form == null) {
+            return "Form not found";
+        }
+
+        if (!request.isApproved()) {
+            if (request.getReason().trim().isEmpty()) {
+                return "Reject reason is required when form is rejected";
+            }
+
+            if (request.getReason().length() > 100) {
+                return "Reject reason must not exceed 100 characters";
+            }
+        }
+        return "";
     }
 
     @Override
