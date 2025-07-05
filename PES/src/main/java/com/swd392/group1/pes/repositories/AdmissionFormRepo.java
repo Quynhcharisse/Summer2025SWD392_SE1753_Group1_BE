@@ -1,5 +1,6 @@
 package com.swd392.group1.pes.repositories;
 
+import com.swd392.group1.pes.enums.Grade;
 import com.swd392.group1.pes.enums.Status;
 import com.swd392.group1.pes.models.AdmissionForm;
 import com.swd392.group1.pes.models.Student;
@@ -13,10 +14,8 @@ import java.util.Optional;
 
 @Repository
 public interface AdmissionFormRepo extends JpaRepository<AdmissionForm, Integer> {
-    //tìm form của một học sinh trong một TermItem cụ thể với các trạng thái cho phép
     List<AdmissionForm> findAllByStudent_IdAndTermItem_IdAndStatusNotIn(int studentId, int termItemId, List<Status> statuses);
 
-    //tìm form REJECTED hoặc CANCELLED của một học sinh trong một TermItem cụ thể
     List<AdmissionForm> findAllByStudent_IdAndTermItem_IdAndStatusIn(int studentId, int termItemId, List<Status> statuses);
 
     List<AdmissionForm> findAllByStudentNotNullAndParent_IdAndStatusIn(int parentId, List<Status> statuses);
@@ -30,4 +29,9 @@ public interface AdmissionFormRepo extends JpaRepository<AdmissionForm, Integer>
     List<AdmissionForm> findByStatusAndPaymentExpiryDateLessThanEqual(Status status, LocalDateTime paymentExpiryDate);
 
 //    int countByAdmissionTerm_IdAndStatusAndTransaction_Status(Integer termId, String formStatus, String transactionStatus);
+    List<AdmissionForm> findByTermItem_AdmissionTerm_YearAndStatusAndTermItem_Grade(
+            Integer termYear,
+            Status formStatus,
+            Grade grade
+    );
 }

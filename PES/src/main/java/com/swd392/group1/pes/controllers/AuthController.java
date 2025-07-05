@@ -69,6 +69,11 @@ public class AuthController {
         return educationService.viewActiveEvents();
     }
 
+    @GetMapping("/event/detail")
+    public ResponseEntity<ResponseObject> viewEventDetail(@RequestParam String id) {
+        return educationService.viewEventDetail(id);
+    }
+
     @PostMapping("/register/otp/send")
     public ResponseEntity<ResponseObject> sendRegisterOtp(@RequestParam String email) {
         return authService.sendRegisterOtp(email);

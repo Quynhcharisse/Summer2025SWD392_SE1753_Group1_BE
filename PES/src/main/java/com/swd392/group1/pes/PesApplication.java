@@ -3,6 +3,7 @@ package com.swd392.group1.pes;
 import com.swd392.group1.pes.enums.Role;
 import com.swd392.group1.pes.enums.Status;
 import com.swd392.group1.pes.models.Account;
+import com.swd392.group1.pes.models.Parent;
 import com.swd392.group1.pes.repositories.AccountRepo;
 import com.swd392.group1.pes.repositories.AdmissionFormRepo;
 import com.swd392.group1.pes.repositories.AdmissionTermRepo;
@@ -27,12 +28,8 @@ import java.util.Random;
 @EnableScheduling
 public class PesApplication {
 
-    private final AdmissionTermRepo admissionTermRepo;
     private final ParentRepo parentRepo;
     private final AccountRepo accountRepo;
-    private final StudentRepo studentRepo;
-    private final AdmissionFormRepo admissionFormRepo;
-    private final TermItemRepo termItemRepo;
 
     private final Random random = new Random();
 
@@ -118,5 +115,31 @@ public class PesApplication {
                     .build();
             accountRepo.save(admissionAccount);
         }
+
+        if (!accountRepo.existsByEmail("parent1@gmail.com")) {
+            Account parent = Account.builder()
+                    .email("parent1@gmail.com")
+                    .password("123456")
+                    .name("Parent")
+                    .gender("male")
+                    .identityNumber("070404000033")
+                    .phone("0705646041")
+                    .address("66/11 Le Trong Tan, Binh Hung Hoa")
+                    .firstLogin(true)
+                    .role(Role.PARENT)
+                    .status(Status.ACCOUNT_ACTIVE.getValue())
+                    .createdAt(LocalDateTime.now())
+                    .build();
+            accountRepo.save(parent);
+
+            Parent parent1 = Parent.builder()
+                    .account(parent)
+                    .job("IT")
+                    .relationshipToChild("father")
+                    .build();
+
+            parentRepo.save(parent1);
+        }
+
     }
 }

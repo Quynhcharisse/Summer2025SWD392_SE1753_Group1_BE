@@ -5,7 +5,11 @@ import com.swd392.group1.pes.requests.CreateEventRequest;
 import com.swd392.group1.pes.requests.RegisterEventRequest;
 
 import java.time.Duration;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.util.List;
+
 
 
 public class EventValidation {
@@ -30,7 +34,17 @@ public class EventValidation {
             return "End time is required";
         }
 
-        Duration duration = Duration.between(request.getStartTime(), request.getEndTime());
+        if(!request.getStartTime().atZone(ZoneOffset.UTC)
+                .withZoneSameInstant(ZoneId.of("Asia/Ho_Chi_Minh")).toLocalDateTime()
+                .isBefore(request.getEndTime().atZone(ZoneOffset.UTC)
+                        .withZoneSameInstant(ZoneId.of("Asia/Ho_Chi_Minh")).toLocalDateTime())){
+          return "Start time must be before end time";
+        }
+
+        Duration duration = Duration.between(request.getStartTime().atZone(ZoneOffset.UTC)
+                        .withZoneSameInstant(ZoneId.of("Asia/Ho_Chi_Minh")).toLocalDateTime(),
+                request.getEndTime().atZone(ZoneOffset.UTC)
+                        .withZoneSameInstant(ZoneId.of("Asia/Ho_Chi_Minh")).toLocalDateTime());
         if (duration.isNegative() || duration.isZero() || duration.toMinutes() < 15) {
             return "Event duration must be at least 15 minutes";
         }
@@ -50,9 +64,23 @@ public class EventValidation {
         if (request.getRegistrationDeadline() == null) {
             return "Registration Deadline Time is required";
         }
-        // Ensure registration deadline is at least 3 days before start time
-        if (!request.getRegistrationDeadline().isBefore(request.getStartTime())) {
+        LocalDateTime now = LocalDateTime.now();
+        if (!request.getRegistrationDeadline().atZone(ZoneOffset.UTC)
+                .withZoneSameInstant(ZoneId.of("Asia/Ho_Chi_Minh")).toLocalDateTime()
+                .isAfter(now.plusDays(1))) {
+            return "Registration deadline must be at least one day in the future";
+        }
+        if (!request.getRegistrationDeadline().atZone(ZoneOffset.UTC)
+                        .withZoneSameInstant(ZoneId.of("Asia/Ho_Chi_Minh")).toLocalDateTime().
+                isBefore(request.getStartTime().atZone(ZoneOffset.UTC)
+                                .withZoneSameInstant(ZoneId.of("Asia/Ho_Chi_Minh")).toLocalDateTime())) {
             return "Registration deadline must be before the event start time";
+        }
+        LocalDateTime minAllowedDeadline = request.getStartTime().atZone(ZoneOffset.UTC)
+                .withZoneSameInstant(ZoneId.of("Asia/Ho_Chi_Minh")).toLocalDateTime()
+                .minusDays(1);
+        if (request.getRegistrationDeadline().isAfter(minAllowedDeadline)) {
+            return "Registration deadline must be at least one day before the event start time";
         }
 
         if (request.getAttachmentImg() == null || request.getAttachmentImg().trim().isEmpty()) {

@@ -1,9 +1,11 @@
 package com.swd392.group1.pes.controllers;
 
 import com.swd392.group1.pes.requests.AssignLessonsRequest;
+import com.swd392.group1.pes.requests.CancelEventRequest;
 import com.swd392.group1.pes.requests.CreateEventRequest;
 import com.swd392.group1.pes.requests.CreateLessonRequest;
 import com.swd392.group1.pes.requests.CreateSyllabusRequest;
+import com.swd392.group1.pes.requests.GenerateClassesRequest;
 import com.swd392.group1.pes.requests.UpdateLessonRequest;
 import com.swd392.group1.pes.requests.UpdateSyllabusRequest;
 import com.swd392.group1.pes.response.ResponseObject;
@@ -11,6 +13,7 @@ import com.swd392.group1.pes.services.EducationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -50,11 +53,42 @@ public class EducationController {
         return educationService.viewAllSyllabus();
     }
 
-//    @PostMapping("/classes")
-//    @PreAuthorize("hasRole('education')")
-//    public ResponseEntity<ResponseObject> generateClassesAuto(GenerateClassesRequest request){
-//        return educationService.generateClassesAuto(request);
-//    }
+    @GetMapping("/syllabus/listByGrade")
+    @PreAuthorize("hasRole('education')")
+    public ResponseEntity<ResponseObject> viewAllSyllabusesByGrade(@RequestParam String gradeName) {
+        return educationService.viewAllSyllabusesByGrade(gradeName);
+    }
+
+
+    @PostMapping("/classes")
+    @PreAuthorize("hasRole('education')")
+    public ResponseEntity<ResponseObject> generateClassesAuto(@RequestBody GenerateClassesRequest request){
+        return educationService.generateClassesAuto(request);
+    }
+
+    @DeleteMapping("/class")
+    @PreAuthorize("hasRole('education')")
+    public ResponseEntity<ResponseObject> deleteClassById (@RequestParam String classId){
+        return educationService.deleteClassById(classId);
+    }
+
+    @GetMapping("/class/listByGradeAndYear")
+    @PreAuthorize("hasRole('education')")
+    public ResponseEntity<ResponseObject> viewAllClassesByYearAndGrade (@RequestParam String year, @RequestParam String grade){
+        return educationService.viewAllClassesByYearAndGrade(year, grade);
+    }
+
+    @GetMapping("/class/schedule/list")
+    @PreAuthorize("hasAnyRole('education', 'parent', 'teacher')")
+    public ResponseEntity<ResponseObject> getSchedulesByClassId(@RequestParam String classId){
+        return educationService.getSchedulesByClassId(classId);
+    }
+
+    @GetMapping("/schedule/activity/list")
+    @PreAuthorize("hasAnyRole('education', 'parent', 'teacher')")
+    public ResponseEntity<ResponseObject> getActivitiesByScheduleId(@RequestParam String scheduleId){
+        return educationService.getActivitiesByScheduleId(scheduleId);
+    }
 
     @PutMapping("/syllabus/assign/lessons")
     @PreAuthorize("hasRole('education')")
@@ -125,8 +159,8 @@ public class EducationController {
 
     @PutMapping("/event/cancel")
     @PreAuthorize("hasRole('education')")
-    public ResponseEntity<ResponseObject> cancelEvent(@RequestParam String id) {
-        return educationService.cancelEvent(id);
+    public ResponseEntity<ResponseObject> cancelEvent(@RequestParam String id, @RequestBody CancelEventRequest cancelEventRequest) {
+        return educationService.cancelEvent(id, cancelEventRequest);
     }
 
     @GetMapping("/event/assign/teachers")
@@ -135,4 +169,15 @@ public class EducationController {
         return educationService.viewAssignedTeachersOfEvent(id);
     }
 
+    @GetMapping("/numberOfAvailableStudents")
+    @PreAuthorize("hasRole('education')")
+    public ResponseEntity<ResponseObject> viewNumberOfStudentsNotAssignToAnyClassByYearAdnGrade(@RequestParam String year, @RequestParam String grade){
+        return educationService.viewNumberOfStudentsNotAssignToAnyClassByYearAdnGrade(year, grade);
+    }
+
+    @GetMapping("/assignedStudentOfClass/list")
+    @PreAuthorize("hasRole('education')")
+    public ResponseEntity<ResponseObject> viewAssignedStudentsOfClass(@RequestParam String classId){
+        return educationService.viewAssignedStudentsOfClass(classId);
+    }
 }

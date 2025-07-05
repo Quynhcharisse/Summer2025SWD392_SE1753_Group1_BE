@@ -67,7 +67,7 @@ public class AdmissionController {
     }
 
     @GetMapping("/years")
-    @PreAuthorize("hasRole('admission')")
+    @PreAuthorize("hasAnyRole('admission','education')")
     public ResponseEntity<ResponseObject> getAllYear() {
         return admissionService.getAllYear();
     }
