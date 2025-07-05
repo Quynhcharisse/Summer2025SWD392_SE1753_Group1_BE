@@ -1,6 +1,6 @@
 package com.swd392.group1.pes.utils;
 
-import com.swd392.group1.pes.email.Format;
+import com.swd392.group1.pes.utils.email.Format;
 import com.swd392.group1.pes.enums.Status;
 import com.swd392.group1.pes.models.AdmissionForm;
 import com.swd392.group1.pes.repositories.AdmissionFormRepo;

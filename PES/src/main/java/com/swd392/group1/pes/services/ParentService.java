@@ -1,14 +1,14 @@
 package com.swd392.group1.pes.services;
 
-import com.swd392.group1.pes.requests.AddChildRequest;
-import com.swd392.group1.pes.requests.CancelAdmissionForm;
-import com.swd392.group1.pes.requests.GetPaymentURLRequest;
-import com.swd392.group1.pes.requests.InitiateVNPayPaymentRequest;
-import com.swd392.group1.pes.requests.RefillFormRequest;
-import com.swd392.group1.pes.requests.RegisterEventRequest;
-import com.swd392.group1.pes.requests.SubmitAdmissionFormRequest;
-import com.swd392.group1.pes.requests.UpdateChildRequest;
-import com.swd392.group1.pes.response.ResponseObject;
+import com.swd392.group1.pes.dto.requests.AddChildRequest;
+import com.swd392.group1.pes.dto.requests.CancelAdmissionForm;
+import com.swd392.group1.pes.dto.requests.GetPaymentURLRequest;
+import com.swd392.group1.pes.dto.requests.InitiateVNPayPaymentRequest;
+import com.swd392.group1.pes.dto.requests.RefillFormRequest;
+import com.swd392.group1.pes.dto.requests.RegisterEventRequest;
+import com.swd392.group1.pes.dto.requests.SubmitAdmissionFormRequest;
+import com.swd392.group1.pes.dto.requests.UpdateChildRequest;
+import com.swd392.group1.pes.dto.response.ResponseObject;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.ResponseEntity;
 

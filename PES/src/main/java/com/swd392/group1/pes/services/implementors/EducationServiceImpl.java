@@ -1,6 +1,15 @@
 package com.swd392.group1.pes.services.implementors;
 
-import com.swd392.group1.pes.email.Format;
+import com.swd392.group1.pes.dto.requests.AssignLessonsRequest;
+import com.swd392.group1.pes.dto.requests.CancelEventRequest;
+import com.swd392.group1.pes.dto.requests.CreateEventRequest;
+import com.swd392.group1.pes.dto.requests.CreateLessonRequest;
+import com.swd392.group1.pes.dto.requests.CreateSyllabusRequest;
+import com.swd392.group1.pes.dto.requests.GenerateClassesRequest;
+import com.swd392.group1.pes.dto.requests.RegisterEventRequest;
+import com.swd392.group1.pes.dto.requests.UpdateLessonRequest;
+import com.swd392.group1.pes.dto.requests.UpdateSyllabusRequest;
+import com.swd392.group1.pes.dto.response.ResponseObject;
 import com.swd392.group1.pes.enums.Grade;
 import com.swd392.group1.pes.enums.Role;
 import com.swd392.group1.pes.enums.Status;
@@ -33,25 +42,9 @@ import com.swd392.group1.pes.repositories.SyllabusLessonRepo;
 import com.swd392.group1.pes.repositories.SyllabusRepo;
 import com.swd392.group1.pes.repositories.TeacherEventRepo;
 import com.swd392.group1.pes.repositories.TermItemRepo;
-import com.swd392.group1.pes.requests.CancelEventRequest;
-import com.swd392.group1.pes.requests.CreateLessonRequest;
-import com.swd392.group1.pes.requests.AssignLessonsRequest;
-import com.swd392.group1.pes.requests.CreateSyllabusRequest;
-import com.swd392.group1.pes.requests.GenerateClassesRequest;
-import com.swd392.group1.pes.requests.UpdateLessonRequest;
-import com.swd392.group1.pes.requests.UpdateSyllabusRequest;
-import com.swd392.group1.pes.response.ResponseObject;
 import com.swd392.group1.pes.services.EducationService;
-import com.swd392.group1.pes.requests.CreateEventRequest;
 import com.swd392.group1.pes.services.MailService;
-import com.swd392.group1.pes.validations.EducationValidation.ClassValidation;
-import com.swd392.group1.pes.validations.EducationValidation.EventValidation;
-import com.swd392.group1.pes.validations.EducationValidation.LessonValidation;
-import com.swd392.group1.pes.validations.EducationValidation.ScheduleValidation;
-import com.swd392.group1.pes.validations.EducationValidation.SyllabusValidation.AssignLessonsValidation;
-import com.swd392.group1.pes.validations.EducationValidation.SyllabusValidation.CheckSyllabusId;
-import com.swd392.group1.pes.validations.EducationValidation.SyllabusValidation.CreateSyllabusValidation;
-import com.swd392.group1.pes.validations.EducationValidation.SyllabusValidation.UpdateSyllabusValidation;
+import com.swd392.group1.pes.utils.email.Format;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -66,7 +59,17 @@ import java.time.LocalTime;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -93,9 +96,9 @@ public class EducationServiceImpl implements EducationService {
     public ResponseEntity<ResponseObject> createSyllabus(CreateSyllabusRequest request) {
 
         // 1. Validation chung
-        String error = CreateSyllabusValidation.validate(request, syllabusRepo);
-        if (!AssignLessonsValidation.validate(request.getLessonNames()).trim().isEmpty()) {
-            error = AssignLessonsValidation.validate(request.getLessonNames());
+        String error = createSyllabusValidation(request, syllabusRepo);
+        if (!assignLessonsValidation(request.getLessonNames()).trim().isEmpty()) {
+            error = assignLessonsValidation(request.getLessonNames());
         }
         if (!error.isEmpty()) {
             return ResponseEntity
@@ -157,7 +160,7 @@ public class EducationServiceImpl implements EducationService {
                         .syllabus(syllabus)
                         .lesson(lesson)
                         .build())
-                        .toList();
+                .toList();
         syllabus.setSyllabusLessonList(joins);
         syllabusRepo.save(syllabus);
 
@@ -170,10 +173,63 @@ public class EducationServiceImpl implements EducationService {
                         .build());
     }
 
+    public static String createSyllabusValidation(CreateSyllabusRequest request, SyllabusRepo syllabusRepo) {
+
+        if (syllabusRepo.existsBySubjectIgnoreCase(request.getSubject()))
+            return "Syllabus already exists";
+
+
+        if (request.getSubject().trim().isEmpty()) {
+            return "Subject cannot be empty";
+        }
+
+        //  Description không điền
+        if (request.getDescription().trim().isEmpty()) {
+            return "Description should not be empty";
+        }
+
+        if (request.getNumberOfWeek() <= 0) {
+            return "Number of weeks must be greater than 0";
+        }
+
+        if (request.getLessonNames().size() < 3) {
+            return "Please select at least 3 lessons for the syllabus";
+        }
+
+        // Cần chọn Grade
+        if (request.getGrade() == null || request.getGrade().trim().isEmpty()) {
+            return "Grade is required";
+        }
+
+        // Grade được chọn không tồn tại
+        boolean isExistGrade = Arrays.stream(Grade.values())
+                .anyMatch(grade -> grade.getName().equalsIgnoreCase(request.getGrade()));
+        if (!isExistGrade) {
+            return "Selected grade does not exist.";
+        }
+        if (!assignLessonsValidation(request.getLessonNames()).isEmpty())
+            return assignLessonsValidation(request.getLessonNames());
+
+        return "";
+    }
+
+//    public static String assignLessonsValidation(List<String> lessonNames) {
+//
+//        if (lessonNames == null || lessonNames.isEmpty()) {
+//            return "Please select at least one lesson.";
+//        }
+//
+//        if (lessonNames.size() < 3) {
+//            return "Please select at least 3 lessons for the syllabus";
+//        }
+//
+//        return ""; xem kĩ hẵn bỏ
+//    }
+
     @Override
     public ResponseEntity<ResponseObject> updateSyllabus(String id, UpdateSyllabusRequest request) {
 
-        String error = UpdateSyllabusValidation.validate(id, request);
+        String error = updateSyllabusValidation(id, request);
 
         if (!error.isEmpty()) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
@@ -195,7 +251,7 @@ public class EducationServiceImpl implements EducationService {
                             .build()
             );
 
-        if(syllabusRepo.findById(Integer.parseInt(id)).get().isAssignedToClasses()){
+        if (syllabusRepo.findById(Integer.parseInt(id)).get().isAssignedToClasses()) {
             return ResponseEntity.status(HttpStatus.CONFLICT).body(
                     ResponseObject.builder()
                             .message("Cannot update syllabus that is already assigned to classes")
@@ -241,10 +297,45 @@ public class EducationServiceImpl implements EducationService {
         );
     }
 
+    public static String updateSyllabusValidation(String id, UpdateSyllabusRequest request) {
+
+        if(!checkSyllabusId(id).trim().isEmpty())
+            return checkSyllabusId(id);
+
+
+        if(request.getSubject().trim().isEmpty()){
+            return "Subject cannot be empty";
+        }
+
+        //  Description không điền
+        if(request.getDescription().trim().isEmpty()){
+            return "Description should not be empty";
+        }
+
+        // Number of week không điền
+        if( request.getNumberOfWeek() <= 0 ){
+            return "Number of weeks must be greater than 0";
+        }
+
+        // Cần chọn Grade
+        if (request.getGrade() == null || request.getGrade().trim().isEmpty()) {
+            return "Grade is required";
+        }
+
+        // Grade được chọn không tồn tại
+        boolean isExistGrade = Arrays.stream(Grade.values())
+                .anyMatch(grade -> grade.getName().equalsIgnoreCase(request.getGrade()));
+        if (!isExistGrade) {
+            return "Selected grade does not exist.";
+        }
+
+        return "";
+    }
+
     @Override
     public ResponseEntity<ResponseObject> viewSyllabusDetail(String id) {
 
-        String error = CheckSyllabusId.validate(id);
+        String error = checkSyllabusId(id);
 
         if (!error.isEmpty())
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
@@ -266,7 +357,6 @@ public class EducationServiceImpl implements EducationService {
             );
 
 
-
         Syllabus syllabus = syllabusRepo.findById(Integer.parseInt(id)).get();
 
         return ResponseEntity.ok().body(
@@ -276,6 +366,20 @@ public class EducationServiceImpl implements EducationService {
                         .data(buildSyllabusDetail(syllabus))
                         .build()
         );
+    }
+
+    public static String checkSyllabusId(String id){
+        // ID is empty
+        if(id.isEmpty()){
+            return "Id cannot be empty";
+        }
+        // ID wrong format
+        try {
+            Integer.parseInt(id);
+        } catch (IllegalArgumentException ex) {
+            return "Id must be a number";
+        }
+        return "";
     }
 
 
@@ -302,9 +406,9 @@ public class EducationServiceImpl implements EducationService {
     public ResponseEntity<ResponseObject> assignLessonsToSyllabus(String id, AssignLessonsRequest request) {
         // 1. Validate request.getLessonNames()
         List<String> requestedNames = request.getLessonNames();
-        String error = AssignLessonsValidation.validate(requestedNames);
+        String error = assignLessonsValidation(requestedNames);
         // Nếu validation của ID cũng trả lỗi, ưu tiên thông báo ID lỗi
-        String idError = CheckSyllabusId.validate(id);
+        String idError = checkSyllabusId(id);
         if (!idError.trim().isEmpty()) {
             error = idError;
         }
@@ -321,7 +425,7 @@ public class EducationServiceImpl implements EducationService {
 
         Syllabus syllabus = syllabusRepo.findById(Integer.parseInt(id)).get();
 
-        if (syllabus.isAssignedToClasses()){
+        if (syllabus.isAssignedToClasses()) {
             return ResponseEntity.status(HttpStatus.CONFLICT).body(
                     ResponseObject.builder()
                             .message("Cannot assign lessons to syllabus because syllabus is already assigned to classes")
@@ -437,11 +541,23 @@ public class EducationServiceImpl implements EducationService {
         }
     }
 
+    public static String assignLessonsValidation(List<String> lessonNames) {
+
+        if (lessonNames == null || lessonNames.isEmpty()) {
+            return "Please select at least one lesson.";}
+
+        if(lessonNames.size() < 3) {
+            return "Please select at least 3 lessons for the syllabus";
+        }
+
+        return "";
+    }
+
     @Override
     public ResponseEntity<ResponseObject> viewAssignedSyllabuses(String id) {
-        String error = LessonValidation.checkLessonId(id);
+        String error = checkLessonIdValid(id);
 
-        if(!error.isEmpty()){
+        if (!error.isEmpty()) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
                     ResponseObject.builder()
                             .message(error)
@@ -450,7 +566,7 @@ public class EducationServiceImpl implements EducationService {
                             .build());
         }
         // Lsson không tồn tại hoặc bị xóa
-        if(lessonRepo.findById(Integer.parseInt(id)).isEmpty())
+        if (lessonRepo.findById(Integer.parseInt(id)).isEmpty())
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
                     ResponseObject.builder()
                             .message("Lesson with id " + id + " does not exist or be deleted")
@@ -473,9 +589,23 @@ public class EducationServiceImpl implements EducationService {
         );
     }
 
+    public static String checkLessonIdValid(String id) {
+        // ID is empty
+        if (id.isEmpty()) {
+            return "Id cannot be empty";
+        }
+        // ID wrong format
+        try {
+            Integer.parseInt(id);
+        } catch (IllegalArgumentException ex) {
+            return "Id must be a number";
+        }
+        return "";
+    }
+
     @Override
     public ResponseEntity<ResponseObject> viewLessonDetail(String id) {
-        String error = CheckSyllabusId.validate(id);
+        String error = checkSyllabusId(id);
 
         if (!error.isEmpty())
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
@@ -487,7 +617,7 @@ public class EducationServiceImpl implements EducationService {
             );
 
         // Lsson không tồn tại hoặc bị xóa
-        if(lessonRepo.findById(Integer.parseInt(id)).isEmpty())
+        if (lessonRepo.findById(Integer.parseInt(id)).isEmpty())
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
                     ResponseObject.builder()
                             .message("Lesson with id " + id + " does not exist or be deleted")
@@ -509,20 +639,20 @@ public class EducationServiceImpl implements EducationService {
     }
 
 
-    private Map<String,Object> buildSyllabusDetail(Syllabus syllabus){
-        Map<String,Object> data = new HashMap<>();
-        data.put("id",syllabus.getId());
-        data.put("subject",syllabus.getSubject());
-        data.put("description",syllabus.getDescription());
-        data.put("numberOfWeek",syllabus.getNumberOfWeek());
+    private Map<String, Object> buildSyllabusDetail(Syllabus syllabus) {
+        Map<String, Object> data = new HashMap<>();
+        data.put("id", syllabus.getId());
+        data.put("subject", syllabus.getSubject());
+        data.put("description", syllabus.getDescription());
+        data.put("numberOfWeek", syllabus.getNumberOfWeek());
         data.put("maxHoursOfSyllabus", syllabus.getHoursOfSyllabus());
-        data.put("grade",syllabus.getGrade());
+        data.put("grade", syllabus.getGrade());
         return data;
     }
 
     @Override
     public ResponseEntity<ResponseObject> createLesson(CreateLessonRequest request) {
-        String error = LessonValidation.validateCreate(request, lessonRepo);
+        String error = lessonCreateValidation(request, lessonRepo);
         if (!error.isEmpty()) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
                     ResponseObject.builder()
@@ -535,7 +665,7 @@ public class EducationServiceImpl implements EducationService {
 
         if (request.getToolsRequired() == null || request.getToolsRequired().trim().isEmpty()) {
             request.setToolsRequired("N/A");
-                    }
+        }
         Lesson lesson = Lesson.builder()
                 .topic(request.getTopic())
                 .description(request.getDescription())
@@ -566,9 +696,42 @@ public class EducationServiceImpl implements EducationService {
         );
     }
 
+    private String lessonCreateValidation(CreateLessonRequest request, LessonRepo lessonRepo) {
+
+        if (request.getTopic() == null || request.getTopic().trim().isEmpty()) {
+            return "Lesson topic is required";
+        }
+
+        if (!request.getTopic().matches("^[a-zA-Z0-9 ]+$")) {
+            return "Lesson topic must not contain special characters.";
+        }
+
+        if (request.getDescription() == null) {
+            return "Lesson description is required";
+        }
+
+        if (request.getObjective() == null || request.getObjective().trim().isEmpty()) {
+            return "Lesson objective is required";
+        }
+
+        if (request.getDuration() <= 0) {
+            return "Lesson duration hours of week must be greater than zero.";
+        }
+
+        if (request.getDuration() >= 31) {
+            return "Lesson duration hours of week must be less than 31 hours.";
+        }
+
+        // Lesson topic da ton tai
+        if (lessonRepo.findByTopicIgnoreCase(request.getTopic()).isPresent())
+            return "Lesson topic already exists";
+
+        return "";
+    }
+
     @Override
     public ResponseEntity<ResponseObject> updateLesson(String id, UpdateLessonRequest request) {
-        String error = LessonValidation.validateUpdate(id, request);
+        String error = lessonUpdateValidate(id, request);
         if (!error.isEmpty()) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
                     ResponseObject.builder()
@@ -592,7 +755,7 @@ public class EducationServiceImpl implements EducationService {
         boolean assigned = lesson.getSyllabusLessonList().stream()
                 .map(SyllabusLesson::getSyllabus)
                 .anyMatch(Syllabus::isAssignedToClasses);
-        if(assigned) {
+        if (assigned) {
             return ResponseEntity.status(HttpStatus.CONFLICT).body(
                     ResponseObject.builder()
                             .message("Cannot update lesson that is already assigned to classes")
@@ -643,6 +806,39 @@ public class EducationServiceImpl implements EducationService {
         );
     }
 
+    private String lessonUpdateValidate(String id, UpdateLessonRequest request) {
+
+        if (!checkLessonIdValid(id).trim().isEmpty())
+            return checkLessonIdValid(id);
+
+        if (request.getTopic() == null || request.getTopic().trim().isEmpty()) {
+            return "Lesson topic is required";
+        }
+
+        if (!request.getTopic().matches("^[a-zA-Z0-9 ]+$")) {
+            return "Lesson topic must not contain special characters.";
+        }
+
+        if (request.getDescription() == null) {
+            return "Lesson description is required";
+        }
+
+        if (request.getObjective() == null || request.getObjective().trim().isEmpty()) {
+            return "Lesson objective is required";
+        }
+
+        if (request.getDuration() <= 0) {
+            return "Lesson duration hours of week must be greater than zero.";
+        }
+
+        if (request.getDuration() >= 41) {
+            return "Lesson duration hours of week must be less than 41 hours.";
+        }
+
+        return "";
+    }
+
+
     @Override
     public ResponseEntity<ResponseObject> viewLessonList(String searchQuery) {
         List<Lesson> lessons;
@@ -653,7 +849,7 @@ public class EducationServiceImpl implements EducationService {
         }
         // Sắp xếp theo createdAt giảm dần
         lessons.sort(Comparator.comparing(Lesson::getCreatedAt).reversed());
-        List<Map<String,Object>> lessonDetails = lessons.stream()
+        List<Map<String, Object>> lessonDetails = lessons.stream()
                 .map(this::buildLessonDetail)
                 .toList();
 
@@ -668,7 +864,7 @@ public class EducationServiceImpl implements EducationService {
 
     @Override
     public ResponseEntity<ResponseObject> viewLessonNotAssignedOfSyllabus(String id, String searchQuery) {
-        String error = CheckSyllabusId.validate(id);
+        String error = checkSyllabusId(id);
         if (!error.isEmpty())
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
                     ResponseObject.builder()
@@ -679,7 +875,7 @@ public class EducationServiceImpl implements EducationService {
             );
 
         // Syllabus không tồn tại hoặc bị xóa
-        if(syllabusRepo.findById(Integer.parseInt(id)).isEmpty())
+        if (syllabusRepo.findById(Integer.parseInt(id)).isEmpty())
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
                     ResponseObject.builder()
                             .message("Syllabus with id " + id + " does not exist or be deleted")
@@ -695,7 +891,7 @@ public class EducationServiceImpl implements EducationService {
 
         List<Lesson> allLessons = lessonRepo.findAll();
         String q = (searchQuery == null ? "" : searchQuery.trim().toLowerCase());
-        List<Map<String,Object>> unassignedLessons = allLessons.stream()
+        List<Map<String, Object>> unassignedLessons = allLessons.stream()
                 .filter(l -> !assignedLessonIds.contains(l.getId()))
                 .filter(l ->
                         // a) Nếu q.empty → trả về true cho tất cả
@@ -717,7 +913,7 @@ public class EducationServiceImpl implements EducationService {
     @Override
     public ResponseEntity<ResponseObject> viewLessonAssignedOfSyllabus(String id, String searchQuery) {
 
-        String error = CheckSyllabusId.validate(id);
+        String error = checkSyllabusId(id);
 
         if (!error.isEmpty())
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
@@ -729,7 +925,7 @@ public class EducationServiceImpl implements EducationService {
             );
 
         // Syllabus không tồn tại hoặc bị xóa
-        if(syllabusRepo.findById(Integer.parseInt(id)).isEmpty())
+        if (syllabusRepo.findById(Integer.parseInt(id)).isEmpty())
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
                     ResponseObject.builder()
                             .message("Syllabus with id " + id + " does not exist or be deleted")
@@ -775,7 +971,7 @@ public class EducationServiceImpl implements EducationService {
 
     @Override
     public ResponseEntity<ResponseObject> createEvent(CreateEventRequest request) {
-        String error = EventValidation.validateCreate(request, eventRepo);
+        String error = validateCreateEvent(request, eventRepo);
         if (!error.isEmpty()) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
                     ResponseObject.builder()
@@ -792,11 +988,11 @@ public class EducationServiceImpl implements EducationService {
         List<String> statuses = List.of(Status.ACCOUNT_ACTIVE.getValue(), Status.ACCOUNT_UNBAN.getValue());
 
         for (String email : requestEmails) {
-            accountRepo.findByRoleAndEmailAndStatusIn(Role.TEACHER , email, statuses)
+            accountRepo.findByRoleAndEmailAndStatusIn(Role.TEACHER, email, statuses)
                     .ifPresent(validTeachers::add);
         }
 
-        if(validTeachers.isEmpty())
+        if (validTeachers.isEmpty())
             return ResponseEntity
                     .status(HttpStatus.NOT_FOUND)
                     .body(ResponseObject.builder()
@@ -817,7 +1013,7 @@ public class EducationServiceImpl implements EducationService {
         // Lấy tất cả TeacherEvent xung đột
         List<TeacherEvent> conflicts = teacherEventRepo
                 .findByTeacherIdInAndEventStatusAndEventStartTimeLessThanAndEventEndTimeGreaterThan(
-                        validTeacherIds, Status.EVENT_REGISTRATION_ACTIVE , newEnd, newStart);
+                        validTeacherIds, Status.EVENT_REGISTRATION_ACTIVE, newEnd, newStart);
 
         Map<Integer, List<Event>> conflictsByTeacher = new HashMap<>();
         for (TeacherEvent te : conflicts) {
@@ -886,11 +1082,148 @@ public class EducationServiceImpl implements EducationService {
                 .build());
     }
 
+    public static String validateCreateEvent(CreateEventRequest request, EventRepo eventRepo) {
+
+        if (request.getName() == null || request.getName().trim().isEmpty()) {
+            return "Event name is required";
+        }
+
+        if (request.getName().length() > 100) {
+            return "Event name must not exceed 100 characters";
+        }
+
+        if (eventRepo.existsByName(request.getName().trim())) {
+            return "Event already exists";
+        }
+
+        if (request.getStartTime() == null) {
+            return "Start time is required";
+        }
+        if (request.getEndTime() == null) {
+            return "End time is required";
+        }
+
+        if (!request.getStartTime().atZone(ZoneOffset.UTC)
+                .withZoneSameInstant(ZoneId.of("Asia/Ho_Chi_Minh")).toLocalDateTime()
+                .isBefore(request.getEndTime().atZone(ZoneOffset.UTC)
+                        .withZoneSameInstant(ZoneId.of("Asia/Ho_Chi_Minh")).toLocalDateTime())) {
+            return "Start time must be before end time";
+        }
+
+        Duration duration = Duration.between(request.getStartTime().atZone(ZoneOffset.UTC)
+                        .withZoneSameInstant(ZoneId.of("Asia/Ho_Chi_Minh")).toLocalDateTime(),
+                request.getEndTime().atZone(ZoneOffset.UTC)
+                        .withZoneSameInstant(ZoneId.of("Asia/Ho_Chi_Minh")).toLocalDateTime());
+        if (duration.isNegative() || duration.isZero() || duration.toMinutes() < 15) {
+            return "Event duration must be at least 15 minutes";
+        }
+
+        if (request.getLocation() == null || request.getLocation().trim().isEmpty()) {
+            return "Location is required";
+        }
+
+        if (request.getLocation().length() > 200) {
+            return "Location must not exceed 200 characters";
+        }
+
+        if (request.getDescription() == null || request.getDescription().trim().isEmpty()) {
+            return "Event description is required";
+        }
+
+        if (request.getRegistrationDeadline() == null) {
+            return "Registration Deadline Time is required";
+        }
+        LocalDateTime now = LocalDateTime.now();
+        if (!request.getRegistrationDeadline().atZone(ZoneOffset.UTC)
+                .withZoneSameInstant(ZoneId.of("Asia/Ho_Chi_Minh")).toLocalDateTime()
+                .isAfter(now.plusDays(1))) {
+            return "Registration deadline must be at least one day in the future";
+        }
+        if (!request.getRegistrationDeadline().atZone(ZoneOffset.UTC)
+                .withZoneSameInstant(ZoneId.of("Asia/Ho_Chi_Minh")).toLocalDateTime().
+                isBefore(request.getStartTime().atZone(ZoneOffset.UTC)
+                        .withZoneSameInstant(ZoneId.of("Asia/Ho_Chi_Minh")).toLocalDateTime())) {
+            return "Registration deadline must be before the event start time";
+        }
+        LocalDateTime minAllowedDeadline = request.getStartTime().atZone(ZoneOffset.UTC)
+                .withZoneSameInstant(ZoneId.of("Asia/Ho_Chi_Minh")).toLocalDateTime()
+                .minusDays(1);
+        if (request.getRegistrationDeadline().isAfter(minAllowedDeadline)) {
+            return "Registration deadline must be at least one day before the event start time";
+        }
+
+        if (request.getAttachmentImg() == null || request.getAttachmentImg().trim().isEmpty()) {
+            return "Event image is required";
+        }
+
+        if (request.getHostName() == null || request.getHostName().trim().isEmpty()) {
+            return "Host Event Name is required";
+        }
+
+        if (request.getEmails() == null || request.getEmails().isEmpty()) {
+            return "Please select at least one teacher.";
+        }
+
+        return "";
+    }
+
+    public static String validateRegisterEvent(RegisterEventRequest request) {
+        // 1. Kiểm tra eventId
+        String err = checkEventId(request.getEventId());
+        if (!err.isEmpty()) {
+            return err;
+        }
+
+        // 2. Kiểm tra danh sách studentIds có tồn tại, không rỗng
+        List<String> ids = request.getStudentIds();
+        if (ids == null || ids.isEmpty()) {
+            return "Student list must not be empty";
+        }
+
+        // 3. Với mỗi studentId, kiểm tra định dạng và giá trị
+        for (String sid : ids) {
+            String studentErr = checkStudentId(sid);
+            if (!studentErr.isEmpty()) {
+                return String.format("Invalid studentId '%s': %s", sid, studentErr);
+            }
+        }
+
+        return "";
+    }
+
+    public static String checkStudentId(String id) {
+        // ID is empty
+        if (id.isEmpty()) {
+            return "Student Id cannot be empty";
+        }
+        // ID wrong format
+        try {
+            Integer.parseInt(id);
+        } catch (IllegalArgumentException ex) {
+            return "Student Id must be a number";
+        }
+        return "";
+    }
+
+    public static String checkEventId(String id) {
+        // ID is empty
+        if (id.isEmpty()) {
+            return "Event Id cannot be empty";
+        }
+        // ID wrong format
+        try {
+            Integer.parseInt(id);
+        } catch (IllegalArgumentException ex) {
+            return "Event Id must be a number";
+        }
+        return "";
+    }
+
+
     @Override
     public ResponseEntity<ResponseObject> cancelEvent(String id, CancelEventRequest request) {
-        String error = EventValidation.checkEventId(id);
-        if(!error.isEmpty())
-        {
+        String error = checkEventId(id);
+        if (!error.isEmpty()) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
                     ResponseObject.builder()
                             .message(error)
@@ -900,7 +1233,7 @@ public class EducationServiceImpl implements EducationService {
             );
         }
 
-        if (request.getReason() == null || request.getReason().trim().isEmpty()){
+        if (request.getReason() == null || request.getReason().trim().isEmpty()) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
                     ResponseObject.builder()
                             .message("Reason of cancel event is required")
@@ -941,11 +1274,11 @@ public class EducationServiceImpl implements EducationService {
                 String parentEmail = parent.getAccount().getEmail();
 
                 String subject = "[PES] Event Cancelled";
-                String header  = String.format("Event \"%s\" Cancelled", event.getName());
-                String body    = Format.getCancelEventForParentBody(parent.getAccount().getName(),
-                                                            stu.getName(),
-                                                            ep.getEvent().getName(), ep.getEvent().getStartTime(),
-                                                            request.getReason());
+                String header = String.format("Event \"%s\" Cancelled", event.getName());
+                String body = Format.getCancelEventForParentBody(parent.getAccount().getName(),
+                        stu.getName(),
+                        ep.getEvent().getName(), ep.getEvent().getStartTime(),
+                        request.getReason());
                 mailService.sendMail(parentEmail, subject, header, body);
             }
         }
@@ -987,7 +1320,7 @@ public class EducationServiceImpl implements EducationService {
     @Override
     public ResponseEntity<ResponseObject> viewEventDetail(String id) {
 
-        String error = EventValidation.checkEventId(id);
+        String error = checkEventId(id);
 
         if (!error.isEmpty()) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
@@ -1016,9 +1349,9 @@ public class EducationServiceImpl implements EducationService {
 
     @Override
     public ResponseEntity<ResponseObject> viewAssignedTeachersOfEvent(String id) {
-        String error = EventValidation.checkEventId(id);
+        String error = checkEventId(id);
 
-        if(!error.isEmpty()){
+        if (!error.isEmpty()) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
                     ResponseObject.builder()
                             .message(error)
@@ -1027,7 +1360,7 @@ public class EducationServiceImpl implements EducationService {
                             .build());
         }
         // Lsson không tồn tại hoặc bị xóa
-        if(eventRepo.findById(Integer.parseInt(id)).isEmpty())
+        if (eventRepo.findById(Integer.parseInt(id)).isEmpty())
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
                     ResponseObject.builder()
                             .message("Event with id " + id + " does not exist or be deleted")
@@ -1109,7 +1442,7 @@ public class EducationServiceImpl implements EducationService {
             );
         }
         List<Syllabus> syllabusList = syllabusRepo.findAllByGrade(getGradeFromName(gradeName));
-        List<Map<String,Object>> syllabusesDetail = syllabusList.stream()
+        List<Map<String, Object>> syllabusesDetail = syllabusList.stream()
                 .sorted(Comparator.comparing(Syllabus::getCreatedAt).reversed())
                 .map(this::buildSyllabusDetail)
                 .toList();
@@ -1131,9 +1464,9 @@ public class EducationServiceImpl implements EducationService {
                 .sorted()
                 .toList();
 
-        String error = ClassValidation.checkAcademicYearAndGrade(year, grade, years);
+        String error = checkAcademicYearAndGrade(year, grade, years);
 
-        if(!error.isEmpty()){
+        if (!error.isEmpty()) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
                     ResponseObject.builder()
                             .message(error)
@@ -1177,9 +1510,9 @@ public class EducationServiceImpl implements EducationService {
     @Override
     public ResponseEntity<ResponseObject> viewAssignedStudentsOfClass(String classId) {
 
-        String error = ClassValidation.checkClassId(classId);
+        String error = checkClassId(classId);
 
-        if(!error.isEmpty()){
+        if (!error.isEmpty()) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
                     ResponseObject.builder()
                             .message(error)
@@ -1196,7 +1529,7 @@ public class EducationServiceImpl implements EducationService {
                 .map(StudentClass::getStudent)
                 .toList();
 
-        List<Map<String,Object>> studentList = students.stream()
+        List<Map<String, Object>> studentList = students.stream()
                 .map(this::buildStudentDetail)
                 .toList();
 
@@ -1209,8 +1542,7 @@ public class EducationServiceImpl implements EducationService {
         );
     }
 
-    private Map<String, Object> buildStudentDetail(Student student)
-    {
+    private Map<String, Object> buildStudentDetail(Student student) {
         Map<String, Object> studentDetail = new HashMap<>();
         studentDetail.put("id", student.getId());
         studentDetail.put("name", student.getName());
@@ -1257,10 +1589,9 @@ public class EducationServiceImpl implements EducationService {
                 .sorted()
                 .toList();
 
-        String error = ClassValidation.validateCreate(request, years);
+        String error = validateCreate(request, years);
 
-        if(!error.isEmpty())
-        {
+        if (!error.isEmpty()) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(ResponseObject.builder()
                             .message(error)
@@ -1344,15 +1675,15 @@ public class EducationServiceImpl implements EducationService {
             int totalWeeklyHours = raws.stream()
                     .map(raw -> raw.split("-", 4))
                     .filter(parts -> parts.length == 4 && parts[1].startsWith("LE_"))
-                    .mapToInt(parts ->{
+                    .mapToInt(parts -> {
                         LocalTime startSlot = LocalTime.parse(parts[2]);
-                        LocalTime endSlot   = LocalTime.parse(parts[3]);
+                        LocalTime endSlot = LocalTime.parse(parts[3]);
                         return (int) Duration.between(startSlot, endSlot).toHours();
                     })
                     .sum();
             if (totalWeeklyHours != 30)
                 return ResponseEntity.status(HttpStatus.CONFLICT).body(ResponseObject.builder()
-                        .message("Total lesson hours per week must be 30, but found "+ totalWeeklyHours)
+                        .message("Total lesson hours per week must be 30, but found " + totalWeeklyHours)
                         .success(false)
                         .data(null)
                         .build());
@@ -1406,7 +1737,7 @@ public class EducationServiceImpl implements EducationService {
         int numberOfStudentsPerClass = 20;
         int numberOfNeededClasses = (studentsToAssign.size() + numberOfStudentsPerClass - 1) / numberOfStudentsPerClass;
         int totalClassIfCreate = existing + numberOfNeededClasses;
-        int expectedClass = termItemRepo.findByAdmissionTerm_YearAndGrade(Integer.parseInt(request.getYear()),syllabus.getGrade()).getExpectedClasses();
+        int expectedClass = termItemRepo.findByAdmissionTerm_YearAndGrade(Integer.parseInt(request.getYear()), syllabus.getGrade()).getExpectedClasses();
         if (totalClassIfCreate > expectedClass) {
             return ResponseEntity.status(HttpStatus.CONFLICT).body(ResponseObject.builder()
                     .message(String.format("Number of classes after assignment (%d) exceeds expected classes (%d). Please update your plan or increase expected classes.",
@@ -1503,7 +1834,7 @@ public class EducationServiceImpl implements EducationService {
             toSave.add(cls);
         }
         Syllabus prev = syllabusRepo.findByAssignedToClassesAndGrade(true, syllabus.getGrade());
-        if(prev != null){
+        if (prev != null) {
             prev.setAssignedToClasses(false);
             syllabusRepo.save(prev);
         }
@@ -1554,9 +1885,9 @@ public class EducationServiceImpl implements EducationService {
         data.put("name", classes.getName());
         data.put("startDate", classes.getStartDate());
         data.put("endDate", classes.getEndDate());
-        data.put("year",classes.getAcademicYear());
+        data.put("year", classes.getAcademicYear());
         data.put("teacherName", classes.getTeacher().getName());
-        data.put("numberStudents",classes.getNumberStudent());
+        data.put("numberStudents", classes.getNumberStudent());
         data.put("status", classes.getStatus());
         data.put("grade", classes.getGrade());
         return data;
@@ -1567,10 +1898,10 @@ public class EducationServiceImpl implements EducationService {
     public ResponseEntity<ResponseObject> deleteClassById(String classId) {
         Classes cls = classRepo.findById(Integer.parseInt(classId)).get();
         classRepo.delete(cls);
-        return  ResponseEntity.ok(ResponseObject.builder()
-                        .success(true)
-                        .message("Delete class successfully")
-                        .data(null)
+        return ResponseEntity.ok(ResponseObject.builder()
+                .success(true)
+                .message("Delete class successfully")
+                .data(null)
                 .build());
     }
 
@@ -1584,9 +1915,9 @@ public class EducationServiceImpl implements EducationService {
                 .sorted()
                 .toList();
 
-        String error = ClassValidation.checkAcademicYearAndGrade(year,grade,years);
+        String error = checkAcademicYearAndGrade(year, grade, years);
 
-        if(!error.isEmpty()){
+        if (!error.isEmpty()) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(ResponseObject.builder()
                             .message(error)
@@ -1597,7 +1928,7 @@ public class EducationServiceImpl implements EducationService {
 
         List<Classes> classes = classRepo.findByAcademicYearAndGrade(Integer.parseInt(year), getGradeFromName(grade));
 
-        List<Map<String,Object>> classesDetail = classes.stream()
+        List<Map<String, Object>> classesDetail = classes.stream()
                 .map(this::buildClassDetail)
                 .toList();
         return ResponseEntity.ok().body(
@@ -1621,9 +1952,9 @@ public class EducationServiceImpl implements EducationService {
         Map<String, Object> data = new HashMap<>();
         data.put("id", activity.getId());
         data.put("name", activity.getName());
-        data.put("syllabusName",activity.getSyllabusName());
-        data.put("dayOfWeek",activity.getDayOfWeek());
-        data.put("startTime",activity.getStartTime());
+        data.put("syllabusName", activity.getSyllabusName());
+        data.put("dayOfWeek", activity.getDayOfWeek());
+        data.put("startTime", activity.getStartTime());
         data.put("endTime", activity.getEndTime());
         data.put("date", activity.getDate());
         return data;
@@ -1632,10 +1963,9 @@ public class EducationServiceImpl implements EducationService {
     @Override
     public ResponseEntity<ResponseObject> getSchedulesByClassId(String classId) {
 
-        String error = ClassValidation.checkClassId(classId);
+        String error = checkClassId(classId);
 
-        if(!error.isEmpty())
-        {
+        if (!error.isEmpty()) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(ResponseObject.builder()
                             .message(error)
@@ -1646,7 +1976,7 @@ public class EducationServiceImpl implements EducationService {
 
         List<Schedule> schedules = scheduleRepo.findByClasses_Id(Integer.parseInt(classId));
 
-        List<Map<String,Object>> scheduleList = schedules.stream()
+        List<Map<String, Object>> scheduleList = schedules.stream()
                 .map(this::buildScheduleDetail)
                 .toList();
 
@@ -1659,12 +1989,106 @@ public class EducationServiceImpl implements EducationService {
         );
     }
 
+    public static String validateCreate(GenerateClassesRequest request, List<Integer> validYears) {
+
+        if (request.getYear().isEmpty()) {
+            return "Year cannot be empty";
+        }
+
+        int year;
+        try {
+            year = Integer.parseInt(request.getYear());
+        } catch (NumberFormatException ex) {
+            return "Year must be a number";
+        }
+
+        // ✅ Kiểm tra year có tồn tại trong AdmissionTerm DB
+        if (!validYears.contains(year)) {
+            return "Year must belong to an existing Admission Term";
+        }
+
+        // ✅ Kiểm tra year có phải là năm hiện tại
+        int currentYear = LocalDate.now().getYear();
+        if (year != currentYear) {
+            return String.format("Year must be the current year (%d)", currentYear);
+        }
+
+        if (request.getSyllabusId().isEmpty()) {
+            return "Syllabus Id be empty";
+        }
+
+        try {
+            Integer.parseInt(request.getSyllabusId());
+        } catch (IllegalArgumentException ex) {
+            return "Syllabus Id must be a number";
+        }
+
+        LocalDate startDate = request.getStartDate();
+        if (!startDate.isAfter(LocalDate.now())) {
+            return "Start date must be after today: " + LocalDate.now();
+        }
+
+        if (startDate.getYear() != Integer.parseInt(request.getYear())) {
+            return String.format("Start date must be within the year %s, but was %d", request.getYear(), startDate.getYear());
+        }
+
+        if (startDate.getDayOfWeek() != DayOfWeek.MONDAY) {
+            return "Start date must be a Monday (the first day of the week).";
+        }
+
+        return "";
+    }
+
+    public static String checkAcademicYearAndGrade(String year, String grade, List<Integer> validYears) {
+        if (year.isEmpty()) {
+            return "Year cannot be empty";
+        }
+        try {
+            int numberYear = Integer.parseInt(year);
+
+            if (validYears == null || !validYears.contains(numberYear)) {
+                return "The academic year you selected does not exist in any admission term. Please verify your selection and try again.";
+            }
+
+        } catch (IllegalArgumentException ex) {
+            return "Year must be a number";
+        }
+
+        if (grade == null || grade.trim().isEmpty()) {
+            return "Grade is required";
+        }
+
+
+        boolean isExistGrade = Arrays.stream(Grade.values())
+                .anyMatch(gra -> gra.getName().equalsIgnoreCase(grade));
+        if (!isExistGrade) {
+            return "Selected grade does not exist.";
+        }
+        return "";
+    }
+
+    public static String checkClassId(String classId) {
+
+        if (classId.isEmpty()) {
+            return "Class Id cannot be empty";
+        }
+
+        try {
+            Integer.parseInt(classId);
+        } catch (IllegalArgumentException ex) {
+            return "Class Id must be a number";
+        }
+
+
+        return "";
+    }
+
     @Override
     public ResponseEntity<ResponseObject> getActivitiesByScheduleId(String scheduleId) {
 
-        String error = ScheduleValidation.checkScheduleId(scheduleId);
+        String error = checkScheduleIdValidation(scheduleId);
 
-        if(!error.isEmpty()){
+        if (!error.isEmpty()) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(ResponseObject.builder()
                             .message(error)
@@ -1675,7 +2099,7 @@ public class EducationServiceImpl implements EducationService {
 
         List<Activity> activities = activityRepo.findBySchedule_Id(Integer.parseInt(scheduleId));
 
-        List<Map<String,Object>> activityList = activities.stream()
+        List<Map<String, Object>> activityList = activities.stream()
                 .map(this::buildActivityDetail)
                 .toList();
 
@@ -1686,6 +2110,22 @@ public class EducationServiceImpl implements EducationService {
                         .data(activityList)
                         .build()
         );
+    }
+
+    private String checkScheduleIdValidation(String scheduleId) {
+
+        if (scheduleId.isEmpty()) {
+            return "Schedule Id cannot be empty";
+        }
+
+        try {
+            Integer.parseInt(scheduleId);
+        } catch (IllegalArgumentException ex) {
+            return "Schedule Id must be a number";
+        }
+
+
+        return "";
     }
 
     private Grade getGradeFromName(String name) {

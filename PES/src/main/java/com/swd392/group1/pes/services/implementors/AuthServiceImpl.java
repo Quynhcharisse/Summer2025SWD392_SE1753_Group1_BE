@@ -1,25 +1,22 @@
 package com.swd392.group1.pes.services.implementors;
 
-import com.swd392.group1.pes.email.Format;
+import com.swd392.group1.pes.dto.requests.ForgotPasswordRequest;
+import com.swd392.group1.pes.dto.requests.LoginRequest;
+import com.swd392.group1.pes.dto.requests.RegisterRequest;
+import com.swd392.group1.pes.dto.requests.ResetPassRequest;
+import com.swd392.group1.pes.dto.response.ResponseObject;
 import com.swd392.group1.pes.enums.Role;
 import com.swd392.group1.pes.enums.Status;
 import com.swd392.group1.pes.models.Account;
 import com.swd392.group1.pes.models.Parent;
 import com.swd392.group1.pes.repositories.AccountRepo;
 import com.swd392.group1.pes.repositories.ParentRepo;
-import com.swd392.group1.pes.requests.ForgotPasswordRequest;
-import com.swd392.group1.pes.requests.LoginRequest;
-import com.swd392.group1.pes.requests.RegisterRequest;
-import com.swd392.group1.pes.requests.ResetPassRequest;
-import com.swd392.group1.pes.response.ResponseObject;
 import com.swd392.group1.pes.services.AuthService;
 import com.swd392.group1.pes.services.JWTService;
 import com.swd392.group1.pes.services.MailService;
 import com.swd392.group1.pes.utils.CookieUtil;
 import com.swd392.group1.pes.utils.RandomPasswordUtil;
-import com.swd392.group1.pes.validations.AuthValidation.ForgotPasswordValidation;
-import com.swd392.group1.pes.validations.AuthValidation.LoginValidation;
-import com.swd392.group1.pes.validations.AuthValidation.RegisterValidation;
+import com.swd392.group1.pes.utils.email.Format;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -29,10 +26,10 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.regex.Pattern;
 
 @Service
 @RequiredArgsConstructor
@@ -65,7 +62,7 @@ public class AuthServiceImpl implements AuthService {
             );
         }
 
-        String error = LoginValidation.validate(request, accountRepo);
+        String error = loginValidation(request, accountRepo);
 
         if (!error.isEmpty()) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
@@ -91,11 +88,30 @@ public class AuthServiceImpl implements AuthService {
         );
     }
 
-    private Map<String, Object> buildLoginBody (Account account) {
-        Map <String, Object> body = new HashMap<>();
+    private Map<String, Object> buildLoginBody(Account account) {
+        Map<String, Object> body = new HashMap<>();
         body.put("email", account.getEmail());
         body.put("role", account.getRole().name());
         return body;
+    }
+
+    public static String loginValidation(LoginRequest request, AccountRepo accountRepo) {
+
+        if (request.getEmail() == null || request.getEmail().trim().isEmpty()) {
+            return "Email is required.";
+        }
+        if (request.getPassword() == null || request.getPassword().trim().isEmpty()) {
+            return "Password is required.";
+        }
+
+        Account acc = accountRepo.findByEmailAndStatus(request.getEmail(), Status.ACCOUNT_ACTIVE.getValue()).orElse(null);
+
+        if (acc == null || !acc.getPassword().equals(request.getPassword()) ||
+                acc.getStatus().equalsIgnoreCase(Status.ACCOUNT_BAN.getValue())) {
+            return "Email or password is incorrect.";
+        }
+
+        return "";
     }
 
     @Override
@@ -119,7 +135,7 @@ public class AuthServiceImpl implements AuthService {
             String email = jwtService.extractEmailFromJWT(refreshToken.getValue());
             Account account = accountRepo.findByEmailAndStatus(email, Status.ACCOUNT_ACTIVE.getValue()).orElse(null);
 
-            if(account != null) {
+            if (account != null) {
                 String newAccessToken = jwtService.generateAccessToken(account);
 
                 CookieUtil.createCookie(response, newAccessToken, refreshToken.getValue(), accessExpiration, refreshExpiration);
@@ -145,8 +161,8 @@ public class AuthServiceImpl implements AuthService {
     @Override
     public ResponseEntity<ResponseObject> register(RegisterRequest request) {
 
-        String error = RegisterValidation.validate(request, accountRepo);
-        if(!error.isEmpty()){
+        String error = registerValidation(request, accountRepo);
+        if (!error.isEmpty()) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
                     ResponseObject.builder()
                             .message(error)
@@ -203,10 +219,99 @@ public class AuthServiceImpl implements AuthService {
         );
     }
 
+    public static String registerValidation(RegisterRequest request, AccountRepo accountRepo) {
+        if (request.getEmail() == null || request.getEmail().trim().isEmpty()) {
+            return "Email is required.";
+        }
+
+        Pattern emailPattern = Pattern.compile("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+$");
+        if (!emailPattern.matcher(request.getEmail()).matches()) {
+            return "Invalid email format.";
+        }
+
+        if (accountRepo.existsByEmail(request.getEmail())) {
+            return "This email is already registered.";
+        }
+
+        if (request.getPassword() == null || request.getPassword().trim().isEmpty()) {
+            return "Password is required.";
+        }
+
+        if (request.getPassword().length() < 8) {
+            return "Password must be at least 8 characters long.";
+        }
+
+        Pattern digitPattern = Pattern.compile(".*\\d.*");
+        Pattern lowerCasePattern = Pattern.compile(".*[a-z].*");
+        Pattern upperCasePattern = Pattern.compile(".*[A-Z].*");
+        Pattern specialPattern = Pattern.compile(".*[^A-Za-z0-9].*");
+
+        if (!digitPattern.matcher(request.getPassword()).matches()) {
+            return "Password must contain at least one digit.";
+        }
+        if (!lowerCasePattern.matcher(request.getPassword()).matches()) {
+            return "Password must contain at least one lowercase letter.";
+        }
+        if (!upperCasePattern.matcher(request.getPassword()).matches()) {
+            return "Password must contain at least one uppercase letter.";
+        }
+        if (!specialPattern.matcher(request.getPassword()).matches()) {
+            return "Password must contain at least one special character.";
+        }
+
+        if (request.getConfirmPassword() == null || request.getConfirmPassword().trim().isEmpty()) {
+            return "Confirm password is required.";
+        }
+
+        if (!request.getConfirmPassword().equals(request.getPassword())) {
+            return "Confirm password does not match password.";
+        }
+
+        if (request.getName() == null || request.getName().trim().isEmpty()) {
+            return "Name is required.";
+        }
+
+        if (!request.getName().trim().matches("^[a-zA-Z\\s'-]+$")) {
+            return "Name can only contain letters, spaces, hyphens, and apostrophes.";
+        }
+
+        if (request.getName().trim().length() < 2 || request.getName().trim().length() > 50) {
+            return "Name must be between 2 and 50 characters.";
+        }
+
+        if (request.getPhone() == null || request.getPhone().trim().isEmpty()) {
+            return "Phone number is required.";
+        }
+
+        if (!request.getPhone().trim().matches("^(03|05|07|08|09)\\d{8}$")) {
+            return "Phone number must start with a valid prefix and be 10 digits.";
+        }
+
+        if (request.getGender() == null || request.getGender().trim().isEmpty()) {
+            return "Gender is required.";
+        }
+
+        if (!request.getGender().trim().equals("male") &&
+                !request.getGender().trim().equals("female")) {
+            return "Gender must be 'male', 'female'";
+        }
+
+        if (request.getIdentityNumber() == null || request.getIdentityNumber().trim().isEmpty()) {
+            return "Identity number is required.";
+        }
+
+        Pattern idPattern = Pattern.compile("^\\d{12}$");
+        if (!idPattern.matcher(request.getIdentityNumber()).matches()) {
+            return "Identity number must be exactly 12 digits.";
+        }
+
+        return "";
+    }
+
     @Override
     public ResponseEntity<ResponseObject> forgotPassword(ForgotPasswordRequest request) {
-        String error = ForgotPasswordValidation.validate(request, accountRepo);
-        if(!error.isEmpty()){
+        String error = forgotPasswordValidation(request, accountRepo);
+        if (!error.isEmpty()) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
                     ResponseObject.builder()
                             .message(error)
@@ -249,10 +354,24 @@ public class AuthServiceImpl implements AuthService {
         );
     }
 
+    public static String forgotPasswordValidation(ForgotPasswordRequest request, AccountRepo accountRepo) {
+        if (request.getEmail() == null || request.getEmail().trim().isEmpty()) {
+            return "Email is required.";
+        }
+
+        Account acc = accountRepo.findByEmailAndStatus(request.getEmail(), Status.ACCOUNT_ACTIVE.getValue()).orElse(null);
+
+        if (acc == null) {
+            return "No active account found with this email.";
+        }
+
+        return "";
+    }
+
     @Override
     public ResponseEntity<ResponseObject> verifyCode(String code) {
         Account account = accountRepo.findByCode(code).orElse(null);
-        
+
         if (account == null) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
                     ResponseObject.builder()
@@ -285,8 +404,8 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     public ResponseEntity<ResponseObject> resetPass(ResetPassRequest request) {
-        String error = ForgotPasswordValidation.reset(request);
-        if(!error.isEmpty()){
+        String error = resetPassValidation(request);
+        if (!error.isEmpty()) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
                     ResponseObject.builder()
                             .message(error)
@@ -298,7 +417,7 @@ public class AuthServiceImpl implements AuthService {
 
 
         Account account = accountRepo.findByCode(request.getCode()).orElse(null);
-        
+
         if (account == null || account.getCodeExpiry().isBefore(LocalDateTime.now())) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
                     ResponseObject.builder()
@@ -330,5 +449,43 @@ public class AuthServiceImpl implements AuthService {
                         .data(null)
                         .build()
         );
+    }
+
+    public static String resetPassValidation(ResetPassRequest request) {
+        if (request.getNewPassword() == null || request.getNewPassword().trim().isEmpty()) {
+            return "Password is required.";
+        }
+
+        if (request.getNewPassword().length() < 8) {
+            return "Password must be at least 8 characters";
+        }
+
+        Pattern digitPattern = Pattern.compile(".*\\d.*");
+        Pattern lowerCasePattern = Pattern.compile(".*[a-z].*");
+        Pattern upperCasePattern = Pattern.compile(".*[A-Z].*");
+        Pattern specialPattern = Pattern.compile(".*[^A-Za-z0-9].*");
+
+        if (!digitPattern.matcher(request.getNewPassword()).matches()) {
+            return "Password must contain at least one digit.";
+        }
+        if (!lowerCasePattern.matcher(request.getNewPassword()).matches()) {
+            return "Password must contain at least one lowercase letter.";
+        }
+        if (!upperCasePattern.matcher(request.getNewPassword()).matches()) {
+            return "Password must contain at least one uppercase letter.";
+        }
+        if (!specialPattern.matcher(request.getNewPassword()).matches()) {
+            return "Password must contain at least one special character.";
+        }
+
+        if (request.getConfirmPassword() == null || request.getConfirmPassword().trim().isEmpty()) {
+            return "Confirm password is required.";
+        }
+
+        if (!request.getConfirmPassword().equals(request.getNewPassword())) {
+            return "Confirm password does not match password.";
+        }
+
+        return "";
     }
 }

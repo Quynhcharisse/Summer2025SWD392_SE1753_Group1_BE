@@ -1,10 +1,10 @@
 package com.swd392.group1.pes.services;
 
-import com.swd392.group1.pes.requests.ForgotPasswordRequest;
-import com.swd392.group1.pes.requests.LoginRequest;
-import com.swd392.group1.pes.requests.RegisterRequest;
-import com.swd392.group1.pes.requests.ResetPassRequest;
-import com.swd392.group1.pes.response.ResponseObject;
+import com.swd392.group1.pes.dto.requests.ForgotPasswordRequest;
+import com.swd392.group1.pes.dto.requests.LoginRequest;
+import com.swd392.group1.pes.dto.requests.RegisterRequest;
+import com.swd392.group1.pes.dto.requests.ResetPassRequest;
+import com.swd392.group1.pes.dto.response.ResponseObject;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.http.ResponseEntity;

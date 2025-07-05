@@ -1,26 +1,23 @@
 package com.swd392.group1.pes.services.implementors;
 
-import com.swd392.group1.pes.email.Format;
+import com.swd392.group1.pes.utils.email.Format;
 import com.swd392.group1.pes.enums.Role;
 import com.swd392.group1.pes.enums.Status;
 import com.swd392.group1.pes.models.Account;
 import com.swd392.group1.pes.repositories.AccountRepo;
-import com.swd392.group1.pes.requests.CreateTeacherRequest;
-import com.swd392.group1.pes.requests.ProcessAccountRequest;
-import com.swd392.group1.pes.response.ResponseObject;
+import com.swd392.group1.pes.dto.requests.CreateTeacherRequest;
+import com.swd392.group1.pes.dto.requests.ProcessAccountRequest;
+import com.swd392.group1.pes.dto.response.ResponseObject;
 import com.swd392.group1.pes.services.HRService;
 import com.swd392.group1.pes.services.MailService;
 import com.swd392.group1.pes.utils.GenerateEmailTeacherUtil;
 import com.swd392.group1.pes.utils.RandomPasswordUtil;
-import com.swd392.group1.pes.validations.HRValidation.CreateTeacherValidation;
-import com.swd392.group1.pes.validations.HRValidation.ProcessAccountValidation;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
@@ -37,7 +34,7 @@ public class HRServiceImpl implements HRService {
     @Override
     public ResponseEntity<ResponseObject> processAccount(ProcessAccountRequest request, String action) {
 
-        String error = ProcessAccountValidation.processAccountValidate(request, action, accountRepo);
+        String error = processAccountValidate(request, action, accountRepo);
 
         if (!error.isEmpty()) {
             log.warn("Failed to {} account {}: {}", action, request.getEmail(), error);
@@ -126,10 +123,35 @@ public class HRServiceImpl implements HRService {
         );
     }
 
+    public static String processAccountValidate(ProcessAccountRequest request, String action, AccountRepo accountRepo) {
+
+        Account acc = null;
+
+        if (action.equalsIgnoreCase("ban")) {
+
+            acc = accountRepo.findByEmailAndStatus(request.getEmail(), Status.ACCOUNT_ACTIVE.getValue()).orElse(null);
+        } else if (action.equalsIgnoreCase("unban")) {
+
+            acc = accountRepo.findByEmailAndStatus(request.getEmail(), Status.ACCOUNT_BAN.getValue()).orElse(null);
+        } else {
+            return "Invalid action";
+        }
+
+        if (acc == null) {
+            return "Account not found or in invalid state for action: " + action;
+        }
+
+        if (!acc.getRole().equals(Role.PARENT) && !acc.getRole().equals(Role.TEACHER)) {
+            return "Can only process parent or teacher accounts";
+        }
+
+        return "";
+    }
+
     @Override
     public ResponseEntity<ResponseObject> createTeacherAcc(CreateTeacherRequest request) {
 
-        String error = CreateTeacherValidation.validate(request, accountRepo);
+        String error = createTeacherValidation(request, accountRepo);
         if (!error.isEmpty()) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
                     ResponseObject.builder()
@@ -179,6 +201,32 @@ public class HRServiceImpl implements HRService {
                         .data(null)
                         .build()
         );
+    }
+
+    public static String createTeacherValidation(CreateTeacherRequest request, AccountRepo accountRepo) {
+
+        if (request.getName().trim().isEmpty()) {
+            return "Name is required";
+        }
+
+        if (!request.getName().trim().matches("^[a-zA-Z\\s'-]+$")) {
+            return "Name can only contain letters, spaces, hyphens, and apostrophes";
+        }
+
+        if (request.getName().trim().length() < 2 || request.getName().trim().length() > 50) {
+            return "Name must be between 2 and 50 characters";
+        }
+
+        if (request.getGender().trim().isEmpty()) {
+            return "Gender is required";
+        }
+
+        if (!request.getGender().equals("male") &&
+                !request.getGender().equals("female") &&
+                !request.getGender().equals("other")) {
+            return "Gender must be male, female, or other";
+        }
+        return "";
     }
 
 

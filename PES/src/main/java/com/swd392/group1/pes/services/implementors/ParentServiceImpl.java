@@ -1,6 +1,14 @@
 package com.swd392.group1.pes.services.implementors;
 
-import com.swd392.group1.pes.email.Format;
+import com.swd392.group1.pes.dto.requests.AddChildRequest;
+import com.swd392.group1.pes.dto.requests.CancelAdmissionForm;
+import com.swd392.group1.pes.dto.requests.GetPaymentURLRequest;
+import com.swd392.group1.pes.dto.requests.InitiateVNPayPaymentRequest;
+import com.swd392.group1.pes.dto.requests.RefillFormRequest;
+import com.swd392.group1.pes.dto.requests.RegisterEventRequest;
+import com.swd392.group1.pes.dto.requests.SubmitAdmissionFormRequest;
+import com.swd392.group1.pes.dto.requests.UpdateChildRequest;
+import com.swd392.group1.pes.dto.response.ResponseObject;
 import com.swd392.group1.pes.enums.Fees;
 import com.swd392.group1.pes.enums.Grade;
 import com.swd392.group1.pes.enums.Role;
@@ -20,23 +28,10 @@ import com.swd392.group1.pes.repositories.ParentRepo;
 import com.swd392.group1.pes.repositories.StudentRepo;
 import com.swd392.group1.pes.repositories.TermItemRepo;
 import com.swd392.group1.pes.repositories.TransactionRepo;
-import com.swd392.group1.pes.requests.AddChildRequest;
-import com.swd392.group1.pes.requests.CancelAdmissionForm;
-import com.swd392.group1.pes.requests.GetPaymentURLRequest;
-import com.swd392.group1.pes.requests.InitiateVNPayPaymentRequest;
-import com.swd392.group1.pes.requests.RefillFormRequest;
-import com.swd392.group1.pes.requests.RegisterEventRequest;
-import com.swd392.group1.pes.requests.SubmitAdmissionFormRequest;
-import com.swd392.group1.pes.requests.UpdateChildRequest;
-import com.swd392.group1.pes.response.ResponseObject;
 import com.swd392.group1.pes.services.JWTService;
 import com.swd392.group1.pes.services.MailService;
 import com.swd392.group1.pes.services.ParentService;
-import com.swd392.group1.pes.validations.EducationValidation.EventValidation;
-import com.swd392.group1.pes.validations.ParentValidation.ChildValidation;
-import com.swd392.group1.pes.validations.ParentValidation.EditAdmissionFormValidation;
-import com.swd392.group1.pes.validations.ParentValidation.PaymentValidation;
-import com.swd392.group1.pes.validations.ParentValidation.SubmittedAdmissionFormValidation;
+import com.swd392.group1.pes.utils.email.Format;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -53,7 +48,9 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.Period;
 import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Comparator;
 import java.util.Date;
@@ -68,7 +65,7 @@ import java.util.TreeMap;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import static com.swd392.group1.pes.validations.ParentValidation.SubmittedAdmissionFormValidation.calculateAge;
+import static com.swd392.group1.pes.services.implementors.EducationServiceImpl.validateRegisterEvent;
 
 @Service
 @RequiredArgsConstructor
@@ -205,7 +202,7 @@ public class ParentServiceImpl implements ParentService {
         }
 
         //Validate input
-        String error = SubmittedAdmissionFormValidation.validate(request, studentRepo, termItemRepo, admissionFormRepo);
+        String error = submittedAdmissionFormValidation(request, studentRepo, termItemRepo, admissionFormRepo);
         if (!error.isEmpty()) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
                     ResponseObject.builder()
@@ -278,6 +275,83 @@ public class ParentServiceImpl implements ParentService {
         );
     }
 
+    public static String submittedAdmissionFormValidation(SubmitAdmissionFormRequest request, StudentRepo studentRepo, TermItemRepo termItemRepo, AdmissionFormRepo admissionFormRepo) {
+        Student student = studentRepo.findById(request.getStudentId()).orElse(null);
+        if (student == null) {
+            return "Student not found after successful validation. This indicates a logical error.";
+        }
+
+        if (!isAgeValidForGrade(student.getDateOfBirth())) {
+            return "Student's age (" + calculateAge(student.getDateOfBirth()) + " years) does not meet the required age for admission (3-5 years).";
+        }
+
+        Grade grade = calculateAge(student.getDateOfBirth()) == 3 ? Grade.SEED : (calculateAge(student.getDateOfBirth()) == 4 ? Grade.BUD : Grade.LEAF);
+        List<TermItem> activeTermItemList = termItemRepo.findAllByGradeAndStatusAndAdmissionTerm_Year(grade, Status.ACTIVE_TERM_ITEM, LocalDate.now().getYear());
+        System.out.println("List ACTIVE TERM: " + activeTermItemList.size());
+        if (activeTermItemList.isEmpty()) {
+            return "No active term currently.";
+        }
+
+        TermItem activeTermItem = activeTermItemList.get(0);
+
+        if (!activeTermItem.getStatus().equals(Status.ACTIVE_TERM_ITEM) || activeTermItem.getAdmissionTerm() == null || !activeTermItem.getAdmissionTerm().getStatus().equals(Status.ACTIVE_TERM)) {
+            return "The admission term item is not currently open for new admissions or is invalid.";
+        }
+
+        List<Status> statusesToExcludeForNewSubmission = Arrays.asList(Status.REJECTED, Status.CANCELLED, Status.REFILLED);
+        List<AdmissionForm> activeOrPendingForms = admissionFormRepo.findAllByStudent_IdAndTermItem_IdAndStatusNotIn(
+                student.getId(), activeTermItem.getId(), statusesToExcludeForNewSubmission
+        );
+
+        if (!activeOrPendingForms.isEmpty()) {
+            boolean hasPendingForm = activeOrPendingForms.stream()
+                    .anyMatch(form -> form.getStatus().equals(Status.PENDING_APPROVAL));
+            if (hasPendingForm) {
+                return "This student already has a pending admission form for the current term. New submission is not allowed.";
+            }
+            return "This student already has an active or processed admission form for the current term. New submission is not allowed.";
+        }
+
+        if (request.getHouseholdRegistrationAddress() == null || request.getHouseholdRegistrationAddress().trim().isEmpty()) {
+            return "Household registration address is required.";
+        }
+
+        if (request.getHouseholdRegistrationAddress().length() > 150) {
+            return "Household registration address must not exceed 150 characters.";
+        }
+
+        if (request.getCommitmentImg() == null) {
+            return "Commitment image is required.";
+        }
+
+        if (isNotValidImage(request.getCommitmentImg())) {
+            return "Commitment image must be a valid image (.jpg, .jpeg, .png, .gif, .bmp, .webp)";
+        }
+
+        if (request.getChildCharacteristicsFormImg() == null) {
+            return "Child characteristics form image is required.";
+        }
+
+        if (isNotValidImage(request.getChildCharacteristicsFormImg())) {
+            return "Child characteristics form image must be a valid image (.jpg, .jpeg, .png, .gif, .bmp, .webp)";
+        }
+
+        if (request.getNote() != null && request.getNote().length() > 300) {
+            return "Note must not exceed 300 characters.";
+        }
+
+        return "";
+    }
+
+    private static boolean isNotValidImage(String fileName) {
+        return fileName == null || fileName.trim().isEmpty() || !fileName.matches("(?i)^.+\\.(jpg|jpeg|png|gif|bmp|webp)$");
+    }
+
+    private static boolean isAgeValidForGrade(LocalDate dob) {
+        int age = calculateAge(dob);
+        return age >= 3 && age <= 5;
+    }
+
     //refill form
     @Override
     public ResponseEntity<ResponseObject> refillForm(RefillFormRequest request, HttpServletRequest httpRequest) {
@@ -324,7 +398,7 @@ public class ParentServiceImpl implements ParentService {
         }
 
 
-        String error = EditAdmissionFormValidation.canceledValidate(request, account, admissionFormRepo);
+        String error = canceledValidate(request, account, admissionFormRepo);
 
         if (!error.isEmpty()) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
@@ -385,6 +459,23 @@ public class ParentServiceImpl implements ParentService {
                         .data(null) //ko cần thiết trả về chỉ quan tâm là thông báo thành công hay thất bại
                         .build()
         );
+    }
+
+    public static String canceledValidate(CancelAdmissionForm request, Account account, AdmissionFormRepo admissionFormRepo) {
+        AdmissionForm form = admissionFormRepo.findById(request.getFormId()).orElse(null);
+
+        if (form == null) {
+            return "Admission form not found.";
+        }
+
+        if (!form.getParent().getId().equals(account.getParent().getId())) {
+            return "You do not have permission to access this form.";
+        }
+
+        if (!form.getStatus().equals(Status.PENDING_APPROVAL)) {
+            return "Only pending-approval forms can be cancelled.";
+        }
+        return "";
     }
 
     @Override
@@ -454,7 +545,7 @@ public class ParentServiceImpl implements ParentService {
                             .build());
         }
 
-        String error = ChildValidation.addChildValidate(request);
+        String error = addChildValidate(request);
         if (!error.isEmpty()) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
                     ResponseObject.builder()
@@ -510,7 +601,7 @@ public class ParentServiceImpl implements ParentService {
                             .build());
         }
 
-        String error = ChildValidation.updateChildValidate(request);
+        String error = updateChildValidate(request);
         if (!error.isEmpty()) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
                     ResponseObject.builder()
@@ -591,6 +682,136 @@ public class ParentServiceImpl implements ParentService {
                         .build());
     }
 
+    public static String updateChildValidate(UpdateChildRequest request) {
+        if (request.getId() <= 0) {
+            return "Invalid child ID.";
+        }
+
+        if (request.getName() == null || request.getName().trim().isEmpty()) {
+            return "Name is required.";
+        }
+        if (request.getName().length() < 2 || request.getName().length() > 50) {
+            return "Name must be between 2 and 50 characters.";
+        }
+
+        if (!isValidGender(request.getGender())) {
+            return "Gender must be Male, Female";
+        }
+
+        if (request.getDateOfBirth() == null || request.getDateOfBirth().isAfter(LocalDate.now())) {
+            return "Date of birth must be in the past.";
+        }
+
+        int age = Period.between(request.getDateOfBirth(), LocalDate.now()).getYears();
+        if (age < 3 || age > 5) {
+            return "Child's age must be between 3 and 5 years.";
+        }
+
+        if (request.getPlaceOfBirth() == null || request.getPlaceOfBirth().trim().isEmpty()) {
+            return "Place of birth is required.";
+        }
+
+        if (request.getPlaceOfBirth().length() > 100) {
+            return "Place of birth must be less than 100 characters.";
+        }
+
+        if (request.getProfileImage() == null || request.getProfileImage().isEmpty()) {
+            return "Profile image is required.";
+        }
+
+        if (request.getHouseholdRegistrationImg() == null || request.getHouseholdRegistrationImg().isEmpty()) {
+            return "Household registration image is required.";
+        }
+
+        if (request.getBirthCertificateImg() == null || request.getBirthCertificateImg().isEmpty()) {
+            return "Birth certificate image is required.";
+        }
+
+        String imgError;
+
+        imgError = validateImageField("Profile image", request.getProfileImage());
+        if (!imgError.isEmpty()) return imgError;
+
+        imgError = validateImageField("Household registration image", request.getHouseholdRegistrationImg());
+        if (!imgError.isEmpty()) return imgError;
+
+        imgError = validateImageField("Birth certificate image", request.getBirthCertificateImg());
+        if (!imgError.isEmpty()) return imgError;
+
+        return "";
+    }
+
+    public static String addChildValidate(AddChildRequest request) {
+        if (request.getName() == null || request.getName().trim().isEmpty()) {
+            return "Name is required.";
+        }
+        if (request.getName().length() < 2 || request.getName().length() > 50) {
+            return "Name must be between 2 and 50 characters.";
+        }
+
+        if (!isValidGender(request.getGender())) {
+            return "Gender must be Male or Female.";
+        }
+
+        if (request.getDateOfBirth() == null || request.getDateOfBirth().isAfter(LocalDate.now())) {
+            return "Date of birth must be in the past.";
+        }
+
+        int age = calculateAge(request.getDateOfBirth());
+        if (age < 3 || age >= 6) {
+            return "Child's age must be between 3 and 5 years.";
+        }
+
+        if (request.getPlaceOfBirth() == null || request.getPlaceOfBirth().trim().isEmpty()) {
+            return "Place of birth is required.";
+        }
+
+        if (request.getPlaceOfBirth().length() > 100) {
+            return "Place of birth must be less than 100 characters.";
+        }
+
+        String[] images = {
+                request.getProfileImage(),
+                request.getHouseholdRegistrationImg(),
+                request.getBirthCertificateImg(),
+        };
+        String[] imageNames = {
+                "Profile image",
+                "Household registration image",
+                "Birth certificate image",
+                "Commitment image"
+        };
+
+        for (int i = 0; i < images.length; i++) {
+            String error = validateImageField(imageNames[i], images[i]);
+            if (!error.isEmpty()) return error;
+        }
+
+        return "";
+    }
+
+    private static boolean isValidGender(String gender) {
+        return gender != null && (
+                gender.equalsIgnoreCase("Male") ||
+                        gender.equalsIgnoreCase("Female")
+        );
+    }
+
+    private static String validateImageField(String name, String value) {
+        if (value == null || value.isEmpty()) {
+            return name + " is required.";
+        }
+        if (!value.matches("(?i)^.+\\.(jpg|jpeg|png|gif|bmp|webp)$")) {
+            return name + " must be a valid image file (.jpg, .png, .jpeg, .gif, .bmp, .webp).";
+        }
+        return "";
+    }
+
+    public static int calculateAge(LocalDate dob) {
+        LocalDate today = LocalDate.now();
+        return (int) ChronoUnit.YEARS.between(dob, today);
+    }
+
     @Override
     public ResponseEntity<ResponseObject> registerEvent(RegisterEventRequest request, HttpServletRequest
             requestHttp) {
@@ -598,7 +819,7 @@ public class ParentServiceImpl implements ParentService {
         Account account = jwtService.extractAccountFromCookie(requestHttp);
 
         // 1. Validate chung
-        String validationError = EventValidation.validateRegisterEvent(request);
+        String validationError = validateRegisterEvent(request);
         if (!validationError.isEmpty()) {
             return ResponseEntity
                     .badRequest()
@@ -933,7 +1154,7 @@ public class ParentServiceImpl implements ParentService {
                             .build());
         }
 
-        String error = PaymentValidation.validate(request, admissionFormRepo, transactionRepo);
+        String error = paymentValidation(request, admissionFormRepo, transactionRepo);
         if(!error.isEmpty()) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
                     ResponseObject.builder()
@@ -1017,5 +1238,21 @@ public class ParentServiceImpl implements ParentService {
                             .build()
             );
         }
+    }
+
+    public static String paymentValidation(InitiateVNPayPaymentRequest request, AdmissionFormRepo admissionFormRepo, TransactionRepo transactionRepo) {
+
+        //Kiểm tra formId có được cung cấp không
+        AdmissionForm form = admissionFormRepo.findById(request.getFormId()).orElse(null);
+        if (form == null) {
+            return "Missing formId in payment request";
+        }
+
+        Transaction existedTransaction = transactionRepo.findByAdmissionFormIdAndStatus(form.getId(), Status.WAITING_PAYMENT);
+        if (existedTransaction != null) {
+            return "Transaction already exists for this form";
+        }
+
+        return "";
     }
 }
