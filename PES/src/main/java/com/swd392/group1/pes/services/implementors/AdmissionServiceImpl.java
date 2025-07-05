@@ -161,7 +161,7 @@ public class AdmissionServiceImpl implements AdmissionService {
     public ResponseEntity<ResponseObject> getDefaultFeeByGrade(String grade) {
         try {
             Grade g = Grade.valueOf(grade.toUpperCase());
-            Map<String, Double> feeData = getFeeMapByGrade(g); // dùng chung
+            Map<String, Long> feeData = getFeeMapByGrade(g); // dùng chung
             return ResponseEntity.ok(
                     ResponseObject.builder()
                             .message("Default fee fetched successfully")
@@ -181,7 +181,7 @@ public class AdmissionServiceImpl implements AdmissionService {
 
     }
 
-    private Map<String, Double> getFeeMapByGrade(Grade grade) {
+    private Map<String, Long> getFeeMapByGrade(Grade grade) {
         Fees fee = Fees.valueOf(grade.name());
         return Map.of(
                 "learningMaterialFee", fee.getLearningMaterial(),
@@ -199,22 +199,23 @@ public class AdmissionServiceImpl implements AdmissionService {
         List<AdmissionTerm> terms = admissionTermRepo.findAllByParentTermIsNull();
 
         for (AdmissionTerm term : terms) {
-            Status timeStatus = updateTermStatus(term);
+            Status termStatus = updateTermStatus(term);
 
+            // Cập nhật status cho term nếu cần
+            if (!term.getStatus().equals(termStatus)) {
+                term.setStatus(termStatus);
+                admissionTermRepo.save(term);
+            }
+
+            // Cập nhật status cho từng termItem
             for (TermItem termItem : term.getTermItemList()) {
-                //if đủ → cần "khóa" lại dù chưa hết hạn
-                int approvedForm = countApprovedFormByTermItem(termItem);
-//            term đang ACTIVE nhưng đã đủ số lượng → chuyển sang LOCKED_TERM
-//            trường hợp khác giữ nguyên status tính từ thời gian
-                Status finalStatus = (timeStatus.equals(Status.ACTIVE_TERM) && approvedForm == termItem.getMaxNumberRegistration())
-                        ? Status.LOCKED_TERM
-                        : timeStatus;
-
-                if (!termItem.getStatus().equals(finalStatus)) {
-                    termItem.setStatus(finalStatus);
+                Status itemStatus = updateTermItemStatus(term, termItem);
+                if (!termItem.getStatus().equals(itemStatus)) {
+                    termItem.setStatus(itemStatus);
                     termItemRepo.save(termItem);
                 }
             }
+
         }
 
         List<Map<String, Object>> termList = viewTermList(terms);
@@ -280,6 +281,25 @@ public class AdmissionServiceImpl implements AdmissionService {
             }
         }
         return Status.LOCKED_TERM;
+    }
+
+    private Status updateTermItemStatus(AdmissionTerm term, TermItem termItem) {
+        int approvedForm = countApprovedFormByTermItem(termItem);
+        LocalDateTime now = LocalDateTime.now();
+
+        if (term.getStatus().equals(Status.LOCKED_TERM)) {
+            return Status.LOCKED_TERM_ITEM;
+        }
+        if (now.isBefore(term.getStartDate())) {
+            return Status.INACTIVE_TERM_ITEM;
+        }
+        if (!now.isAfter(term.getEndDate())) {
+            if (approvedForm >= termItem.getMaxNumberRegistration()) {
+                return Status.LOCKED_TERM_ITEM;
+            }
+            return Status.ACTIVE_TERM_ITEM;
+        }
+        return Status.LOCKED_TERM_ITEM;
     }
 
     private List<Map<String, Object>> viewExtraTerm(AdmissionTerm parentTerm) {

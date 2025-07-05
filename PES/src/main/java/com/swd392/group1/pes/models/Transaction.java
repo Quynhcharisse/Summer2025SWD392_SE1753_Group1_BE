@@ -20,6 +20,7 @@ import lombok.NoArgsConstructor;
 import lombok.experimental.FieldDefaults;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Data
 @NoArgsConstructor
@@ -41,8 +42,8 @@ public class Transaction {
     @Column(name = "`payment_date`")
     LocalDate paymentDate;
 
-    @Column(name = "`receipt_number`")
-    String receiptNumber; // Số biên lai
+    @Column(name = "`vnp_transactionNo`")
+    String vnpTransactionNo; // Mã giao dịch
 
     @Column(name = "`txn_ref`")
     String txnRef; //Thêm trường txnRef để lưu mã giao dịch VNPay

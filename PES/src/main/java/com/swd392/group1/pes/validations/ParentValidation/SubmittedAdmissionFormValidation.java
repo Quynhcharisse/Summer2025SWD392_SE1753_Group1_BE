@@ -30,7 +30,7 @@ public class SubmittedAdmissionFormValidation {
         List<TermItem> activeTermItemList = termItemRepo.findAllByGradeAndStatusAndAdmissionTerm_Year(grade, Status.ACTIVE_TERM_ITEM, LocalDate.now().getYear());
         System.out.println("List ACTIVE TERM: " + activeTermItemList.size());
         if (activeTermItemList.isEmpty()) {
-            return "Active Term Item not found after successful validation. This indicates a logical error.";
+            return "No active term currently.";
         }
 
         TermItem activeTermItem = activeTermItemList.get(0);
@@ -39,7 +39,7 @@ public class SubmittedAdmissionFormValidation {
             return "The admission term item is not currently open for new admissions or is invalid.";
         }
 
-        List<Status> statusesToExcludeForNewSubmission = Arrays.asList(Status.REJECTED, Status.CANCELLED);
+        List<Status> statusesToExcludeForNewSubmission = Arrays.asList(Status.REJECTED, Status.CANCELLED, Status.REFILLED);
         List<AdmissionForm> activeOrPendingForms = admissionFormRepo.findAllByStudent_IdAndTermItem_IdAndStatusNotIn(
                 student.getId(), activeTermItem.getId(), statusesToExcludeForNewSubmission
         );
