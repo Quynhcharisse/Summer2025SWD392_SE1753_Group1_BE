@@ -12,6 +12,10 @@ public class LessonValidation {
             return "Lesson topic is required";
         }
 
+        if (!request.getTopic().matches("^[a-zA-Z0-9 ]+$")) {
+            return "Lesson topic must not contain special characters.";
+        }
+
         if (request.getDescription() == null ) {
             return "Lesson description is required";
         }
@@ -43,6 +47,10 @@ public class LessonValidation {
         if (request.getTopic() == null || request.getTopic().trim().isEmpty())
         {
             return "Lesson topic is required";
+        }
+
+        if (!request.getTopic().matches("^[a-zA-Z0-9 ]+$")) {
+            return "Lesson topic must not contain special characters.";
         }
 
         if (request.getDescription() == null ) {

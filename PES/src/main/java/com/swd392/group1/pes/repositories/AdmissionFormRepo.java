@@ -29,10 +29,9 @@ public interface AdmissionFormRepo extends JpaRepository<AdmissionForm, Integer>
     List<AdmissionForm> findByStatusAndPaymentExpiryDateLessThanEqual(Status status, LocalDateTime paymentExpiryDate);
 
 //    int countByAdmissionTerm_IdAndStatusAndTransaction_Status(Integer termId, String formStatus, String transactionStatus);
-    List<AdmissionForm> findByTermItem_AdmissionTerm_YearAndStatusAndTransaction_StatusAndTermItem_Grade(
+    List<AdmissionForm> findByTermItem_AdmissionTerm_YearAndStatusAndTermItem_Grade(
             Integer termYear,
             Status formStatus,
-            Status transactionStatus,
             Grade grade
     );
 }

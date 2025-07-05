@@ -120,18 +120,6 @@ public class Format {
                 "<p>Best regards,<br/>Sunshine Preschool</p>";
     }
 
-    public static String getReminderBody(String parentName,
-                                         String childName,
-                                         String eventName,
-                                         LocalDateTime startTime){
-        String formatStartTime =  startTime.format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"));
-        return
-                "<p>Dear " + parentName + ",</p>\n" +
-                        "<p>This is a friendly reminder that your children \""+childName+"\" is registered for event " + eventName + "which starts at " +formatStartTime+"</p"+
-                        "<p>Please be ready 15 minutes ahead of time.</p>" +
-                        "<p>Best regards,<br/>Sunshine Preschool</p>";
-    }
-
     public static String getCancelEventForParentBody(String parentName,
                                             String childName,
                                             String eventName,

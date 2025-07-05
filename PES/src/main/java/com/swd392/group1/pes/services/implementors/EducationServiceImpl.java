@@ -63,6 +63,8 @@ import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -804,8 +806,8 @@ public class EducationServiceImpl implements EducationService {
                             .data(null)
                             .build());
 
-        LocalDateTime newStart = request.getStartTime();
-        LocalDateTime newEnd = request.getEndTime();
+        LocalDateTime newStart = request.getStartTime().atZone(ZoneOffset.UTC).withZoneSameInstant(ZoneId.of("Asia/Ho_Chi_Minh")).toLocalDateTime();
+        LocalDateTime newEnd = request.getEndTime().atZone(ZoneOffset.UTC).withZoneSameInstant(ZoneId.of("Asia/Ho_Chi_Minh")).toLocalDateTime();
 
 
         List<Integer> validTeacherIds = validTeachers.stream()
@@ -856,12 +858,13 @@ public class EducationServiceImpl implements EducationService {
         }
         Event event = Event.builder()
                 .name(request.getName())
-                .startTime(request.getStartTime())
-                .endTime(request.getEndTime())
+                .startTime(newStart)
+                .endTime(newEnd)
                 .location(request.getLocation())
                 .description(request.getDescription())
                 .createdAt(LocalDateTime.now())
-                .registrationDeadline(request.getRegistrationDeadline())
+                .registrationDeadline(request.getRegistrationDeadline().atZone(ZoneOffset.UTC)
+                        .withZoneSameInstant(ZoneId.of("Asia/Ho_Chi_Minh")).toLocalDateTime())
                 .status(Status.EVENT_REGISTRATION_ACTIVE)
                 .attachmentImg(request.getAttachmentImg())
                 .hostName(request.getHostName())
@@ -1140,10 +1143,9 @@ public class EducationServiceImpl implements EducationService {
             );
         }
 
-        List<AdmissionForm> approvedForms = admissionFormRepo.findByTermItem_AdmissionTerm_YearAndStatusAndTransaction_StatusAndTermItem_Grade(
+        List<AdmissionForm> approvedForms = admissionFormRepo.findByTermItem_AdmissionTerm_YearAndStatusAndTermItem_Grade(
                 Integer.parseInt(year),
-                Status.APPROVED,
-                Status.TRANSACTION_SUCCESSFUL,
+                Status.APPROVED_PAID,
                 getGradeFromName(grade)
         );
 
@@ -1267,7 +1269,14 @@ public class EducationServiceImpl implements EducationService {
                             .build());
         }
 
-        Syllabus syllabus = syllabusRepo.findById(Integer.parseInt(request.getSyllabusId())).get();
+        Syllabus syllabus = syllabusRepo.findById(Integer.parseInt(request.getSyllabusId())).orElse(null);
+        if (syllabus == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ResponseObject.builder()
+                    .message("Syllabus not found")
+                    .success(false)
+                    .data(null)
+                    .build());
+        }
         Grade grade = syllabus.getGrade();
         LocalDate start = request.getStartDate();
         LocalDate end = start.plusWeeks(syllabus.getNumberOfWeek()).minusDays(1);
@@ -1366,10 +1375,9 @@ public class EducationServiceImpl implements EducationService {
                 }
             }
         }
-        List<AdmissionForm> approvedForms = admissionFormRepo.findByTermItem_AdmissionTerm_YearAndStatusAndTransaction_StatusAndTermItem_Grade(
+        List<AdmissionForm> approvedForms = admissionFormRepo.findByTermItem_AdmissionTerm_YearAndStatusAndTermItem_Grade(
                 Integer.parseInt(request.getYear()),
-                Status.APPROVED,
-                Status.TRANSACTION_SUCCESSFUL,
+                Status.APPROVED_PAID,
                 grade
         );
 
@@ -1547,6 +1555,7 @@ public class EducationServiceImpl implements EducationService {
         data.put("startDate", classes.getStartDate());
         data.put("endDate", classes.getEndDate());
         data.put("year",classes.getAcademicYear());
+        data.put("teacherName", classes.getTeacher().getName());
         data.put("numberStudents",classes.getNumberStudent());
         data.put("status", classes.getStatus());
         data.put("grade", classes.getGrade());
@@ -1678,7 +1687,6 @@ public class EducationServiceImpl implements EducationService {
                         .build()
         );
     }
-
 
     private Grade getGradeFromName(String name) {
         for (Grade grade : Grade.values()) {
