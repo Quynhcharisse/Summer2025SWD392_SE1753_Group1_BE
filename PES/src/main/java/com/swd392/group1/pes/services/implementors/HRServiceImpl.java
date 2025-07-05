@@ -16,12 +16,22 @@ import com.swd392.group1.pes.validations.HRValidation.CreateTeacherValidation;
 import com.swd392.group1.pes.validations.HRValidation.ProcessAccountValidation;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.io.output.ByteArrayOutputStream;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.springframework.core.io.ByteArrayResource;
+import org.springframework.core.io.Resource;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDate;
+import java.io.IOException;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -246,5 +256,211 @@ public class HRServiceImpl implements HRService {
         );
     }
 
+    public ResponseEntity<Resource> exportTeacherListToExcel() {
+        List<Account> teachers = accountRepo.findByRole(Role.TEACHER);
+        String dateTimeStr = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
 
+        try (Workbook workbook = new XSSFWorkbook()) {
+            Sheet sheet = workbook.createSheet("Teachers");
+            Row header = sheet.createRow(0);
+            String[] columns = {"Email", "Name", "AvatarUrl", "Gender", "Role", "Status"};
+            for (int i = 0; i < columns.length; i++) {
+                header.createCell(i).setCellValue(columns[i]);
+            }
+            int rowIdx = 1;
+            for (Account teacher : teachers) {
+                Row row = sheet.createRow(rowIdx++);
+                row.createCell(0).setCellValue(teacher.getEmail() != null ? teacher.getEmail() : "");
+                row.createCell(1).setCellValue(teacher.getName() != null ? teacher.getName() : "");
+                row.createCell(2).setCellValue(teacher.getAvatarUrl() != null ? teacher.getAvatarUrl() : "");
+                row.createCell(3).setCellValue(teacher.getGender() != null ? teacher.getGender() : "");
+                row.createCell(4).setCellValue(teacher.getRole() != null ? teacher.getRole().toString() : "");
+                row.createCell(5).setCellValue(teacher.getStatus() != null ? teacher.getStatus() : "");
+            }
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
+            workbook.write(out);
+            ByteArrayResource resource = new ByteArrayResource(out.toByteArray());
+
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=teachers_" + dateTimeStr + ".xlsx")
+                    .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                    .body(resource);
+        } catch (IOException e) {
+            throw new RuntimeException("Excel export failed", e);
+        }
+    }
+
+    public ResponseEntity<Resource> exportParentListToExcel() {
+        List<Account> parents = accountRepo.findByRole(Role.PARENT);
+        String dateTimeStr = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
+
+        try (Workbook workbook = new XSSFWorkbook()) {
+            Sheet sheet = workbook.createSheet("Parents");
+            Row header = sheet.createRow(0);
+            String[] columns = {
+                    "Email", "Name", "Phone", "Gender", "Identity Number", "Address", "Job", "Relationship To Child", "Role", "Status"
+            };
+            for (int i = 0; i < columns.length; i++) {
+                header.createCell(i).setCellValue(columns[i]);
+            }
+            int rowIdx = 1;
+            for (Account parentAcc : parents) {
+                Row row = sheet.createRow(rowIdx++);
+                row.createCell(0).setCellValue(parentAcc.getEmail() != null ? parentAcc.getEmail() : "");
+                row.createCell(1).setCellValue(parentAcc.getName() != null ? parentAcc.getName() : "");
+                row.createCell(2).setCellValue(parentAcc.getPhone() != null ? parentAcc.getPhone() : "");
+                row.createCell(3).setCellValue(parentAcc.getGender() != null ? parentAcc.getGender() : "");
+                row.createCell(4).setCellValue(parentAcc.getIdentityNumber() != null ? parentAcc.getIdentityNumber() : "");
+                row.createCell(5).setCellValue(parentAcc.getAddress() != null ? parentAcc.getAddress() : "");
+                row.createCell(6).setCellValue(
+                    parentAcc.getParent() != null && parentAcc.getParent().getJob() != null
+                        ? parentAcc.getParent().getJob() : ""
+                );
+                row.createCell(7).setCellValue(
+                    parentAcc.getParent() != null && parentAcc.getParent().getRelationshipToChild() != null
+                        ? parentAcc.getParent().getRelationshipToChild() : ""
+                );
+                row.createCell(8).setCellValue(parentAcc.getRole() != null ? parentAcc.getRole().toString() : "");
+                row.createCell(9).setCellValue(parentAcc.getStatus() != null ? parentAcc.getStatus() : "");
+            }
+            for (int i = 0; i < columns.length; i++) {
+                sheet.autoSizeColumn(i);
+            }
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
+            workbook.write(out);
+            ByteArrayResource resource = new ByteArrayResource(out.toByteArray());
+
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=parents_" + dateTimeStr + ".xlsx")
+                    .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                    .body(resource);
+        } catch (Exception e) {
+            throw new RuntimeException("Excel export failed", e);
+        }
+    }
+
+    public ResponseEntity<Resource> exportChildrenListToExcel() {
+        List<Account> parentAccounts = accountRepo.findByRole(Role.PARENT);
+        String dateTimeStr = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
+
+        try (Workbook workbook = new XSSFWorkbook()) {
+            Sheet sheet = workbook.createSheet("Children");
+            Row header = sheet.createRow(0);
+            String[] columns = {
+                    "Parent Email", "Parent Name",
+                    "Child Name", "Child Gender", "Child Date of Birth", "Child Place of Birth"
+            };
+            for (int i = 0; i < columns.length; i++) {
+                header.createCell(i).setCellValue(columns[i]);
+            }
+            int rowIdx = 1;
+            for (Account parentAcc : parentAccounts) {
+                String parentEmail = parentAcc.getEmail();
+                String parentName = parentAcc.getName();
+                if (parentAcc.getParent() != null && parentAcc.getParent().getStudentList() != null) {
+                    for (com.swd392.group1.pes.models.Student child : parentAcc.getParent().getStudentList()) {
+                        Row row = sheet.createRow(rowIdx++);
+                        row.createCell(0).setCellValue(parentEmail != null ? parentEmail : "");
+                        row.createCell(1).setCellValue(parentName != null ? parentName : "");
+                        row.createCell(2).setCellValue(child.getName() != null ? child.getName() : "");
+                        row.createCell(3).setCellValue(child.getGender() != null ? child.getGender() : "");
+                        row.createCell(4).setCellValue(child.getDateOfBirth() != null ? child.getDateOfBirth().toString() : "");
+                        row.createCell(5).setCellValue(child.getPlaceOfBirth() != null ? child.getPlaceOfBirth() : "");
+                    }
+                }
+            }
+            for (int i = 0; i < columns.length; i++) {
+                sheet.autoSizeColumn(i);
+            }
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
+            workbook.write(out);
+            ByteArrayResource resource = new ByteArrayResource(out.toByteArray());
+
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=children_" + dateTimeStr + ".xlsx")
+                    .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                    .body(resource);
+        } catch (Exception e) {
+            throw new RuntimeException("Excel export failed", e);
+        }
+    }
+
+    public ResponseEntity<Resource> exportParentAndChildrenToExcel() {
+        List<Account> parentAccounts = accountRepo.findByRole(Role.PARENT);
+        String dateTimeStr = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
+
+        try (Workbook workbook = new XSSFWorkbook()) {
+            Sheet sheet = workbook.createSheet("Parents & Children");
+            Row header = sheet.createRow(0);
+            String[] columns = {
+                    "Parent Email", "Parent Name", "Parent Phone", "Parent Gender", "Parent Identity Number",
+                    "Parent Address", "Parent Job", "Relationship To Child",
+                    "Child Name", "Child Gender", "Child Date of Birth", "Child Place of Birth"
+            };
+            for (int i = 0; i < columns.length; i++) {
+                header.createCell(i).setCellValue(columns[i]);
+            }
+            int rowIdx = 1;
+            for (Account parentAcc : parentAccounts) {
+                String parentEmail = parentAcc.getEmail();
+                String parentName = parentAcc.getName();
+                String parentPhone = parentAcc.getPhone();
+                String parentGender = parentAcc.getGender();
+                String parentIdentity = parentAcc.getIdentityNumber();
+                String parentAddress = parentAcc.getAddress();
+                String parentJob = "";
+                String relationship = "";
+                List<com.swd392.group1.pes.models.Student> children = List.of();
+
+                if (parentAcc.getParent() != null) {
+                    parentJob = parentAcc.getParent().getJob();
+                    relationship = parentAcc.getParent().getRelationshipToChild();
+                    if (parentAcc.getParent().getStudentList() != null) {
+                        children = parentAcc.getParent().getStudentList();
+                    }
+                }
+
+                if (children.isEmpty()) {
+                    Row row = sheet.createRow(rowIdx++);
+                    row.createCell(0).setCellValue(parentEmail != null ? parentEmail : "");
+                    row.createCell(1).setCellValue(parentName != null ? parentName : "");
+                    row.createCell(2).setCellValue(parentPhone != null ? parentPhone : "");
+                    row.createCell(3).setCellValue(parentGender != null ? parentGender : "");
+                    row.createCell(4).setCellValue(parentIdentity != null ? parentIdentity : "");
+                    row.createCell(5).setCellValue(parentAddress != null ? parentAddress : "");
+                    row.createCell(6).setCellValue(parentJob != null ? parentJob : "");
+                    row.createCell(7).setCellValue(relationship != null ? relationship : "");
+                } else {
+                    for (com.swd392.group1.pes.models.Student child : children) {
+                        Row row = sheet.createRow(rowIdx++);
+                        row.createCell(0).setCellValue(parentEmail != null ? parentEmail : "");
+                        row.createCell(1).setCellValue(parentName != null ? parentName : "");
+                        row.createCell(2).setCellValue(parentPhone != null ? parentPhone : "");
+                        row.createCell(3).setCellValue(parentGender != null ? parentGender : "");
+                        row.createCell(4).setCellValue(parentIdentity != null ? parentIdentity : "");
+                        row.createCell(5).setCellValue(parentAddress != null ? parentAddress : "");
+                        row.createCell(6).setCellValue(parentJob != null ? parentJob : "");
+                        row.createCell(7).setCellValue(relationship != null ? relationship : "");
+                        row.createCell(8).setCellValue(child.getName() != null ? child.getName() : "");
+                        row.createCell(9).setCellValue(child.getGender() != null ? child.getGender() : "");
+                        row.createCell(10).setCellValue(child.getDateOfBirth() != null ? child.getDateOfBirth().toString() : "");
+                        row.createCell(11).setCellValue(child.getPlaceOfBirth() != null ? child.getPlaceOfBirth() : "");
+                    }
+                }
+            }
+            for (int i = 0; i < columns.length; i++) {
+                sheet.autoSizeColumn(i);
+            }
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
+            workbook.write(out);
+            ByteArrayResource resource = new ByteArrayResource(out.toByteArray());
+
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=parents_children_" + dateTimeStr + ".xlsx")
+                    .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                    .body(resource);
+        } catch (Exception e) {
+            throw new RuntimeException("Excel export failed", e);
+        }
+    }
 }

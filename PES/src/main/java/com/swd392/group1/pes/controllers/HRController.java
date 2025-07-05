@@ -5,6 +5,7 @@ import com.swd392.group1.pes.requests.ProcessAccountRequest;
 import com.swd392.group1.pes.response.ResponseObject;
 import com.swd392.group1.pes.services.HRService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.core.io.Resource;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -45,9 +46,25 @@ public class HRController {
         return hrService.viewTeacherList();
     }
 
+    @GetMapping("/teacher/export")
+    @PreAuthorize("hasRole('hr')")
+    public ResponseEntity<Resource> exportTeacherListToExcel() { return hrService.exportTeacherListToExcel(); }
+
     @GetMapping("/parent")
     @PreAuthorize("hasRole('hr')")
     public ResponseEntity<ResponseObject> viewParentList() {
         return hrService.viewParentList();
     }
+
+    @GetMapping("/parent/export")
+    @PreAuthorize("hasRole('hr')")
+    public ResponseEntity<Resource> exportParentListToExcel() { return hrService.exportParentListToExcel(); }
+
+    @GetMapping("/children/export")
+    @PreAuthorize("hasRole('hr')")
+    public ResponseEntity<Resource> exportChildrenListToExcel() { return hrService.exportChildrenListToExcel(); }
+
+    @GetMapping("/parent/children/export")
+    @PreAuthorize("hasRole('hr')")
+    public ResponseEntity<Resource> exportParentAndChildrenToExcel() { return hrService.exportParentAndChildrenToExcel(); }
 }
