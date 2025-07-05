@@ -1,5 +1,8 @@
 package com.swd392.group1.pes.email;
 
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+
 public class Format {
     /** Fragment cho tài khoản giáo viên */
     public static String getTeacherBody(String email, String password) {
@@ -117,4 +120,64 @@ public class Format {
                 "<p>Best regards,<br/>Sunshine Preschool</p>";
     }
 
+    public static String getCancelEventForParentBody(String parentName,
+                                            String childName,
+                                            String eventName,
+                                            LocalDateTime startTime,
+                                            String reasons){
+        String formattedStart = startTime.format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"));
+
+        return    "<p>Dear " + parentName + ",</p>"
+                + "<p>We regret to inform you that the event \"" + eventName + "\" scheduled at "
+                + formattedStart
+                + " for your child " + childName
+                + " has been canceled.</p>"
+                + "<p>Reason: " + reasons + "</p>"
+                + "<p>We apologize for any inconvenience caused.</p>"
+                + "<p>Best regards,<br/>SunShine Preschool</p>";
+    }
+
+    public static String getCancelEventForTeacherBody(String teacherName,
+                                                     String eventName,
+                                                     LocalDateTime startTime,
+                                                     String reasons){
+        String formattedStart = startTime.format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"));
+
+        return    "<p>Dear " + teacherName + ",</p>"
+                + "<p>The event \"" + eventName + "\" scheduled at "
+                + formattedStart
+                + " has been cancelled. </p>"
+                + "<p>Reason: " + reasons + "</p>"
+                + "<p>Best regards,<br/>SunShine Preschool</p>";
+    }
+
+    public static String getAssignClassSuccessfulForParentBody(
+            String parentName,
+            String studentName,
+            String className,
+            String teacherName,
+            String startDate
+    ) {
+        return  "<p>Dear " + parentName + ",</p>"
+                + "<p>We are pleased to inform you that your child, <strong>" + studentName + "</strong>, "
+                + "has been successfully assigned to <strong>class " + className + "</strong> for the upcoming academic term.</p>"
+                + "<p>This class will be taught by <strong>teacher " + teacherName + "</strong>.</p>"
+                + "<p>The class will officially start on <strong>" + startDate + "</strong>.</p>"
+                + "<p>If you have any questions or need further information, please do not hesitate to contact us.</p>"
+                + "<p>Sincerely,<br/>The School Administration</p>";
+    }
+
+    public static String getAssignClassSuccessfulForTeacherBody(
+            String teacherName, String className, String startDateStr
+    ) {
+        return String.format(
+                "Dear %s,\n\n" +
+                        "Congratulations! You have been assigned as the homeroom teacher for class %s.\n" +
+                        "The class will officially start on %s.\n\n" +
+                        "Please check your teacher portal for more details about your class schedule and student list.\n\n" +
+                        "Best regards,\n" +
+                        "School Administration"
+                , teacherName, className, startDateStr
+        );
+    }
 }

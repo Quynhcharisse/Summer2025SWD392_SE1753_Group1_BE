@@ -87,10 +87,10 @@ public class Account implements UserDetails {
     @ToString.Exclude
     Parent parent;
 
-    @OneToOne(mappedBy = "teacher", fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "teacher", fetch = FetchType.LAZY)
     @EqualsAndHashCode.Exclude
     @ToString.Exclude
-    Classes classes;
+    List<Classes> classes;
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {

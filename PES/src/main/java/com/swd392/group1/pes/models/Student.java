@@ -72,7 +72,7 @@ public class Student {
     @ToString.Exclude
     List<AdmissionForm> admissionFormList;
 
-    @OneToMany(mappedBy = "student", fetch = FetchType.EAGER, cascade = CascadeType.ALL)
+    @OneToMany(mappedBy = "student", fetch = FetchType.LAZY)
     @EqualsAndHashCode.Exclude
     @ToString.Exclude
     List<EventParticipate> eventParticipateList;

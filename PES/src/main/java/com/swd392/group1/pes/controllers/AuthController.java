@@ -67,4 +67,9 @@ public class AuthController {
         return educationService.viewActiveEvents();
     }
 
+    @GetMapping("/event/detail")
+    public ResponseEntity<ResponseObject> viewEventDetail(@RequestParam String id) {
+        return educationService.viewEventDetail(id);
+    }
+
 }

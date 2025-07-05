@@ -728,9 +728,7 @@ public class ParentServiceImpl implements ParentService {
                     .build());
             registered.add(stu.getName());
         }
-
-        try {
-            mailService.sendMail(
+        mailService.sendMail(
                     account.getEmail(),
                     "[PES] EVENT REGISTRATION CONFIRMATION",
                     "Event Registration Confirmation",
@@ -740,11 +738,6 @@ public class ParentServiceImpl implements ParentService {
                             String.join("\n- ", registered) +
                             "\n\nThank you,\nSunShine Preschool"
             );
-        } catch (Exception e) {
-            System.err.println("Failed to send email notification: " + e.getMessage());
-        }
-
-        // 5. Lưu tất cả và trả về kết quả
         eventParticipateRepo.saveAll(toSave);
         String successMsg = "All students registered successfully: " + registered;
         return ResponseEntity.ok(
