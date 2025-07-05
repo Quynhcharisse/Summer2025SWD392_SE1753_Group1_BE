@@ -59,12 +59,4 @@ public class HRController {
     @GetMapping("/parent/export")
     @PreAuthorize("hasRole('hr')")
     public ResponseEntity<Resource> exportParentListToExcel() { return hrService.exportParentListToExcel(); }
-
-    @GetMapping("/children/export")
-    @PreAuthorize("hasRole('hr')")
-    public ResponseEntity<Resource> exportChildrenListToExcel() { return hrService.exportChildrenListToExcel(); }
-
-    @GetMapping("/parent/children/export")
-    @PreAuthorize("hasRole('hr')")
-    public ResponseEntity<Resource> exportParentAndChildrenToExcel() { return hrService.exportParentAndChildrenToExcel(); }
 }

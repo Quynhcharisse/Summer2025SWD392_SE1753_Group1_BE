@@ -7,4 +7,5 @@ import java.util.List;
 
 public interface StudentRepo extends JpaRepository<Student, Integer> {
     List<Student> findAllByParent_Id(int id);
+    List<Student> findAllByIsStudentTrue();
 }

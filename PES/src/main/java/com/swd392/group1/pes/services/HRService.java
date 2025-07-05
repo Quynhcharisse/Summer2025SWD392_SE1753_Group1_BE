@@ -19,7 +19,4 @@ public interface HRService {
 
     ResponseEntity<Resource> exportParentListToExcel();
 
-    ResponseEntity<Resource> exportChildrenListToExcel();
-
-    ResponseEntity<Resource> exportParentAndChildrenToExcel();
 }

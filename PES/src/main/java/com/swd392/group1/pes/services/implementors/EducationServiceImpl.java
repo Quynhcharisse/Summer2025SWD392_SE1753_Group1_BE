@@ -29,20 +29,21 @@ import com.swd392.group1.pes.repositories.EventRepo;
 import com.swd392.group1.pes.repositories.LessonRepo;
 import com.swd392.group1.pes.repositories.ScheduleRepo;
 import com.swd392.group1.pes.repositories.StudentClassRepo;
+import com.swd392.group1.pes.repositories.StudentRepo;
 import com.swd392.group1.pes.repositories.SyllabusLessonRepo;
 import com.swd392.group1.pes.repositories.SyllabusRepo;
 import com.swd392.group1.pes.repositories.TeacherEventRepo;
 import com.swd392.group1.pes.repositories.TermItemRepo;
-import com.swd392.group1.pes.requests.CancelEventRequest;
-import com.swd392.group1.pes.requests.CreateLessonRequest;
 import com.swd392.group1.pes.requests.AssignLessonsRequest;
+import com.swd392.group1.pes.requests.CancelEventRequest;
+import com.swd392.group1.pes.requests.CreateEventRequest;
+import com.swd392.group1.pes.requests.CreateLessonRequest;
 import com.swd392.group1.pes.requests.CreateSyllabusRequest;
 import com.swd392.group1.pes.requests.GenerateClassesRequest;
 import com.swd392.group1.pes.requests.UpdateLessonRequest;
 import com.swd392.group1.pes.requests.UpdateSyllabusRequest;
 import com.swd392.group1.pes.response.ResponseObject;
 import com.swd392.group1.pes.services.EducationService;
-import com.swd392.group1.pes.requests.CreateEventRequest;
 import com.swd392.group1.pes.services.MailService;
 import com.swd392.group1.pes.validations.EducationValidation.ClassValidation;
 import com.swd392.group1.pes.validations.EducationValidation.EventValidation;
@@ -53,7 +54,16 @@ import com.swd392.group1.pes.validations.EducationValidation.SyllabusValidation.
 import com.swd392.group1.pes.validations.EducationValidation.SyllabusValidation.CreateSyllabusValidation;
 import com.swd392.group1.pes.validations.EducationValidation.SyllabusValidation.UpdateSyllabusValidation;
 import lombok.RequiredArgsConstructor;
+import org.apache.commons.io.output.ByteArrayOutputStream;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.springframework.core.io.ByteArrayResource;
+import org.springframework.core.io.Resource;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -66,7 +76,17 @@ import java.time.LocalTime;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -88,6 +108,8 @@ public class EducationServiceImpl implements EducationService {
     private final ActivityRepo activityRepo;
     private final StudentClassRepo studentClassRepo;
     private final TermItemRepo termItemRepo;
+    private final StudentRepo studentRepo;
+
 
     @Override
     public ResponseEntity<ResponseObject> createSyllabus(CreateSyllabusRequest request) {
@@ -1723,4 +1745,49 @@ public class EducationServiceImpl implements EducationService {
         return violatedSyllabuses;
     }
 
+    public ResponseEntity<Resource> exportStudentListToExcel() {
+        List<Student> students = studentRepo.findAllByIsStudentTrue();
+        String dateTimeStr = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
+
+        String[] columns = {
+                "Parent Email", "Parent Name",
+                "Student Name", "Student Gender", "Student Date of Birth", "Student Place of Birth"
+        };
+
+        try (Workbook workbook = new XSSFWorkbook();
+             ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+
+            Sheet sheet = workbook.createSheet("Students");
+            Row header = sheet.createRow(0);
+            for (int i = 0; i < columns.length; i++) {
+                header.createCell(i).setCellValue(columns[i]);
+            }
+
+            int rowIdx = 1;
+            for (Student student : students) {
+                Row row = sheet.createRow(rowIdx++);
+                Account parentAcc = (student.getParent() != null) ? student.getParent().getAccount() : null;
+                row.createCell(0).setCellValue(Objects.toString(parentAcc != null ? parentAcc.getEmail() : null, ""));
+                row.createCell(1).setCellValue(Objects.toString(parentAcc != null ? parentAcc.getName() : null, ""));
+                row.createCell(2).setCellValue(Objects.toString(student.getName(), ""));
+                row.createCell(3).setCellValue(Objects.toString(student.getGender(), ""));
+                row.createCell(4).setCellValue(student.getDateOfBirth() != null ? student.getDateOfBirth().toString() : "");
+                row.createCell(5).setCellValue(Objects.toString(student.getPlaceOfBirth(), ""));
+            }
+
+            for (int i = 0; i < columns.length; i++) {
+                sheet.autoSizeColumn(i);
+            }
+
+            workbook.write(out);
+            ByteArrayResource resource = new ByteArrayResource(out.toByteArray());
+
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=students_" + dateTimeStr + ".xlsx")
+                    .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                    .body(resource);
+        } catch (Exception e) {
+            throw new RuntimeException("Excel export failed", e);
+        }
+    }
 }
