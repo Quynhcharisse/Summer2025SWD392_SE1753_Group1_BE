@@ -1,32 +1,53 @@
 package com.swd392.group1.pes.services.implementors;
 
+import com.swd392.group1.pes.email.Format;
 import com.swd392.group1.pes.enums.Grade;
 import com.swd392.group1.pes.enums.Role;
 import com.swd392.group1.pes.enums.Status;
 import com.swd392.group1.pes.models.Account;
+import com.swd392.group1.pes.models.Activity;
+import com.swd392.group1.pes.models.AdmissionForm;
+import com.swd392.group1.pes.models.AdmissionTerm;
+import com.swd392.group1.pes.models.Classes;
 import com.swd392.group1.pes.models.Event;
+import com.swd392.group1.pes.models.EventParticipate;
 import com.swd392.group1.pes.models.Lesson;
+import com.swd392.group1.pes.models.Parent;
+import com.swd392.group1.pes.models.Schedule;
+import com.swd392.group1.pes.models.Student;
+import com.swd392.group1.pes.models.StudentClass;
 import com.swd392.group1.pes.models.Syllabus;
 import com.swd392.group1.pes.models.SyllabusLesson;
 import com.swd392.group1.pes.models.TeacherEvent;
 import com.swd392.group1.pes.repositories.AccountRepo;
+import com.swd392.group1.pes.repositories.ActivityRepo;
 import com.swd392.group1.pes.repositories.AdmissionFormRepo;
+import com.swd392.group1.pes.repositories.AdmissionTermRepo;
 import com.swd392.group1.pes.repositories.ClassRepo;
+import com.swd392.group1.pes.repositories.EventParticipateRepo;
 import com.swd392.group1.pes.repositories.EventRepo;
 import com.swd392.group1.pes.repositories.LessonRepo;
+import com.swd392.group1.pes.repositories.ScheduleRepo;
+import com.swd392.group1.pes.repositories.StudentClassRepo;
 import com.swd392.group1.pes.repositories.SyllabusLessonRepo;
 import com.swd392.group1.pes.repositories.SyllabusRepo;
 import com.swd392.group1.pes.repositories.TeacherEventRepo;
-import com.swd392.group1.pes.requests.AssignLessonsRequest;
-import com.swd392.group1.pes.requests.CreateEventRequest;
+import com.swd392.group1.pes.repositories.TermItemRepo;
+import com.swd392.group1.pes.requests.CancelEventRequest;
 import com.swd392.group1.pes.requests.CreateLessonRequest;
+import com.swd392.group1.pes.requests.AssignLessonsRequest;
 import com.swd392.group1.pes.requests.CreateSyllabusRequest;
+import com.swd392.group1.pes.requests.GenerateClassesRequest;
 import com.swd392.group1.pes.requests.UpdateLessonRequest;
 import com.swd392.group1.pes.requests.UpdateSyllabusRequest;
 import com.swd392.group1.pes.response.ResponseObject;
 import com.swd392.group1.pes.services.EducationService;
+import com.swd392.group1.pes.requests.CreateEventRequest;
+import com.swd392.group1.pes.services.MailService;
+import com.swd392.group1.pes.validations.EducationValidation.ClassValidation;
 import com.swd392.group1.pes.validations.EducationValidation.EventValidation;
 import com.swd392.group1.pes.validations.EducationValidation.LessonValidation;
+import com.swd392.group1.pes.validations.EducationValidation.ScheduleValidation;
 import com.swd392.group1.pes.validations.EducationValidation.SyllabusValidation.AssignLessonsValidation;
 import com.swd392.group1.pes.validations.EducationValidation.SyllabusValidation.CheckSyllabusId;
 import com.swd392.group1.pes.validations.EducationValidation.SyllabusValidation.CreateSyllabusValidation;
@@ -35,18 +56,17 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.time.DayOfWeek;
+import java.time.Duration;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -61,7 +81,13 @@ public class EducationServiceImpl implements EducationService {
     private final AdmissionFormRepo admissionFormRepo;
     private final AccountRepo accountRepo;
     private final TeacherEventRepo teacherEventRepo;
-
+    private final EventParticipateRepo eventParticipateRepo;
+    private final MailService mailService;
+    private final AdmissionTermRepo admissionTermRepo;
+    private final ScheduleRepo scheduleRepo;
+    private final ActivityRepo activityRepo;
+    private final StudentClassRepo studentClassRepo;
+    private final TermItemRepo termItemRepo;
 
     @Override
     public ResponseEntity<ResponseObject> createSyllabus(CreateSyllabusRequest request) {
@@ -123,6 +149,7 @@ public class EducationServiceImpl implements EducationService {
                 .hoursOfSyllabus(request.getNumberOfWeek() * 30)
                 .grade(getGradeFromName(request.getGrade()))
                 .createdAt(LocalDateTime.now())
+                .assignedToClasses(false)
                 .build();
 
         List<SyllabusLesson> joins = validLessons.stream()
@@ -130,9 +157,8 @@ public class EducationServiceImpl implements EducationService {
                         .syllabus(syllabus)
                         .lesson(lesson)
                         .build())
-                .toList();
+                        .toList();
         syllabus.setSyllabusLessonList(joins);
-
         syllabusRepo.save(syllabus);
 
         return ResponseEntity
@@ -169,6 +195,16 @@ public class EducationServiceImpl implements EducationService {
                             .build()
             );
 
+        if(syllabusRepo.findById(Integer.parseInt(id)).get().isAssignedToClasses()){
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(
+                    ResponseObject.builder()
+                            .message("Cannot update syllabus that is already assigned to classes")
+                            .success(false)
+                            .data(null)
+                            .build()
+            );
+        }
+
 
         // ✅ Check subject trùng với syllabus khác
         boolean isSubjectDuplicate = syllabusRepo.existsBySubjectIgnoreCaseAndIdNot(request.getSubject(), Integer.parseInt(id));
@@ -183,7 +219,6 @@ public class EducationServiceImpl implements EducationService {
         }
 
         List<SyllabusLesson> list = syllabusLessonRepo.findBySyllabusId(Integer.parseInt(id));
-
         syllabusRepo.save(
                 Syllabus.builder()
                         .id(Integer.parseInt(id))
@@ -231,6 +266,7 @@ public class EducationServiceImpl implements EducationService {
             );
 
 
+
         Syllabus syllabus = syllabusRepo.findById(Integer.parseInt(id)).get();
 
         return ResponseEntity.ok().body(
@@ -262,7 +298,6 @@ public class EducationServiceImpl implements EducationService {
         );
     }
 
-
     @Override
     public ResponseEntity<ResponseObject> assignLessonsToSyllabus(String id, AssignLessonsRequest request) {
         // 1. Validate request.getLessonNames()
@@ -285,6 +320,16 @@ public class EducationServiceImpl implements EducationService {
 
 
         Syllabus syllabus = syllabusRepo.findById(Integer.parseInt(id)).get();
+
+        if (syllabus.isAssignedToClasses()){
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(
+                    ResponseObject.builder()
+                            .message("Cannot assign lessons to syllabus because syllabus is already assigned to classes")
+                            .success(false)
+                            .data(null)
+                            .build()
+            );
+        }
 
         // 3. Lấy danh sách Lesson hợp lệ theo topic (theo thứ tự request nếu cần):
         List<Lesson> validLessons = new ArrayList<>();
@@ -396,7 +441,7 @@ public class EducationServiceImpl implements EducationService {
     public ResponseEntity<ResponseObject> viewAssignedSyllabuses(String id) {
         String error = LessonValidation.checkLessonId(id);
 
-        if (!error.isEmpty()) {
+        if(!error.isEmpty()){
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
                     ResponseObject.builder()
                             .message(error)
@@ -405,7 +450,7 @@ public class EducationServiceImpl implements EducationService {
                             .build());
         }
         // Lsson không tồn tại hoặc bị xóa
-        if (lessonRepo.findById(Integer.parseInt(id)).isEmpty())
+        if(lessonRepo.findById(Integer.parseInt(id)).isEmpty())
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
                     ResponseObject.builder()
                             .message("Lesson with id " + id + " does not exist or be deleted")
@@ -442,7 +487,7 @@ public class EducationServiceImpl implements EducationService {
             );
 
         // Lsson không tồn tại hoặc bị xóa
-        if (lessonRepo.findById(Integer.parseInt(id)).isEmpty())
+        if(lessonRepo.findById(Integer.parseInt(id)).isEmpty())
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
                     ResponseObject.builder()
                             .message("Lesson with id " + id + " does not exist or be deleted")
@@ -464,14 +509,14 @@ public class EducationServiceImpl implements EducationService {
     }
 
 
-    private Map<String, Object> buildSyllabusDetail(Syllabus syllabus) {
-        Map<String, Object> data = new HashMap<>();
-        data.put("id", syllabus.getId());
-        data.put("subject", syllabus.getSubject());
-        data.put("description", syllabus.getDescription());
-        data.put("numberOfWeek", syllabus.getNumberOfWeek());
+    private Map<String,Object> buildSyllabusDetail(Syllabus syllabus){
+        Map<String,Object> data = new HashMap<>();
+        data.put("id",syllabus.getId());
+        data.put("subject",syllabus.getSubject());
+        data.put("description",syllabus.getDescription());
+        data.put("numberOfWeek",syllabus.getNumberOfWeek());
         data.put("maxHoursOfSyllabus", syllabus.getHoursOfSyllabus());
-        data.put("grade", syllabus.getGrade());
+        data.put("grade",syllabus.getGrade());
         return data;
     }
 
@@ -490,7 +535,7 @@ public class EducationServiceImpl implements EducationService {
 
         if (request.getToolsRequired() == null || request.getToolsRequired().trim().isEmpty()) {
             request.setToolsRequired("N/A");
-        }
+                    }
         Lesson lesson = Lesson.builder()
                 .topic(request.getTopic())
                 .description(request.getDescription())
@@ -544,6 +589,19 @@ public class EducationServiceImpl implements EducationService {
                             .build()
             );
         }
+        boolean assigned = lesson.getSyllabusLessonList().stream()
+                .map(SyllabusLesson::getSyllabus)
+                .anyMatch(Syllabus::isAssignedToClasses);
+        if(assigned) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(
+                    ResponseObject.builder()
+                            .message("Cannot update lesson that is already assigned to classes")
+                            .success(false)
+                            .data(null)
+                            .build()
+            );
+        }
+
         boolean isLessonDuplicate = lessonRepo.existsByTopicIgnoreCaseAndIdNot(request.getTopic(), Integer.parseInt(id));
         if (isLessonDuplicate) {
             return ResponseEntity.status(HttpStatus.CONFLICT).body(
@@ -595,7 +653,7 @@ public class EducationServiceImpl implements EducationService {
         }
         // Sắp xếp theo createdAt giảm dần
         lessons.sort(Comparator.comparing(Lesson::getCreatedAt).reversed());
-        List<Map<String, Object>> lessonDetails = lessons.stream()
+        List<Map<String,Object>> lessonDetails = lessons.stream()
                 .map(this::buildLessonDetail)
                 .toList();
 
@@ -621,7 +679,7 @@ public class EducationServiceImpl implements EducationService {
             );
 
         // Syllabus không tồn tại hoặc bị xóa
-        if (syllabusRepo.findById(Integer.parseInt(id)).isEmpty())
+        if(syllabusRepo.findById(Integer.parseInt(id)).isEmpty())
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
                     ResponseObject.builder()
                             .message("Syllabus with id " + id + " does not exist or be deleted")
@@ -637,7 +695,7 @@ public class EducationServiceImpl implements EducationService {
 
         List<Lesson> allLessons = lessonRepo.findAll();
         String q = (searchQuery == null ? "" : searchQuery.trim().toLowerCase());
-        List<Map<String, Object>> unassignedLessons = allLessons.stream()
+        List<Map<String,Object>> unassignedLessons = allLessons.stream()
                 .filter(l -> !assignedLessonIds.contains(l.getId()))
                 .filter(l ->
                         // a) Nếu q.empty → trả về true cho tất cả
@@ -671,7 +729,7 @@ public class EducationServiceImpl implements EducationService {
             );
 
         // Syllabus không tồn tại hoặc bị xóa
-        if (syllabusRepo.findById(Integer.parseInt(id)).isEmpty())
+        if(syllabusRepo.findById(Integer.parseInt(id)).isEmpty())
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
                     ResponseObject.builder()
                             .message("Syllabus with id " + id + " does not exist or be deleted")
@@ -734,11 +792,11 @@ public class EducationServiceImpl implements EducationService {
         List<String> statuses = List.of(Status.ACCOUNT_ACTIVE.getValue(), Status.ACCOUNT_UNBAN.getValue());
 
         for (String email : requestEmails) {
-            accountRepo.findByRoleAndEmailAndStatusIn(Role.TEACHER, email, statuses)
+            accountRepo.findByRoleAndEmailAndStatusIn(Role.TEACHER , email, statuses)
                     .ifPresent(validTeachers::add);
         }
 
-        if (validTeachers.isEmpty())
+        if(validTeachers.isEmpty())
             return ResponseEntity
                     .status(HttpStatus.NOT_FOUND)
                     .body(ResponseObject.builder()
@@ -748,8 +806,8 @@ public class EducationServiceImpl implements EducationService {
                             .data(null)
                             .build());
 
-        LocalDateTime newStart = request.getStartTime();
-        LocalDateTime newEnd = request.getEndTime();
+        LocalDateTime newStart = request.getStartTime().atZone(ZoneOffset.UTC).withZoneSameInstant(ZoneId.of("Asia/Ho_Chi_Minh")).toLocalDateTime();
+        LocalDateTime newEnd = request.getEndTime().atZone(ZoneOffset.UTC).withZoneSameInstant(ZoneId.of("Asia/Ho_Chi_Minh")).toLocalDateTime();
 
 
         List<Integer> validTeacherIds = validTeachers.stream()
@@ -759,13 +817,12 @@ public class EducationServiceImpl implements EducationService {
         // Lấy tất cả TeacherEvent xung đột
         List<TeacherEvent> conflicts = teacherEventRepo
                 .findByTeacherIdInAndEventStatusAndEventStartTimeLessThanAndEventEndTimeGreaterThan(
-                        validTeacherIds, Status.EVENT_REGISTRATION_ACTIVE, newEnd, newStart);
+                        validTeacherIds, Status.EVENT_REGISTRATION_ACTIVE , newEnd, newStart);
 
         Map<Integer, List<Event>> conflictsByTeacher = new HashMap<>();
         for (TeacherEvent te : conflicts) {
             Integer tid = te.getTeacher().getId();
             Event e = te.getEvent();
-            // Thêm event e vào list của tid
             conflictsByTeacher
                     .computeIfAbsent(tid, k -> new ArrayList<>())
                     .add(e);
@@ -801,12 +858,13 @@ public class EducationServiceImpl implements EducationService {
         }
         Event event = Event.builder()
                 .name(request.getName())
-                .startTime(request.getStartTime())
-                .endTime(request.getEndTime())
+                .startTime(newStart)
+                .endTime(newEnd)
                 .location(request.getLocation())
                 .description(request.getDescription())
                 .createdAt(LocalDateTime.now())
-                .registrationDeadline(request.getRegistrationDeadline())
+                .registrationDeadline(request.getRegistrationDeadline().atZone(ZoneOffset.UTC)
+                        .withZoneSameInstant(ZoneId.of("Asia/Ho_Chi_Minh")).toLocalDateTime())
                 .status(Status.EVENT_REGISTRATION_ACTIVE)
                 .attachmentImg(request.getAttachmentImg())
                 .hostName(request.getHostName())
@@ -829,13 +887,23 @@ public class EducationServiceImpl implements EducationService {
     }
 
     @Override
-    public ResponseEntity<ResponseObject> cancelEvent(String id) {
+    public ResponseEntity<ResponseObject> cancelEvent(String id, CancelEventRequest request) {
         String error = EventValidation.checkEventId(id);
-
-        if (!error.isEmpty()) {
+        if(!error.isEmpty())
+        {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
                     ResponseObject.builder()
                             .message(error)
+                            .success(false)
+                            .data(null)
+                            .build()
+            );
+        }
+
+        if (request.getReason() == null || request.getReason().trim().isEmpty()){
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
+                    ResponseObject.builder()
+                            .message("Reason of cancel event is required")
                             .success(false)
                             .data(null)
                             .build()
@@ -865,6 +933,35 @@ public class EducationServiceImpl implements EducationService {
         event.setStatus(Status.EVENT_CANCELLED);
         eventRepo.save(event);
 
+        List<EventParticipate> parts = eventParticipateRepo.findAllByEventId(Integer.parseInt(id));
+        for (EventParticipate ep : parts) {
+            Student stu = ep.getStudent();
+            Parent parent = stu.getParent();
+            if (parent != null && parent.getAccount() != null) {
+                String parentEmail = parent.getAccount().getEmail();
+
+                String subject = "[PES] Event Cancelled";
+                String header  = String.format("Event \"%s\" Cancelled", event.getName());
+                String body    = Format.getCancelEventForParentBody(parent.getAccount().getName(),
+                                                            stu.getName(),
+                                                            ep.getEvent().getName(), ep.getEvent().getStartTime(),
+                                                            request.getReason());
+                mailService.sendMail(parentEmail, subject, header, body);
+            }
+        }
+
+        for (TeacherEvent te : event.getTeacherEventList()) {
+            Account teacher = te.getTeacher();
+            if (teacher != null && teacher.getEmail() != null) {
+                String subj = "Event Cancelled";
+                String heading = "Event \"" + event.getName() + "\" Cancelled";
+                String body = Format.getCancelEventForTeacherBody(teacher.getName(),
+                        te.getEvent().getName(),
+                        te.getEvent().getStartTime(),
+                        request.getReason());
+                mailService.sendMail(teacher.getEmail(), subj, heading, body);
+            }
+        }
 
         return ResponseEntity.ok(ResponseObject.builder()
                 .message("Cancel event successfully")
@@ -872,7 +969,6 @@ public class EducationServiceImpl implements EducationService {
                 .data(null)
                 .build());
     }
-
 
     @Override
     public ResponseEntity<ResponseObject> viewEventList() {
@@ -887,7 +983,6 @@ public class EducationServiceImpl implements EducationService {
                 .data(eventDetails)
                 .build());
     }
-
 
     @Override
     public ResponseEntity<ResponseObject> viewEventDetail(String id) {
@@ -923,7 +1018,7 @@ public class EducationServiceImpl implements EducationService {
     public ResponseEntity<ResponseObject> viewAssignedTeachersOfEvent(String id) {
         String error = EventValidation.checkEventId(id);
 
-        if (!error.isEmpty()) {
+        if(!error.isEmpty()){
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
                     ResponseObject.builder()
                             .message(error)
@@ -932,7 +1027,7 @@ public class EducationServiceImpl implements EducationService {
                             .build());
         }
         // Lsson không tồn tại hoặc bị xóa
-        if (eventRepo.findById(Integer.parseInt(id)).isEmpty())
+        if(eventRepo.findById(Integer.parseInt(id)).isEmpty())
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
                     ResponseObject.builder()
                             .message("Event with id " + id + " does not exist or be deleted")
@@ -990,6 +1085,152 @@ public class EducationServiceImpl implements EducationService {
                 .build());
     }
 
+    @Override
+    public ResponseEntity<ResponseObject> viewAllSyllabusesByGrade(String gradeName) {
+        if (gradeName == null || gradeName.trim().isEmpty()) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
+                    ResponseObject.builder()
+                            .message("Grade is required")
+                            .success(false)
+                            .data(null)
+                            .build()
+            );
+        }
+        // Grade được chọn không tồn tại
+        boolean isExistGrade = Arrays.stream(Grade.values())
+                .anyMatch(grade -> grade.getName().equalsIgnoreCase(gradeName));
+        if (!isExistGrade) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
+                    ResponseObject.builder()
+                            .message("Selected grade does not exist.")
+                            .success(false)
+                            .data(null)
+                            .build()
+            );
+        }
+        List<Syllabus> syllabusList = syllabusRepo.findAllByGrade(getGradeFromName(gradeName));
+        List<Map<String,Object>> syllabusesDetail = syllabusList.stream()
+                .sorted(Comparator.comparing(Syllabus::getCreatedAt).reversed())
+                .map(this::buildSyllabusDetail)
+                .toList();
+        return ResponseEntity.ok().body(
+                ResponseObject.builder()
+                        .message("View All Syllabuses By Grade Successfully")
+                        .success(true)
+                        .data(syllabusesDetail)
+                        .build()
+        );
+    }
+
+    @Override
+    public ResponseEntity<ResponseObject> viewNumberOfStudentsNotAssignToAnyClassByYearAdnGrade(String year, String grade) {
+        List<Integer> years = admissionTermRepo.findAll()
+                .stream()
+                .map(AdmissionTerm::getYear)
+                .distinct()
+                .sorted()
+                .toList();
+
+        String error = ClassValidation.checkAcademicYearAndGrade(year, grade, years);
+
+        if(!error.isEmpty()){
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
+                    ResponseObject.builder()
+                            .message(error)
+                            .success(false)
+                            .data(null)
+                            .build()
+            );
+        }
+
+        List<AdmissionForm> approvedForms = admissionFormRepo.findByTermItem_AdmissionTerm_YearAndStatusAndTermItem_Grade(
+                Integer.parseInt(year),
+                Status.APPROVED_PAID,
+                getGradeFromName(grade)
+        );
+
+        List<Student> students = approvedForms.stream()
+                .map(AdmissionForm::getStudent)
+                .toList();
+        List<StudentClass> assignedStudentClasses = studentClassRepo.findByClasses_AcademicYearAndClasses_Grade(
+                Integer.parseInt(year),
+                getGradeFromName(grade)
+        );
+        Set<Integer> assignedStudentIds = assignedStudentClasses.stream()
+                .map(sc -> sc.getStudent().getId())
+                .collect(Collectors.toSet());
+
+        List<Student> studentsToAssign = students.stream()
+                .filter(st -> !assignedStudentIds.contains(st.getId()))
+                .toList();
+
+        return ResponseEntity.ok().body(
+                ResponseObject.builder()
+                        .message("View Number Of Students Not Assigned To Any Classes By Grade And Year Successfully")
+                        .success(true)
+                        .data(studentsToAssign.size())
+                        .build()
+        );
+    }
+
+
+    @Override
+    public ResponseEntity<ResponseObject> viewAssignedStudentsOfClass(String classId) {
+
+        String error = ClassValidation.checkClassId(classId);
+
+        if(!error.isEmpty()){
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
+                    ResponseObject.builder()
+                            .message(error)
+                            .success(false)
+                            .data(null)
+                            .build()
+            );
+        }
+        List<StudentClass> assignedStudentOfClass = studentClassRepo.findByClasses_Id(
+                Integer.parseInt(classId)
+        );
+
+        List<Student> students = assignedStudentOfClass.stream()
+                .map(StudentClass::getStudent)
+                .toList();
+
+        List<Map<String,Object>> studentList = students.stream()
+                .map(this::buildStudentDetail)
+                .toList();
+
+        return ResponseEntity.ok().body(
+                ResponseObject.builder()
+                        .message("View Assigned Students Of Class Successfully")
+                        .success(true)
+                        .data(studentList)
+                        .build()
+        );
+    }
+
+    private Map<String, Object> buildStudentDetail(Student student)
+    {
+        Map<String, Object> studentDetail = new HashMap<>();
+        studentDetail.put("id", student.getId());
+        studentDetail.put("name", student.getName());
+        studentDetail.put("gender", student.getGender());
+        studentDetail.put("dateOfBirth", student.getDateOfBirth());
+        studentDetail.put("placeOfBirth", student.getPlaceOfBirth());
+        return studentDetail;
+    }
+
+    @Override
+    public ResponseEntity<ResponseObject> assignAvailableStudentsAuto() {
+        return null;
+    }
+
+    @Override
+    public ResponseEntity<ResponseObject> viewClassDetailOfChild(String childId) {
+
+        return null;
+    }
+
     private Map<String, Object> buildEventDetail(Event event) {
         DateTimeFormatter fmt = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
         Map<String, Object> data = new HashMap<>();
@@ -1006,35 +1247,446 @@ public class EducationServiceImpl implements EducationService {
         return data;
     }
 
+    @Override
+    public ResponseEntity<ResponseObject> generateClassesAuto(GenerateClassesRequest request) {
 
-//    @Override
-//    public ResponseEntity<ResponseObject> generateClassesAuto(GenerateClassesRequest request) {
-//        int maxStudents = admissionFormRepo.countByAdmissionTerm_IdAndStatusAndTransaction_Status(request.getTermId(), Status.APPROVED.getValue(), Status.TRANSACTION_SUCCESSFUL.getValue());
-//        int maxClasses = (int) Math.ceil((double) maxStudents / request.getNumberStudentsOfEachClass());
-//        Syllabus syllabus = syllabusRepo.findById(request.getSyllabusId()).get();
-//        for (int i = 0; i < maxClasses; i++)
-//        {
-//            classRepo.save(
-//                    Classes.builder()
-////                      .name(request.getGrade()+"_"+String.format("%02d", i+1) + "_" + request.getAcademicYear())
-//                            .numberStudent(request.getNumberStudentsOfEachClass())
-////                      .academicYear(request.getAcademicYear())
-//                            .startDate(request.getStartDate())
-//                            .endDate(request.getEndDate())
-//                            .status("NOT VERIFIED")
-////                      .grade(getGradeFromName(request.getGrade()))
-//                            .syllabus(syllabus)
-//                            .build()
-//            );
-//        }
-//        return ResponseEntity.ok(
-//                ResponseObject.builder()
-//                        .message("Generate Classes Successfully")
-//                        .success(true)
-//                        .data(null)
-//                        .build()
-//        );
-//    }
+        List<Integer> years = admissionTermRepo.findAll()
+                .stream()
+                .map(AdmissionTerm::getYear)
+                .distinct()
+                .sorted()
+                .toList();
+
+        String error = ClassValidation.validateCreate(request, years);
+
+        if(!error.isEmpty())
+        {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(ResponseObject.builder()
+                            .message(error)
+                            .success(false)
+                            .data(null)
+                            .build());
+        }
+
+        Syllabus syllabus = syllabusRepo.findById(Integer.parseInt(request.getSyllabusId())).orElse(null);
+        if (syllabus == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ResponseObject.builder()
+                    .message("Syllabus not found")
+                    .success(false)
+                    .data(null)
+                    .build());
+        }
+        Grade grade = syllabus.getGrade();
+        LocalDate start = request.getStartDate();
+        LocalDate end = start.plusWeeks(syllabus.getNumberOfWeek()).minusDays(1);
+        if (start.getYear() != end.getYear()) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ResponseObject.builder()
+                    .message("Start date and end date must be within the same calendar year")
+                    .success(false)
+                    .data(null)
+                    .build());
+        }
+        List<Account> teachers = accountRepo.findByRoleAndStatus(Role.TEACHER, Status.ACCOUNT_ACTIVE.getValue());
+        Set<String> validLessonNames = syllabus.getSyllabusLessonList().stream()
+                .map(sl -> sl.getLesson().getTopic())
+                .collect(Collectors.toSet());
+        List<String> raws = request.getActivitiesNameByDay();
+        Map<DayOfWeek, List<String[]>> entriesByDay = raws.stream()
+                .map(raw -> raw.split("-", 4))
+                .filter(parts -> parts.length == 4)
+                .collect(Collectors.groupingBy(
+                        parts -> DayOfWeek.valueOf(parts[0].toUpperCase())
+                ));
+        for (var e : entriesByDay.entrySet()) {
+            DayOfWeek dow = e.getKey();
+            List<String[]> activities = e.getValue();
+            int count = e.getValue().size();
+            if (count != 10) {
+                return ResponseEntity.status(HttpStatus.CONFLICT).body(
+                        ResponseObject.builder()
+                                .message(String.format(
+                                        "On %s there must be exactly 10 activities (lessons+extras), but found %d",
+                                        dow, count))
+                                .success(false)
+                                .data(null)
+                                .build()
+                );
+            }
+            Set<String> slotSet = new HashSet<>();
+            for (String[] parts : activities) {
+                // parts[0] = dayOfWeek, parts[2] = startTime, parts[3] = endTime
+                String slotKey = parts[0] + "-" + parts[2] + "-" + parts[3];
+                if (!slotSet.add(slotKey)) {
+                    return ResponseEntity.status(HttpStatus.CONFLICT).body(
+                            ResponseObject.builder()
+                                    .message(String.format(
+                                            "Duplicate slot on %s: start %s - end %s",
+                                            parts[0], parts[2], parts[3]))
+                                    .success(false)
+                                    .data(null)
+                                    .build()
+                    );
+                }
+            }
+        }
+        Map<DayOfWeek, List<String>> lessonsByDay = raws.stream()
+                .map(raw -> raw.split("-", 4))
+                .filter(p -> p.length == 4 && p[1].startsWith("LE_"))
+                .collect(Collectors.groupingBy(
+                        p -> DayOfWeek.valueOf(p[0].toUpperCase()),
+                        Collectors.mapping(p -> p[1].substring(3), Collectors.toList())
+                ));
+        for (var e : lessonsByDay.entrySet()) {
+            DayOfWeek dow = e.getKey();
+            List<String> lessons = e.getValue();
+            Set<String> distinct = new HashSet<>(lessons);
+            int totalWeeklyHours = raws.stream()
+                    .map(raw -> raw.split("-", 4))
+                    .filter(parts -> parts.length == 4 && parts[1].startsWith("LE_"))
+                    .mapToInt(parts ->{
+                        LocalTime startSlot = LocalTime.parse(parts[2]);
+                        LocalTime endSlot   = LocalTime.parse(parts[3]);
+                        return (int) Duration.between(startSlot, endSlot).toHours();
+                    })
+                    .sum();
+            if (totalWeeklyHours != 30)
+                return ResponseEntity.status(HttpStatus.CONFLICT).body(ResponseObject.builder()
+                        .message("Total lesson hours per week must be 30, but found "+ totalWeeklyHours)
+                        .success(false)
+                        .data(null)
+                        .build());
+
+            if (lessons.size() != 6) {
+                return ResponseEntity.status(HttpStatus.CONFLICT).body(ResponseObject.builder()
+                        .message(String.format("On %s there must be exactly 6 lessons, but found %d",
+                                dow, lessons.size()))
+                        .success(false)
+                        .data(null)
+                        .build());
+            }
+            for (String lesson : distinct) {
+                if (!validLessonNames.contains(lesson)) {
+                    return ResponseEntity.status(HttpStatus.CONFLICT).body(ResponseObject.builder()
+                            .message(String.format("Lesson '%s' is not part of the syllabus", lesson))
+                            .success(false)
+                            .data(null)
+                            .build());
+                }
+            }
+        }
+        List<AdmissionForm> approvedForms = admissionFormRepo.findByTermItem_AdmissionTerm_YearAndStatusAndTermItem_Grade(
+                Integer.parseInt(request.getYear()),
+                Status.APPROVED_PAID,
+                grade
+        );
+
+        List<Student> students = approvedForms.stream()
+                .map(AdmissionForm::getStudent)
+                .toList();
+        List<StudentClass> assignedStudentClasses = studentClassRepo.findByClasses_AcademicYearAndClasses_Grade(
+                Integer.parseInt(request.getYear()),
+                grade
+        );
+        Set<Integer> assignedStudentIds = assignedStudentClasses.stream()
+                .map(sc -> sc.getStudent().getId())
+                .collect(Collectors.toSet());
+
+        List<Student> studentsToAssign = students.stream()
+                .filter(st -> !assignedStudentIds.contains(st.getId()))
+                .toList();
+        if (studentsToAssign.isEmpty()) {
+            return ResponseEntity.ok(ResponseObject.builder()
+                    .message("No new students to assign.").success(true).data(null).build());
+        }
+        // Đếm số lớp hiện có của năm đó
+        int existing = classRepo.countByAcademicYearAndGrade(Integer.parseInt(request.getYear()), grade);
+
+        // Tính số lớp mới cần tạo
+        int numberOfStudentsPerClass = 20;
+        int numberOfNeededClasses = (studentsToAssign.size() + numberOfStudentsPerClass - 1) / numberOfStudentsPerClass;
+        int totalClassIfCreate = existing + numberOfNeededClasses;
+        int expectedClass = termItemRepo.findByAdmissionTerm_YearAndGrade(Integer.parseInt(request.getYear()),syllabus.getGrade()).getExpectedClasses();
+        if (totalClassIfCreate > expectedClass) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(ResponseObject.builder()
+                    .message(String.format("Number of classes after assignment (%d) exceeds expected classes (%d). Please update your plan or increase expected classes.",
+                            totalClassIfCreate, expectedClass))
+                    .success(false).data(null).build());
+        }
+        if (numberOfNeededClasses + existing > expectedClass) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(ResponseObject.builder()
+                    .message(String.format("Number of needed classes (%d) exceeds expected classes (%d). Please update your plan or increase expected classes.",
+                            numberOfNeededClasses, expectedClass))
+                    .success(false)
+                    .data(null)
+                    .build());
+        }
+        List<Account> availableTeachers = teachers.stream()
+                .filter(teacher -> teacher.getClasses().stream()
+                        .noneMatch(cls ->
+                                cls.getAcademicYear() == Integer.parseInt(request.getYear())
+                        )
+                )
+                .toList();
+        if (availableTeachers.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ResponseObject.builder()
+                    .message("No teachers available")
+                    .success(true)
+                    .data(null)
+                    .build());
+        }
+        if (availableTeachers.size() < numberOfNeededClasses) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(ResponseObject.builder()
+                    .message(String.format("Only %d teachers available but %d new classes required",
+                            availableTeachers.size(), numberOfNeededClasses))
+                    .success(false)
+                    .data(null)
+                    .build());
+        }
+        List<Classes> toSave = new ArrayList<>();
+        int studentIdx = 0;
+        for (int i = 0; i < numberOfNeededClasses; i++) {
+            Account assignedTeacher = availableTeachers.get(i);
+            Classes cls = Classes.builder()
+                    .name(grade + "-" + (existing + i + 1) + "-" + request.getYear())
+                    .startDate(start)
+                    .endDate(end)
+                    .academicYear(Integer.parseInt(request.getYear()))
+                    .grade(grade)
+                    .status(Status.CLASS_ACTIVE.getValue())
+                    .teacher(assignedTeacher)
+                    .syllabus(syllabus)
+                    .build();
+            List<StudentClass> scList = new ArrayList<>();
+            for (int j = 0; j < numberOfStudentsPerClass && studentIdx < studentsToAssign.size(); j++, studentIdx++) {
+                scList.add(StudentClass.builder().classes(cls).student(studentsToAssign.get(studentIdx)).build());
+            }
+            cls.setStudentClassList(scList);
+            cls.setNumberStudent(scList.size());
+            List<Schedule> scheduleList = new ArrayList<>();
+            for (int week = 1; week <= syllabus.getNumberOfWeek(); week++) {
+                LocalDate mondayOfWeek = start.plusWeeks(week - 1);
+                Schedule sch = Schedule.builder()
+                        .weekName("Week - " + week)
+                        .classes(cls)
+                        .build();
+                List<Activity> activities = raws.stream()
+                        .map(raw -> raw.split("-", 4))
+                        .filter(parts -> parts.length == 4)
+                        .map(parts -> {
+                            DayOfWeek dow = DayOfWeek.valueOf(parts[0].toUpperCase());
+                            String token = parts[1];
+                            String lessonTopic = token.startsWith("LE_")
+                                    ? token.substring(3)
+                                    : null;
+                            String activityName = token.startsWith("LE_")
+                                    ? null
+                                    : token;
+                            LocalTime startTime = LocalTime.parse(parts[2]);
+                            LocalTime endTime = LocalTime.parse(parts[3]);
+                            LocalDate activityDate = mondayOfWeek.plusDays(dow.getValue() - 1);
+                            return Activity.builder()
+                                    .name(activityName != null ? activityName : lessonTopic)
+                                    .syllabusName(activityName != null ? "N/A" : syllabus.getSubject())
+                                    .dayOfWeek(dow)
+                                    .date(activityDate)
+                                    .startTime(startTime)
+                                    .endTime(endTime)
+                                    .schedule(sch)
+                                    .build();
+                        })
+                        .toList();
+                sch.setActivityList(activities);
+                scheduleList.add(sch);
+            }
+            cls.setScheduleList(scheduleList);
+            toSave.add(cls);
+        }
+        Syllabus prev = syllabusRepo.findByAssignedToClassesAndGrade(true, syllabus.getGrade());
+        if(prev != null){
+            prev.setAssignedToClasses(false);
+            syllabusRepo.save(prev);
+        }
+        syllabus.setAssignedToClasses(true);
+        syllabusRepo.save(syllabus);
+        classRepo.saveAll(toSave);
+        for (Classes createdClass : toSave) {
+            String className = createdClass.getName();
+            String teacherName = createdClass.getTeacher().getName();
+            String startDateStr = createdClass.getStartDate().toString();
+            // Duyệt từng học sinh trong lớp
+            for (StudentClass sc : createdClass.getStudentClassList()) {
+                Student student = sc.getStudent();
+                Parent parent = student.getParent();
+                if (parent != null && parent.getAccount() != null) {
+                    String parentName = parent.getAccount().getName();
+                    String parentEmail = parent.getAccount().getEmail();
+                    String studentName = student.getName();
+                    String subject = "Thông báo xếp lớp cho học sinh " + studentName;
+                    String header = "Class Assignment Notification";
+                    String body = Format.getAssignClassSuccessfulForParentBody(
+                            parentName, studentName, className, teacherName, startDateStr
+                    );
+                    mailService.sendMail(parentEmail, subject, header, body);
+                }
+            }
+            String teacherEmail = createdClass.getTeacher().getEmail();
+            String subject = "Class Homeroom Assignment Notification";
+            String header = "Class Assignment Notification";
+            String body = Format.getAssignClassSuccessfulForTeacherBody(
+                    teacherName, className, startDateStr
+            );
+            mailService.sendMail(teacherEmail, subject, header, body);
+
+        }
+        return ResponseEntity.ok(
+                ResponseObject.builder()
+                        .message("Classes generated successfully")
+                        .success(true)
+                        .data(null)
+                        .build()
+        );
+    }
+
+    private Map<String, Object> buildClassDetail(Classes classes) {
+        Map<String, Object> data = new HashMap<>();
+        data.put("id", classes.getId());
+        data.put("name", classes.getName());
+        data.put("startDate", classes.getStartDate());
+        data.put("endDate", classes.getEndDate());
+        data.put("year",classes.getAcademicYear());
+        data.put("teacherName", classes.getTeacher().getName());
+        data.put("numberStudents",classes.getNumberStudent());
+        data.put("status", classes.getStatus());
+        data.put("grade", classes.getGrade());
+        return data;
+    }
+
+
+    @Transactional
+    public ResponseEntity<ResponseObject> deleteClassById(String classId) {
+        Classes cls = classRepo.findById(Integer.parseInt(classId)).get();
+        classRepo.delete(cls);
+        return  ResponseEntity.ok(ResponseObject.builder()
+                        .success(true)
+                        .message("Delete class successfully")
+                        .data(null)
+                .build());
+    }
+
+    @Override
+    public ResponseEntity<ResponseObject> viewAllClassesByYearAndGrade(String year, String grade) {
+
+        List<Integer> years = admissionTermRepo.findAll()
+                .stream()
+                .map(AdmissionTerm::getYear)
+                .distinct()
+                .sorted()
+                .toList();
+
+        String error = ClassValidation.checkAcademicYearAndGrade(year,grade,years);
+
+        if(!error.isEmpty()){
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(ResponseObject.builder()
+                            .message(error)
+                            .success(false)
+                            .data(null)
+                            .build());
+        }
+
+        List<Classes> classes = classRepo.findByAcademicYearAndGrade(Integer.parseInt(year), getGradeFromName(grade));
+
+        List<Map<String,Object>> classesDetail = classes.stream()
+                .map(this::buildClassDetail)
+                .toList();
+        return ResponseEntity.ok().body(
+                ResponseObject.builder()
+                        .message("View All Classes By Grade And Year Successfully")
+                        .success(true)
+                        .data(classesDetail)
+                        .build()
+        );
+
+    }
+
+    private Map<String, Object> buildScheduleDetail(Schedule schedule) {
+        Map<String, Object> data = new HashMap<>();
+        data.put("id", schedule.getId());
+        data.put("name", schedule.getWeekName());
+        return data;
+    }
+
+    private Map<String, Object> buildActivityDetail(Activity activity) {
+        Map<String, Object> data = new HashMap<>();
+        data.put("id", activity.getId());
+        data.put("name", activity.getName());
+        data.put("syllabusName",activity.getSyllabusName());
+        data.put("dayOfWeek",activity.getDayOfWeek());
+        data.put("startTime",activity.getStartTime());
+        data.put("endTime", activity.getEndTime());
+        data.put("date", activity.getDate());
+        return data;
+    }
+
+    @Override
+    public ResponseEntity<ResponseObject> getSchedulesByClassId(String classId) {
+
+        String error = ClassValidation.checkClassId(classId);
+
+        if(!error.isEmpty())
+        {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(ResponseObject.builder()
+                            .message(error)
+                            .success(false)
+                            .data(null)
+                            .build());
+        }
+
+        List<Schedule> schedules = scheduleRepo.findByClasses_Id(Integer.parseInt(classId));
+
+        List<Map<String,Object>> scheduleList = schedules.stream()
+                .map(this::buildScheduleDetail)
+                .toList();
+
+        return ResponseEntity.ok().body(
+                ResponseObject.builder()
+                        .message("View All Schedules Of Class Successfully")
+                        .success(true)
+                        .data(scheduleList)
+                        .build()
+        );
+    }
+
+    @Override
+    public ResponseEntity<ResponseObject> getActivitiesByScheduleId(String scheduleId) {
+
+        String error = ScheduleValidation.checkScheduleId(scheduleId);
+
+        if(!error.isEmpty()){
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(ResponseObject.builder()
+                            .message(error)
+                            .success(false)
+                            .data(null)
+                            .build());
+        }
+
+        List<Activity> activities = activityRepo.findBySchedule_Id(Integer.parseInt(scheduleId));
+
+        List<Map<String,Object>> activityList = activities.stream()
+                .map(this::buildActivityDetail)
+                .toList();
+
+        return ResponseEntity.ok().body(
+                ResponseObject.builder()
+                        .message("View All Activities Of Schedule Successfully")
+                        .success(true)
+                        .data(activityList)
+                        .build()
+        );
+    }
 
     private Grade getGradeFromName(String name) {
         for (Grade grade : Grade.values()) {
