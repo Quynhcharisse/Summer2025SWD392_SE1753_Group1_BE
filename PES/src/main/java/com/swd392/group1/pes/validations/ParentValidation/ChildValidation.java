@@ -5,6 +5,7 @@ import com.swd392.group1.pes.requests.UpdateChildRequest;
 
 import java.time.LocalDate;
 import java.time.Period;
+import java.time.temporal.ChronoUnit;
 
 public class ChildValidation {
     public static String updateChildValidate(UpdateChildRequest request) {
@@ -82,8 +83,8 @@ public class ChildValidation {
             return "Date of birth must be in the past.";
         }
 
-        int age = Period.between(request.getDateOfBirth(), LocalDate.now()).getYears();
-        if (age < 3 || age > 5) {
+        int age = calculateAge(request.getDateOfBirth());
+        if (age < 3 || age >= 6) {
             return "Child's age must be between 3 and 5 years.";
         }
 
@@ -130,5 +131,10 @@ public class ChildValidation {
             return name + " must be a valid image file (.jpg, .png, .jpeg, .gif, .bmp, .webp).";
         }
         return "";
+    }
+
+    public static int calculateAge(LocalDate dob) {
+        LocalDate today = LocalDate.now();
+        return (int) ChronoUnit.YEARS.between(dob, today);
     }
 }
