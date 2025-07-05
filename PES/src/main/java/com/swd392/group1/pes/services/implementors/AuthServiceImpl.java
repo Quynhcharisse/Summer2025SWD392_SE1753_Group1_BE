@@ -16,6 +16,7 @@ import com.swd392.group1.pes.services.AuthService;
 import com.swd392.group1.pes.services.JWTService;
 import com.swd392.group1.pes.services.MailService;
 import com.swd392.group1.pes.utils.CookieUtil;
+import com.swd392.group1.pes.utils.OtpUtil;
 import com.swd392.group1.pes.utils.RandomPasswordUtil;
 import com.swd392.group1.pes.validations.AuthValidation.ForgotPasswordValidation;
 import com.swd392.group1.pes.validations.AuthValidation.LoginValidation;
@@ -29,7 +30,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
@@ -143,8 +143,65 @@ public class AuthServiceImpl implements AuthService {
     }
 
     @Override
-    public ResponseEntity<ResponseObject> register(RegisterRequest request) {
+    public ResponseEntity<ResponseObject> sendRegisterOtp(String email) {
+        if (email == null || email.trim().isEmpty()) {
+            return ResponseEntity.badRequest().body(
+                ResponseObject.builder().message("Email is required.").success(false).data(null).build()
+            );
+        }
+        if (accountRepo.existsByEmail(email)) {
+            return ResponseEntity.badRequest().body(
+                ResponseObject.builder().message("Email is already in use by another account.").success(false).data(null).build()
+            );
+        }
+        String otp = OtpUtil.generateOtp();
+        long expiry = System.currentTimeMillis() + OtpUtil.OTP_EXPIRY_MINUTES * 60 * 1000;
+        OtpUtil.otpStore(email, otp, expiry);
+        mailService.sendMail(
+            email,
+            "[PES] Registration OTP",
+            "🔐 Your OTP Code",
+            Format.getRegisterOtpBody(otp, OtpUtil.OTP_EXPIRY_MINUTES)
+        );
+        return ResponseEntity.ok(
+            ResponseObject.builder().message("OTP sent to email.").success(true).data(null).build()
+        );
+    }
 
+    @Override
+    public ResponseEntity<ResponseObject> verifyRegisterOtp(String email, String otp) {
+        OtpUtil.OtpInfo info = OtpUtil.getOtpInfo(email);
+        if (info == null || System.currentTimeMillis() > info.expiryTime) {
+            OtpUtil.removeOtp(email);
+            return ResponseEntity.badRequest().body(
+                ResponseObject.builder().message("OTP expired or not found.").success(false).data(null).build()
+            );
+        }
+        if (!info.otp.equals(otp)) {
+            return ResponseEntity.badRequest().body(
+                ResponseObject.builder().message("Invalid OTP.").success(false).data(null).build()
+            );
+        }
+        info.verified = true;
+        return ResponseEntity.ok(
+            ResponseObject.builder().message("OTP verified successfully.").success(true).data(null).build()
+        );
+    }
+
+    @Override
+    public ResponseEntity<ResponseObject> register(RegisterRequest request) {
+        // OTP check
+        OtpUtil.OtpInfo info = OtpUtil.getOtpInfo(request.getEmail());
+        if (info == null || !info.verified) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
+                ResponseObject.builder()
+                    .message("OTP verification required before registration.")
+                    .success(false)
+                    .data(null)
+                    .build()
+            );
+        }
+        OtpUtil.removeOtp(request.getEmail());
         String error = RegisterValidation.validate(request, accountRepo);
         if(!error.isEmpty()){
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
@@ -252,7 +309,7 @@ public class AuthServiceImpl implements AuthService {
     @Override
     public ResponseEntity<ResponseObject> verifyCode(String code) {
         Account account = accountRepo.findByCode(code).orElse(null);
-        
+
         if (account == null) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
                     ResponseObject.builder()
@@ -298,7 +355,7 @@ public class AuthServiceImpl implements AuthService {
 
 
         Account account = accountRepo.findByCode(request.getCode()).orElse(null);
-        
+
         if (account == null || account.getCodeExpiry().isBefore(LocalDateTime.now())) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
                     ResponseObject.builder()

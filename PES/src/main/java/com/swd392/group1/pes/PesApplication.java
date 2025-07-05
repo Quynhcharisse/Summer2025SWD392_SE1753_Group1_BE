@@ -17,11 +17,13 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
 import org.springframework.scheduling.annotation.EnableScheduling;
+import org.springframework.scheduling.annotation.EnableAsync;
 
 import java.time.LocalDateTime;
 import java.util.Random;
 
 @SpringBootApplication
+@EnableAsync
 @RequiredArgsConstructor
 @EnableScheduling
 public class PesApplication {
