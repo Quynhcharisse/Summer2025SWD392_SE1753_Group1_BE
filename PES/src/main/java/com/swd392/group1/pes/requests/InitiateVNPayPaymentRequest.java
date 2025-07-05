@@ -16,4 +16,5 @@ public class InitiateVNPayPaymentRequest {
     int formId;
     String description;
     String transactionInfo;
+    String responseCode;
 }

@@ -35,6 +35,7 @@ import com.swd392.group1.pes.services.ParentService;
 import com.swd392.group1.pes.validations.EducationValidation.EventValidation;
 import com.swd392.group1.pes.validations.ParentValidation.ChildValidation;
 import com.swd392.group1.pes.validations.ParentValidation.EditAdmissionFormValidation;
+import com.swd392.group1.pes.validations.ParentValidation.PaymentValidation;
 import com.swd392.group1.pes.validations.ParentValidation.SubmittedAdmissionFormValidation;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
@@ -806,7 +807,16 @@ public class ParentServiceImpl implements ParentService {
         String currCode = "VND";
         String ipAddr = "127.0.0.1";
         String locale = "vn";
-        String orderInfo = "Thanh toán học phí đầu vào cho năm học " + LocalDate.now().getYear() + " - " + (LocalDate.now().getYear() + 1);
+
+        String studentName = form.getStudent().getName();
+        String grade = form.getTermItem().getGrade().name();
+        String orderInfo = String.format(
+                "Thanh toan hoc phi đau vao nam hoc %d - %d cho hoc sinh %s, khoi %s",
+                LocalDate.now().getYear(),
+                LocalDate.now().getYear() + 1,
+                studentName,
+                grade
+        );
         String orderType = "education";
         String returnUrl = vnpayReturnUrl;
         cld.add(Calendar.MINUTE, 10);
@@ -912,13 +922,22 @@ public class ParentServiceImpl implements ParentService {
     }
 
     @Override
-    public ResponseEntity<ResponseObject> initiateVNPayPayment(InitiateVNPayPaymentRequest
-                                                                       request, HttpServletRequest httpRequest) {
+    public ResponseEntity<ResponseObject> initiateVNPayPayment(InitiateVNPayPaymentRequest request, HttpServletRequest httpRequest) {
         Account acc = jwtService.extractAccountFromCookie(httpRequest);
         if (acc == null || !acc.getRole().equals(Role.PARENT)) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body(
                     ResponseObject.builder()
                             .message("Forbidden: Only parents can access this resource")
+                            .success(false)
+                            .data(null)
+                            .build());
+        }
+
+        String error = PaymentValidation.validate(request, admissionFormRepo, transactionRepo);
+        if(!error.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
+                    ResponseObject.builder()
+                            .message(error)
                             .success(false)
                             .data(null)
                             .build());
@@ -936,20 +955,43 @@ public class ParentServiceImpl implements ParentService {
             );
         }
 
+
+        Transaction existedTransaction = transactionRepo.findByAdmissionFormIdAndStatus(form.getId(), Status.WAITING_PAYMENT);
+        if (existedTransaction != null) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
+                    ResponseObject.builder()
+                            .message("Transaction already exists for this form")
+                            .success(false)
+                            .data(null)
+                            .build()
+            );
+        }
+
         // Sinh txnRef tại backend
         String txnRef = getTxnRef(8);
         //Tạo bản ghi Transaction MỚI và lưu vào DB với trạng thái PENDING
+
         try {
             Transaction transaction = Transaction.builder()
                     .admissionForm(form) // Liên kết giao dịch với AdmissionForm
                     .amount(sumFee(form.getTermItem().getGrade()))
-                    .vnpTransactionNo(request.getTransactionInfo()) // Khi tạo mới, vnpTransactionNo luôn null (chỉ cập nhật khi callback từ VNPay)
+                    .vnpTransactionNo(request.getTransactionInfo())
                     .description(request.getTransactionInfo())
-                    .status(Status.APPROVED_PAID) // Đặt trạng thái ban đầu là PENDING (từ enum Status của bạn)
+                    .status(Status.APPROVED_PAID)
                     .paymentDate(LocalDate.now())
                     .txnRef(txnRef)  // Gán txnRef do backend sinh ở trên
                     .build();
+
+            transaction.getAdmissionForm().setStatus(Status.APPROVED_PAID);
             transactionRepo.save(transaction);
+
+            if(request.getResponseCode().equals("00")) {
+                Student student = form.getStudent();
+                if (student != null && !student.isStudent()) {
+                    student.setStudent(true);
+                    studentRepo.save(student);
+                }
+            }
 
             Map<String, Object> data = new HashMap<>();
             data.put("txnRef", txnRef);
@@ -975,6 +1017,5 @@ public class ParentServiceImpl implements ParentService {
                             .build()
             );
         }
-
     }
 }
