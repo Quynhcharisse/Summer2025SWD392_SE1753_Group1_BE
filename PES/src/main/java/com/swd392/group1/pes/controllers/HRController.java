@@ -2,6 +2,7 @@ package com.swd392.group1.pes.controllers;
 
 import com.swd392.group1.pes.dto.requests.CreateTeacherRequest;
 import com.swd392.group1.pes.dto.requests.ProcessAccountRequest;
+import com.swd392.group1.pes.dto.requests.UpdateTeacherRequest;
 import com.swd392.group1.pes.dto.response.ResponseObject;
 import com.swd392.group1.pes.services.HRService;
 import lombok.RequiredArgsConstructor;
@@ -13,6 +14,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -38,6 +40,18 @@ public class HRController {
     @PreAuthorize("hasRole('hr')")
     public ResponseEntity<ResponseObject> createTeacher(@RequestBody CreateTeacherRequest request) {
         return hrService.createTeacherAcc(request);
+    }
+
+    @PutMapping("/teacher")
+    @PreAuthorize("hasRole('hr')")
+    public ResponseEntity<ResponseObject> updateTeacher(@RequestParam String id, @RequestBody UpdateTeacherRequest request) {
+        return hrService.updateTeacherAcc(id, request);
+    }
+
+    @PostMapping("/teacher/remove")
+    @PreAuthorize("hasRole('hr')")
+    public ResponseEntity<ResponseObject> removeTeacher(@RequestParam String id) {
+        return hrService.removeTeacherAcc(id);
     }
 
     @GetMapping("/teacher")

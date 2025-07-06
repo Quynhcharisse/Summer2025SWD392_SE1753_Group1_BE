@@ -1,17 +1,18 @@
 package com.swd392.group1.pes.services.implementors;
 
-import com.swd392.group1.pes.utils.email.Format;
+import com.swd392.group1.pes.dto.requests.CreateTeacherRequest;
+import com.swd392.group1.pes.dto.requests.ProcessAccountRequest;
+import com.swd392.group1.pes.dto.requests.UpdateTeacherRequest;
+import com.swd392.group1.pes.dto.response.ResponseObject;
 import com.swd392.group1.pes.enums.Role;
 import com.swd392.group1.pes.enums.Status;
 import com.swd392.group1.pes.models.Account;
 import com.swd392.group1.pes.repositories.AccountRepo;
-import com.swd392.group1.pes.dto.requests.CreateTeacherRequest;
-import com.swd392.group1.pes.dto.requests.ProcessAccountRequest;
-import com.swd392.group1.pes.dto.response.ResponseObject;
 import com.swd392.group1.pes.services.HRService;
 import com.swd392.group1.pes.services.MailService;
 import com.swd392.group1.pes.utils.GenerateEmailTeacherUtil;
 import com.swd392.group1.pes.utils.RandomPasswordUtil;
+import com.swd392.group1.pes.utils.email.Format;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.output.ByteArrayOutputStream;
@@ -240,6 +241,145 @@ public class HRServiceImpl implements HRService {
         return "";
     }
 
+    @Override
+    public ResponseEntity<ResponseObject> updateTeacherAcc(String id, UpdateTeacherRequest request) {
+        if (id == null || id.isBlank()) {
+            return ResponseEntity.badRequest().body(
+                ResponseObject.builder()
+                    .message("Teacher id is required for update")
+                    .success(false)
+                    .data(null)
+                    .build()
+            );
+        }
+        int teacherId;
+        try {
+            teacherId = Integer.parseInt(id);
+        } catch (NumberFormatException e) {
+            return ResponseEntity.badRequest().body(
+                ResponseObject.builder()
+                    .message("Invalid teacher id format")
+                    .success(false)
+                    .data(null)
+                    .build()
+            );
+        }
+        Account teacher = accountRepo.findByIdAndRole(teacherId, Role.TEACHER);
+        if (teacher == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
+                ResponseObject.builder()
+                    .message("Teacher not found")
+                    .success(false)
+                    .data(null)
+                    .build()
+            );
+        }
+        String error = updateTeacherValidation(request);
+        if (!error.isEmpty()) {
+            return ResponseEntity.badRequest().body(
+                ResponseObject.builder()
+                    .message(error)
+                    .success(false)
+                    .data(null)
+                    .build()
+            );
+        }
+        if (request.getName() != null && !request.getName().isBlank()) {
+            teacher.setName(request.getName().trim());
+        }
+        if (request.getPhone() != null && !request.getPhone().isBlank()) {
+            teacher.setPhone(request.getPhone().trim());
+        }
+        if (request.getGender() != null && !request.getGender().isBlank()) {
+            teacher.setGender(request.getGender().trim());
+        }
+        if (request.getAvatarUrl() != null && !request.getAvatarUrl().isBlank()) {
+            teacher.setAvatarUrl(request.getAvatarUrl().trim());
+        }
+        accountRepo.save(teacher);
+        return ResponseEntity.ok(
+            ResponseObject.builder()
+                .message("Teacher updated successfully")
+                .success(true)
+                .data(null)
+                .build()
+        );
+    }
+
+    public static String updateTeacherValidation(UpdateTeacherRequest request) {
+        if (request.getName() != null) {
+            String name = request.getName().trim();
+            if (name.isEmpty()) {
+                return "Name is required";
+            }
+            if (!name.matches("^[a-zA-Z\\s'-]+$")) {
+                return "Name can only contain letters, spaces, hyphens, and apostrophes";
+            }
+            if (name.length() < 2 || name.length() > 50) {
+                return "Name must be between 2 and 50 characters";
+            }
+        }
+        if (request.getPhone() != null) {
+            String phone = request.getPhone().trim();
+            if (!phone.isEmpty() && !phone.matches("^(03|05|07|08|09)\\d{8}$")) {
+                return "Phone number must start with a valid prefix and be 10 digits.";
+            }
+        }
+        if (request.getGender() != null) {
+            String gender = request.getGender().trim();
+            if (gender.isEmpty()) {
+                return "Gender is required";
+            }
+            if (!gender.equals("male") && !gender.equals("female") && !gender.equals("other")) {
+                return "Gender must be male, female, or other";
+            }
+        }
+        return "";
+    }
+
+    @Override
+    public ResponseEntity<ResponseObject> removeTeacherAcc(String id) {
+        if (id == null || id.isBlank()) {
+            return ResponseEntity.badRequest().body(
+                ResponseObject.builder()
+                    .message("Teacher id is required for removal")
+                    .success(false)
+                    .data(null)
+                    .build()
+            );
+        }
+        int teacherId;
+        try {
+            teacherId = Integer.parseInt(id);
+        } catch (NumberFormatException e) {
+            return ResponseEntity.badRequest().body(
+                ResponseObject.builder()
+                    .message("Invalid teacher id format")
+                    .success(false)
+                    .data(null)
+                    .build()
+            );
+        }
+        Account teacher = accountRepo.findByIdAndRole(teacherId, Role.TEACHER);
+        if (teacher == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
+                ResponseObject.builder()
+                    .message("Teacher not found")
+                    .success(false)
+                    .data(null)
+                    .build()
+            );
+        }
+        teacher.setStatus(Status.ACCOUNT_BAN.getValue());
+        accountRepo.save(teacher);
+        return ResponseEntity.ok(
+            ResponseObject.builder()
+                .message("Teacher removed successfully")
+                .success(true)
+                .data(null)
+                .build()
+        );
+    }
 
     @Override
     public ResponseEntity<ResponseObject> viewTeacherList() {
@@ -395,5 +535,6 @@ public class HRServiceImpl implements HRService {
             throw new RuntimeException("Excel export failed", e);
         }
     }
+
 
 }

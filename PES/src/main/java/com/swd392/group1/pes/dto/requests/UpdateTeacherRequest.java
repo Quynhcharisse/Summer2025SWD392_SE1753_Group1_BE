@@ -13,7 +13,6 @@ import lombok.experimental.FieldDefaults;
 @Builder
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class UpdateTeacherRequest {
-    int teacherId;
     String name;
     String phone;
     String gender;

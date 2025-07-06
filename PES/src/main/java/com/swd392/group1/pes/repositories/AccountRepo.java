@@ -18,4 +18,5 @@ public interface AccountRepo extends JpaRepository<Account, Integer> {
     boolean existsByEmail(String email);
     long countByRole(Role role);
     Optional<Account> findByCode(String code);
+    Account findByIdAndRole(int teacherId, Role role);
 }
