@@ -8,8 +8,11 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 public interface EventRepo extends JpaRepository<Event, Integer> {
-  boolean existsByName(String name);
-  List<Event> findByStartTimeBetween(LocalDateTime from, LocalDateTime to);
-  List<Event> findByStatusAndRegistrationDeadlineLessThanEqual(Status status, LocalDateTime time);
-  List<Event> findByStatus(Status status);
+    boolean existsByName(String name);
+
+    List<Event> findByStartTimeBetween(LocalDateTime from, LocalDateTime to);
+
+    List<Event> findByStatusAndRegistrationDeadlineLessThanEqual(Status status, LocalDateTime time);
+
+    List<Event> findByStatus(Status status);
 }

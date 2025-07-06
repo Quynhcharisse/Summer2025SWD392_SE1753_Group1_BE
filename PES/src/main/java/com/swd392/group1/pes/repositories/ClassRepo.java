@@ -7,8 +7,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.List;
 
 public interface ClassRepo extends JpaRepository<Classes, Integer> {
-int countByAcademicYearAndGrade(
-        int academicYear, Grade grade
-);
-List<Classes> findByAcademicYearAndGrade(int academicYear, Grade grade);
+    int countByAcademicYearAndGrade(int academicYear, Grade grade);
+
+    List<Classes> findByAcademicYearAndGrade(int academicYear, Grade grade);
 }

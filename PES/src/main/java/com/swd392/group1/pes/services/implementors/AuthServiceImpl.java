@@ -35,6 +35,7 @@ import java.util.regex.Pattern;
 @Service
 @RequiredArgsConstructor
 public class AuthServiceImpl implements AuthService {
+
     @Value("${security-access-expiration}")
     private long accessExpiration;
 
@@ -380,8 +381,7 @@ public class AuthServiceImpl implements AuthService {
             );
         }
 
-        Account account = accountRepo.findByEmail(request.getEmail()).orElse(null);
-
+        Account account = accountRepo.findByEmailAndStatus(request.getEmail(), Status.ACCOUNT_ACTIVE.getValue()).orElse(null);
         if (account == null) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
                     ResponseObject.builder()
@@ -392,18 +392,20 @@ public class AuthServiceImpl implements AuthService {
             );
         }
 
-        // Tạo code ngẫu nhiên 7 ký tự
-        String code = RandomPasswordUtil.generateRandomString(7);
-        account.setCode(code);
-        // Set thời gian hết hạn 5 phút
-        account.setCodeExpiry(LocalDateTime.now().plusMinutes(5));
-        accountRepo.save(account);
+        String token = jwtService.generateResetToken(account);
 
-        // Gửi email chứa code sử dụng format có sẵn
-        String subject = "Reset Your Password";
-        String body = Format.getForgotPasswordBody(code);
-        mailService.sendMail(account.getEmail(), subject, subject, body);
+        String prefix = RandomPasswordUtil.generateRandomString(7);
+        String suffix = RandomPasswordUtil.generateRandomString(6);
+        String code = prefix + token + suffix;
 
+        String resetLink = "http://localhost:5173/reset-pass?code=" + code;
+
+        mailService.sendMail(
+                account.getEmail(),
+                "[PES] Password Reset Request",
+                "Reset Your Password",
+                Format.getForgotPasswordBody(resetLink)
+        );
         return ResponseEntity.status(HttpStatus.OK).body(
                 ResponseObject.builder()
                         .message("Reset code has been sent to your email")
@@ -427,39 +429,6 @@ public class AuthServiceImpl implements AuthService {
         return "";
     }
 
-    @Override
-    public ResponseEntity<ResponseObject> verifyCode(String code) {
-        Account account = accountRepo.findByCode(code).orElse(null);
-
-        if (account == null) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
-                    ResponseObject.builder()
-                            .message("Invalid reset code")
-                            .success(false)
-                            .data(null)
-                            .build()
-            );
-        }
-
-        // Check if code is expired
-        if (account.getCodeExpiry().isBefore(LocalDateTime.now())) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
-                    ResponseObject.builder()
-                            .message("Reset code has expired")
-                            .success(false)
-                            .data(null)
-                            .build()
-            );
-        }
-
-        return ResponseEntity.status(HttpStatus.OK).body(
-                ResponseObject.builder()
-                        .message("Code is valid")
-                        .success(true)
-                        .data(null)
-                        .build()
-        );
-    }
 
     @Override
     public ResponseEntity<ResponseObject> resetPass(ResetPassRequest request) {
@@ -474,40 +443,53 @@ public class AuthServiceImpl implements AuthService {
             );
         }
 
+        try {
+            String code = request.getCode();
+            if (code.contains("?code=")) {
+                code = code.substring(code.indexOf("?code=") + 6);
+            }
+            String token = code.substring(7, code.length() - 6);
 
-        Account account = accountRepo.findByCode(request.getCode()).orElse(null);
+            String email = jwtService.extractEmailFromJWT(token);
 
-        if (account == null || account.getCodeExpiry().isBefore(LocalDateTime.now())) {
+            Account account = accountRepo.findByEmailAndStatus(email, Status.ACCOUNT_ACTIVE.getValue()).orElse(null);
+            if (account == null) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
+                        ResponseObject.builder()
+                                .message("Account not found")
+                                .success(false)
+                                .data(null)
+                                .build()
+                );
+            }
+
+            account.setPassword(request.getNewPassword());
+            accountRepo.save(account);
+
+            mailService.sendMail(
+                    account.getEmail(),
+                    "[PES] Password Changed Successfully",
+                    "Password Changed",
+                    Format.getPasswordChangedFormat(account.getName())
+            );
+
+            return ResponseEntity.ok(
+                    ResponseObject.builder()
+                            .message("Password has been reset successfully")
+                            .success(true)
+                            .data(null)
+                            .build()
+            );
+
+        } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
                     ResponseObject.builder()
-                            .message("Invalid or expired reset code")
+                            .message("Invalid reset code format")
                             .success(false)
                             .data(null)
                             .build()
             );
         }
-
-        // Update password
-        account.setPassword(request.getNewPassword()); // chưa cần decode pass
-        // Clear reset code
-        account.setCode(null);
-        account.setCodeExpiry(null);
-        accountRepo.save(account);
-
-        mailService.sendMail(
-                account.getEmail(),
-                "[PES] Password Changed Successfully",
-                "🔒 Password Changed",
-                Format.getPasswordChangedFormat(account.getName())
-        );
-
-        return ResponseEntity.status(HttpStatus.OK).body(
-                ResponseObject.builder()
-                        .message("Password has been reset successfully")
-                        .success(true)
-                        .data(null)
-                        .build()
-        );
     }
 
     public static String resetPassValidation(ResetPassRequest request) {

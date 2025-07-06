@@ -8,7 +8,10 @@ import java.util.Optional;
 
 public interface LessonRepo extends JpaRepository<Lesson, Integer> {
     Optional<Lesson> findByTopicIgnoreCase(String name);
+
     List<Lesson> findByTopicContainingIgnoreCase(String keyword);
+
     boolean existsByTopicIgnoreCaseAndIdNot(String name, int id);
+
     boolean existsByTopicIgnoreCase(String name);
 }
