@@ -6,7 +6,7 @@ import com.swd392.group1.pes.dto.requests.RegisterRequest;
 import com.swd392.group1.pes.dto.requests.ResetPassRequest;
 import com.swd392.group1.pes.dto.response.ResponseObject;
 import com.swd392.group1.pes.services.AuthService;
-import com.swd392.group1.pes.services.EducationService;
+import com.swd392.group1.pes.services.EventService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -25,7 +25,7 @@ public class AuthController {
 
     private final AuthService authService;
 
-    private final EducationService educationService;
+    private final EventService eventService;
 
     @PostMapping("/login")
     public ResponseEntity<ResponseObject> login (@RequestBody LoginRequest request, HttpServletResponse response) {
@@ -59,12 +59,12 @@ public class AuthController {
 
     @GetMapping("/event/active")
     public ResponseEntity<ResponseObject> viewActiveEvents() {
-        return educationService.viewActiveEvents();
+        return eventService.viewActiveEvents();
     }
 
     @GetMapping("/event/detail")
     public ResponseEntity<ResponseObject> viewEventDetail(@RequestParam String id) {
-        return educationService.viewEventDetail(id);
+        return eventService.viewEventDetail(id);
     }
 
     @PostMapping("/register/otp/send")

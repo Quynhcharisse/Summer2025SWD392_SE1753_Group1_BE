@@ -65,7 +65,7 @@ import java.util.TreeMap;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import static com.swd392.group1.pes.services.implementors.EducationServiceImpl.validateRegisterEvent;
+import static com.swd392.group1.pes.services.implementors.EventServiceImpl.validateRegisterEvent;
 
 @Service
 @RequiredArgsConstructor

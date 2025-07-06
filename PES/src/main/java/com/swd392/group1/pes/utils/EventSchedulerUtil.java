@@ -17,7 +17,7 @@ public class EventSchedulerUtil {
 
     private final EventRepo eventRepo;
 
-    @Scheduled(cron = "*/30 * * * * *")
+    @Scheduled(cron = "*/40 * * * * *")
     @Transactional
     public void updateEventStatusCloseRegistration() {
         LocalDateTime now = LocalDateTime.now();
