@@ -183,5 +183,7 @@ public class EducationController {
     }
     @GetMapping("/student/export")
     @PreAuthorize("hasRole('education')")
-    public ResponseEntity<Resource> exportStudentListToExcel() { return educationService.exportStudentListToExcel(); }
+    public ResponseEntity<Resource> exportStudentListOfClassToExcel(@RequestParam String classId) {
+        return educationService.exportStudentListOfClassToExcel(classId);
+    }
 }
