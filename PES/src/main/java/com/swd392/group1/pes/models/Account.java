@@ -46,12 +46,6 @@ public class Account implements UserDetails {
     @Column(name = "password")
     private String password;
 
-    @Column(name = "code")
-    private String code;
-
-    @Column(name = "code_expiry")
-    private LocalDateTime codeExpiry;
-
     @Enumerated(EnumType.STRING)
     Role role;
 

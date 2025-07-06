@@ -20,8 +20,6 @@ public interface AuthService {
 
     ResponseEntity<ResponseObject> forgotPassword (ForgotPasswordRequest request);
 
-    ResponseEntity<ResponseObject> verifyCode (String code);
-
     ResponseEntity<ResponseObject> resetPass (ResetPassRequest request);
 
     ResponseEntity<ResponseObject> sendRegisterOtp(String email);

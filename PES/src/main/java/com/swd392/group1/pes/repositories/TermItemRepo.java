@@ -9,5 +9,6 @@ import java.util.List;
 
 public interface TermItemRepo extends JpaRepository<TermItem, Integer> {
     List<TermItem> findAllByGradeAndStatusAndAdmissionTerm_Year(Grade grade, Status status, int year);
+
     TermItem findByAdmissionTerm_YearAndGrade(int year, Grade grade);
 }

@@ -52,11 +52,6 @@ public class AuthController {
         return authService.forgotPassword(request);
     }
 
-    @GetMapping("/password/forgot/verify")
-    public ResponseEntity<ResponseObject> verifyCode (@RequestParam("code") String code){
-        return authService.verifyCode (code);
-    }
-
     @PostMapping("/password/forgot/reset")
     public ResponseEntity<ResponseObject> resetPass (@RequestBody ResetPassRequest request){
         return authService.resetPass (request);

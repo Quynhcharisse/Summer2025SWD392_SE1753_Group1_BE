@@ -117,4 +117,21 @@ public class JWTServiceImpl implements JWTService {
         Date expiration = getClaim(jwt, Claims::getExpiration);
         return expiration != null && !Objects.requireNonNull(expiration).before(new Date());
     }
+
+    @Override
+    public String generateResetToken(UserDetails user) {
+        Map<String, Object> claims = new HashMap<>();
+        long expiredTime = 5 * 60 * 1000; // 5 phút
+        return generateTokenCode(claims, user, expiredTime);
+    }
+
+    private String generateTokenCode(Map<String, Object> extractClaims, UserDetails user, long expiredTime) {
+        return Jwts.builder()
+                .setClaims(extractClaims)
+                .setSubject(user.getUsername())
+                .setIssuedAt(new Date())
+                .setExpiration(new Date(System.currentTimeMillis() + expiredTime))
+                .signWith(getSigningKey())
+                .compact();
+    }
 }
