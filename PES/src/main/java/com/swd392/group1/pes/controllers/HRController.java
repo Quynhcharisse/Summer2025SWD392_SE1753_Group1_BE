@@ -48,12 +48,6 @@ public class HRController {
         return hrService.updateTeacherAcc(id, request);
     }
 
-    @PostMapping("/teacher/remove")
-    @PreAuthorize("hasRole('hr')")
-    public ResponseEntity<ResponseObject> removeTeacher(@RequestParam String id) {
-        return hrService.removeTeacherAcc(id);
-    }
-
     @GetMapping("/teacher")
     @PreAuthorize("hasAnyRole('hr', 'education')")
     public ResponseEntity<ResponseObject> viewTeacherList() {
