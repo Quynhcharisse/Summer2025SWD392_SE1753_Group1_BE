@@ -1,6 +1,7 @@
 package com.swd392.group1.pes.configs;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationProvider;
@@ -25,6 +26,9 @@ public class SecurityConfig {
 
     private final AuthenticationProvider authenticationProvider;
 
+    @Value("${client.url}")
+    private String clientUrl;
+
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
@@ -33,7 +37,7 @@ public class SecurityConfig {
                                 cors.configurationSource(
                                         request -> {
                                             CorsConfiguration config = new CorsConfiguration();
-                                            config.setAllowedOrigins(Collections.singletonList("http://localhost:5173"));
+                                            config.setAllowedOrigins(Collections.singletonList(clientUrl));
                                             config.setAllowedMethods(Collections.singletonList("*"));
                                             config.setAllowedHeaders(Collections.singletonList("*"));
                                             config.setAllowCredentials(true);

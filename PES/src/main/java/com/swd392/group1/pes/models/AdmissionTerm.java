@@ -39,6 +39,7 @@ public class AdmissionTerm {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     Integer id;
 
+    @Column(length = 50)
     String name;
 
     @Column(name = "`start_date`")
@@ -50,6 +51,7 @@ public class AdmissionTerm {
     int year;
 
     @Enumerated(EnumType.STRING)
+    @Column(length = 50)
     Status status;
 
     @ManyToOne(fetch = FetchType.LAZY)

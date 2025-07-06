@@ -33,7 +33,7 @@ public class Activity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     Integer id;
 
-    @Column
+    @Column(length = 50)
     String name;
 
     @Column(name = "`day_of_week`")
@@ -51,6 +51,7 @@ public class Activity {
 
     LocalDate date;
 
+    @Column(length = 50)
     String syllabusName;
 
 }

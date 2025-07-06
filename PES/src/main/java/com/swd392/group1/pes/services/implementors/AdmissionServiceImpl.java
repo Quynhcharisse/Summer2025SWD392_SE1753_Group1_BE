@@ -671,4 +671,27 @@ public class AdmissionServiceImpl implements AdmissionService {
                         .build()
         );
     }
+
+    @Override
+    public Map<String, Long> getAdmissionFormStatusSummary() {
+        Map<String, Long> summary = new HashMap<>();
+        for (Status status : List.of(
+                Status.PENDING_APPROVAL,
+                Status.REFILLED,
+                Status.APPROVED,
+                Status.APPROVED_PAID,
+                Status.REJECTED)) {
+
+            Long count = admissionFormRepo.countByStatus(status);
+            summary.put(status.name(), count);
+        }
+
+        summary.put("pendingApprovalCount", admissionFormRepo.countByStatus(Status.PENDING_APPROVAL));
+        summary.put("refilledCount", admissionFormRepo.countByStatus(Status.REFILLED));
+        summary.put("approvedCount", admissionFormRepo.countByStatus(Status.APPROVED));
+        summary.put("rejectedCount", admissionFormRepo.countByStatus(Status.REJECTED));
+        summary.put("paymentCount", admissionFormRepo.countByStatus(Status.APPROVED_PAID));
+
+        return summary;
+    }
 }
