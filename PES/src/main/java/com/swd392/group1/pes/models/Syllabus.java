@@ -37,8 +37,10 @@ public class Syllabus {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     Integer id;
 
+    @Column(length = 50)
     String subject;
 
+    @Column(length = 2000)
     String description;
 
     @Column(name = "`max_number_of_week`")
@@ -47,6 +49,7 @@ public class Syllabus {
     int hoursOfSyllabus;
 
     @Enumerated(EnumType.STRING)
+    @Column(length = 50)
     Grade grade;
 
     @OneToMany(mappedBy = "syllabus", fetch = FetchType.LAZY) //ko dùng cascade
