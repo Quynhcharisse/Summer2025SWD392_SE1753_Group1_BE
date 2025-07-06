@@ -45,6 +45,5 @@ public interface EducationService {
     ResponseEntity<ResponseObject> assignAvailableStudentsAuto();
     ResponseEntity<ResponseObject> viewClassDetailOfChild(String childId);
 
-
-    ResponseEntity<Resource> exportStudentListToExcel();
+    ResponseEntity<Resource> exportStudentListOfClassToExcel(String classId);
 }

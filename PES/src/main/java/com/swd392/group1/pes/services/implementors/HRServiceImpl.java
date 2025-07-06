@@ -338,50 +338,6 @@ public class HRServiceImpl implements HRService {
     }
 
     @Override
-    public ResponseEntity<ResponseObject> removeTeacherAcc(String id) {
-        if (id == null || id.isBlank()) {
-            return ResponseEntity.badRequest().body(
-                ResponseObject.builder()
-                    .message("Teacher id is required for removal")
-                    .success(false)
-                    .data(null)
-                    .build()
-            );
-        }
-        int teacherId;
-        try {
-            teacherId = Integer.parseInt(id);
-        } catch (NumberFormatException e) {
-            return ResponseEntity.badRequest().body(
-                ResponseObject.builder()
-                    .message("Invalid teacher id format")
-                    .success(false)
-                    .data(null)
-                    .build()
-            );
-        }
-        Account teacher = accountRepo.findByIdAndRole(teacherId, Role.TEACHER);
-        if (teacher == null) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
-                ResponseObject.builder()
-                    .message("Teacher not found")
-                    .success(false)
-                    .data(null)
-                    .build()
-            );
-        }
-        teacher.setStatus(Status.ACCOUNT_BAN.getValue());
-        accountRepo.save(teacher);
-        return ResponseEntity.ok(
-            ResponseObject.builder()
-                .message("Teacher removed successfully")
-                .success(true)
-                .data(null)
-                .build()
-        );
-    }
-
-    @Override
     public ResponseEntity<ResponseObject> viewTeacherList() {
 
         List<Map<String, Object>> teacherList = accountRepo.findByRole(Role.TEACHER).stream()
