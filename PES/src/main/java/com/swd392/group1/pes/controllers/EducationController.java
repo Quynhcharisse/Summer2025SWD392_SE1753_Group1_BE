@@ -11,6 +11,7 @@ import com.swd392.group1.pes.dto.requests.UpdateSyllabusRequest;
 import com.swd392.group1.pes.dto.response.ResponseObject;
 import com.swd392.group1.pes.services.EducationService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.core.io.Resource;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -180,4 +181,7 @@ public class EducationController {
     public ResponseEntity<ResponseObject> viewAssignedStudentsOfClass(@RequestParam String classId){
         return educationService.viewAssignedStudentsOfClass(classId);
     }
+    @GetMapping("/student/export")
+    @PreAuthorize("hasRole('education')")
+    public ResponseEntity<Resource> exportStudentListToExcel() { return educationService.exportStudentListToExcel(); }
 }

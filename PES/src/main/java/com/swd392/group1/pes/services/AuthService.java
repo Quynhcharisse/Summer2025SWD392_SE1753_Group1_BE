@@ -24,4 +24,8 @@ public interface AuthService {
 
     ResponseEntity<ResponseObject> resetPass (ResetPassRequest request);
 
+    ResponseEntity<ResponseObject> sendRegisterOtp(String email);
+
+    ResponseEntity<ResponseObject> verifyRegisterOtp(String email, String otp);
+
 }

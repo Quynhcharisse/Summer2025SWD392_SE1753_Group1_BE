@@ -9,6 +9,7 @@ import com.swd392.group1.pes.dto.requests.GenerateClassesRequest;
 import com.swd392.group1.pes.dto.requests.UpdateLessonRequest;
 import com.swd392.group1.pes.dto.requests.UpdateSyllabusRequest;
 import com.swd392.group1.pes.dto.response.ResponseObject;
+import org.springframework.core.io.Resource;
 import org.springframework.http.ResponseEntity;
 
 public interface EducationService {
@@ -44,4 +45,6 @@ public interface EducationService {
     ResponseEntity<ResponseObject> assignAvailableStudentsAuto();
     ResponseEntity<ResponseObject> viewClassDetailOfChild(String childId);
 
+
+    ResponseEntity<Resource> exportStudentListToExcel();
 }

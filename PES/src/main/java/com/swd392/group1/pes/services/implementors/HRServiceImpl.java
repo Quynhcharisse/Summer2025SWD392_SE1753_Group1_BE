@@ -1,27 +1,39 @@
 package com.swd392.group1.pes.services.implementors;
 
-import com.swd392.group1.pes.utils.email.Format;
+import com.swd392.group1.pes.dto.requests.CreateTeacherRequest;
+import com.swd392.group1.pes.dto.requests.ProcessAccountRequest;
+import com.swd392.group1.pes.dto.requests.UpdateTeacherRequest;
+import com.swd392.group1.pes.dto.response.ResponseObject;
 import com.swd392.group1.pes.enums.Role;
 import com.swd392.group1.pes.enums.Status;
 import com.swd392.group1.pes.models.Account;
 import com.swd392.group1.pes.repositories.AccountRepo;
-import com.swd392.group1.pes.dto.requests.CreateTeacherRequest;
-import com.swd392.group1.pes.dto.requests.ProcessAccountRequest;
-import com.swd392.group1.pes.dto.response.ResponseObject;
 import com.swd392.group1.pes.services.HRService;
 import com.swd392.group1.pes.services.MailService;
 import com.swd392.group1.pes.utils.GenerateEmailTeacherUtil;
 import com.swd392.group1.pes.utils.RandomPasswordUtil;
+import com.swd392.group1.pes.utils.email.Format;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.io.output.ByteArrayOutputStream;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.springframework.core.io.ByteArrayResource;
+import org.springframework.core.io.Resource;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
@@ -229,6 +241,145 @@ public class HRServiceImpl implements HRService {
         return "";
     }
 
+    @Override
+    public ResponseEntity<ResponseObject> updateTeacherAcc(String id, UpdateTeacherRequest request) {
+        if (id == null || id.isBlank()) {
+            return ResponseEntity.badRequest().body(
+                ResponseObject.builder()
+                    .message("Teacher id is required for update")
+                    .success(false)
+                    .data(null)
+                    .build()
+            );
+        }
+        int teacherId;
+        try {
+            teacherId = Integer.parseInt(id);
+        } catch (NumberFormatException e) {
+            return ResponseEntity.badRequest().body(
+                ResponseObject.builder()
+                    .message("Invalid teacher id format")
+                    .success(false)
+                    .data(null)
+                    .build()
+            );
+        }
+        Account teacher = accountRepo.findByIdAndRole(teacherId, Role.TEACHER);
+        if (teacher == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
+                ResponseObject.builder()
+                    .message("Teacher not found")
+                    .success(false)
+                    .data(null)
+                    .build()
+            );
+        }
+        String error = updateTeacherValidation(request);
+        if (!error.isEmpty()) {
+            return ResponseEntity.badRequest().body(
+                ResponseObject.builder()
+                    .message(error)
+                    .success(false)
+                    .data(null)
+                    .build()
+            );
+        }
+        if (request.getName() != null && !request.getName().isBlank()) {
+            teacher.setName(request.getName().trim());
+        }
+        if (request.getPhone() != null && !request.getPhone().isBlank()) {
+            teacher.setPhone(request.getPhone().trim());
+        }
+        if (request.getGender() != null && !request.getGender().isBlank()) {
+            teacher.setGender(request.getGender().trim());
+        }
+        if (request.getAvatarUrl() != null && !request.getAvatarUrl().isBlank()) {
+            teacher.setAvatarUrl(request.getAvatarUrl().trim());
+        }
+        accountRepo.save(teacher);
+        return ResponseEntity.ok(
+            ResponseObject.builder()
+                .message("Teacher updated successfully")
+                .success(true)
+                .data(null)
+                .build()
+        );
+    }
+
+    public static String updateTeacherValidation(UpdateTeacherRequest request) {
+        if (request.getName() != null) {
+            String name = request.getName().trim();
+            if (name.isEmpty()) {
+                return "Name is required";
+            }
+            if (!name.matches("^[a-zA-Z\\s'-]+$")) {
+                return "Name can only contain letters, spaces, hyphens, and apostrophes";
+            }
+            if (name.length() < 2 || name.length() > 50) {
+                return "Name must be between 2 and 50 characters";
+            }
+        }
+        if (request.getPhone() != null) {
+            String phone = request.getPhone().trim();
+            if (!phone.isEmpty() && !phone.matches("^(03|05|07|08|09)\\d{8}$")) {
+                return "Phone number must start with a valid prefix and be 10 digits.";
+            }
+        }
+        if (request.getGender() != null) {
+            String gender = request.getGender().trim();
+            if (gender.isEmpty()) {
+                return "Gender is required";
+            }
+            if (!gender.equals("male") && !gender.equals("female") && !gender.equals("other")) {
+                return "Gender must be male, female, or other";
+            }
+        }
+        return "";
+    }
+
+    @Override
+    public ResponseEntity<ResponseObject> removeTeacherAcc(String id) {
+        if (id == null || id.isBlank()) {
+            return ResponseEntity.badRequest().body(
+                ResponseObject.builder()
+                    .message("Teacher id is required for removal")
+                    .success(false)
+                    .data(null)
+                    .build()
+            );
+        }
+        int teacherId;
+        try {
+            teacherId = Integer.parseInt(id);
+        } catch (NumberFormatException e) {
+            return ResponseEntity.badRequest().body(
+                ResponseObject.builder()
+                    .message("Invalid teacher id format")
+                    .success(false)
+                    .data(null)
+                    .build()
+            );
+        }
+        Account teacher = accountRepo.findByIdAndRole(teacherId, Role.TEACHER);
+        if (teacher == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
+                ResponseObject.builder()
+                    .message("Teacher not found")
+                    .success(false)
+                    .data(null)
+                    .build()
+            );
+        }
+        teacher.setStatus(Status.ACCOUNT_BAN.getValue());
+        accountRepo.save(teacher);
+        return ResponseEntity.ok(
+            ResponseObject.builder()
+                .message("Teacher removed successfully")
+                .success(true)
+                .data(null)
+                .build()
+        );
+    }
 
     @Override
     public ResponseEntity<ResponseObject> viewTeacherList() {
@@ -292,6 +443,97 @@ public class HRServiceImpl implements HRService {
                         .data(parentList)
                         .build()
         );
+    }
+
+    public ResponseEntity<Resource> exportTeacherListToExcel() {
+        List<Account> teachers = accountRepo.findByRole(Role.TEACHER);
+        String dateTimeStr = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
+
+        String[] columns = {"Email", "Name", "AvatarUrl", "Gender", "Role", "Status"};
+
+        try (Workbook workbook = new XSSFWorkbook();
+             ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+            Sheet sheet = workbook.createSheet("Teachers");
+            Row header = sheet.createRow(0);
+            for (int i = 0; i < columns.length; i++) {
+                header.createCell(i).setCellValue(columns[i]);
+            }
+            int rowIdx = 1;
+            for (Account teacher : teachers) {
+                Row row = sheet.createRow(rowIdx++);
+                row.createCell(0).setCellValue(Objects.toString(teacher.getEmail(), ""));
+                row.createCell(1).setCellValue(Objects.toString(teacher.getName(), ""));
+                row.createCell(2).setCellValue(Objects.toString(teacher.getAvatarUrl(), ""));
+                row.createCell(3).setCellValue(Objects.toString(teacher.getGender(), ""));
+                row.createCell(4).setCellValue(teacher.getRole() != null ? teacher.getRole().toString() : "");
+                row.createCell(5).setCellValue(Objects.toString(teacher.getStatus(), ""));
+            }
+            for (int i = 0; i < columns.length; i++) {
+                sheet.autoSizeColumn(i);
+            }
+            workbook.write(out);
+            ByteArrayResource resource = new ByteArrayResource(out.toByteArray());
+
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=teachers_" + dateTimeStr + ".xlsx")
+                    .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                    .body(resource);
+        } catch (Exception e) {
+            throw new RuntimeException("Excel export failed", e);
+        }
+    }
+
+    public ResponseEntity<Resource> exportParentListToExcel() {
+        List<Account> parents = accountRepo.findByRole(Role.PARENT);
+        String dateTimeStr = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
+
+        String[] columns = {
+            "Email", "Name", "Phone", "Gender", "Identity Number", "Address",
+            "Job", "Relationship To Child", "Role", "Status"
+        };
+
+        try (Workbook workbook = new XSSFWorkbook();
+             ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+            Sheet sheet = workbook.createSheet("Parents");
+            Row header = sheet.createRow(0);
+            for (int i = 0; i < columns.length; i++) {
+                header.createCell(i).setCellValue(columns[i]);
+            }
+            int rowIdx = 1;
+            for (Account parentAcc : parents) {
+                Row row = sheet.createRow(rowIdx++);
+                row.createCell(0).setCellValue(Objects.toString(parentAcc.getEmail(), ""));
+                row.createCell(1).setCellValue(Objects.toString(parentAcc.getName(), ""));
+                row.createCell(2).setCellValue(Objects.toString(parentAcc.getPhone(), ""));
+                row.createCell(3).setCellValue(Objects.toString(parentAcc.getGender(), ""));
+                row.createCell(4).setCellValue(Objects.toString(parentAcc.getIdentityNumber(), ""));
+                row.createCell(5).setCellValue(Objects.toString(parentAcc.getAddress(), ""));
+                row.createCell(6).setCellValue(
+                    parentAcc.getParent() != null
+                        ? Objects.toString(parentAcc.getParent().getJob(), "")
+                        : ""
+                );
+                row.createCell(7).setCellValue(
+                    parentAcc.getParent() != null
+                        ? Objects.toString(parentAcc.getParent().getRelationshipToChild(), "")
+                        : ""
+                );
+                row.createCell(8).setCellValue(parentAcc.getRole() != null ? parentAcc.getRole().toString() : "");
+                row.createCell(9).setCellValue(Objects.toString(parentAcc.getStatus(), ""));
+            }
+            for (int i = 0; i < columns.length; i++) {
+                sheet.autoSizeColumn(i);
+            }
+            workbook.write(out);
+            ByteArrayResource resource = new ByteArrayResource(out.toByteArray());
+
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=parents_" + dateTimeStr + ".xlsx")
+                    .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                    .body(resource);
+        } catch (Exception e) {
+            throw new RuntimeException("Excel export failed", e);
+        }
     }
 
 
