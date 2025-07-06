@@ -61,9 +61,11 @@ public class AdmissionForm {
     @Column(name = "`commitment_img`")
     String commitmentImg ;
 
+    @Column(length = 50)
     String note;
 
     @Enumerated(EnumType.STRING)
+    @Column(length = 50)
     Status status;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -78,7 +80,7 @@ public class AdmissionForm {
     @JoinColumn(name = "`term_item_id`")
     TermItem termItem;
 
-    @OneToOne(mappedBy = "admissionForm", fetch = FetchType.EAGER, cascade = CascadeType.ALL) // ko dùng cascade
+    @OneToOne(mappedBy = "admissionForm", fetch = FetchType.EAGER, cascade = CascadeType.ALL)
     @EqualsAndHashCode.Exclude
     @ToString.Exclude
     Transaction transaction;

@@ -32,11 +32,17 @@ public class Lesson {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     Integer id;
+
     String topic;
+
     String description;
+
     String objective;
+
     String toolsRequired;
+
     int duration;
+
     LocalDateTime createdAt;
 
     @OneToMany(mappedBy = "lesson", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)

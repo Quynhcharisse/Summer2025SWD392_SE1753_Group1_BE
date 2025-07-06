@@ -7,6 +7,8 @@ import com.swd392.group1.pes.dto.requests.UpdateAdmissionTermRequest;
 import com.swd392.group1.pes.dto.response.ResponseObject;
 import org.springframework.http.ResponseEntity;
 
+import java.util.Map;
+
 public interface AdmissionService {
     ResponseEntity<ResponseObject> createAdmissionTerm(CreateAdmissionTermRequest request);
 
@@ -23,4 +25,6 @@ public interface AdmissionService {
     ResponseEntity<ResponseObject> processAdmissionFormList(ProcessAdmissionFormRequest request);
 
     ResponseEntity<ResponseObject> getAllYear();
+
+    Map<String, Long> getAdmissionFormStatusSummary();
 }

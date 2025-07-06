@@ -23,7 +23,6 @@ import lombok.experimental.FieldDefaults;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
@@ -41,12 +40,14 @@ public class Account implements UserDetails {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     Integer id;
 
+    @Column(length = 150)
     String email;
 
     @Column(name = "password")
-    private String password;
+    String password;
 
     @Enumerated(EnumType.STRING)
+    @Column(length = 15)
     Role role;
 
     String status;
@@ -54,18 +55,22 @@ public class Account implements UserDetails {
     @Column(name = "`created_at`")
     LocalDateTime createdAt;
 
+    @Column(length = 50)
     String name;
 
+    @Column(length = 11)
     String phone;
 
+    @Column(length = 10)
     String gender;
 
+    @Column(length = 150)
     String address;
 
     @Column(name = "avatar_url")
     String avatarUrl;
 
-    @Column(name = "identity_number")
+    @Column(name = "identity_number", length = 15)
     String identityNumber;
 
     @Column(name = "`first_login`")
