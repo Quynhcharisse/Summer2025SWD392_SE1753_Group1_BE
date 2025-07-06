@@ -36,14 +36,16 @@ public class Student {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     Integer id;
 
+    @Column(length = 100)
     String name;
 
+    @Column(length = 50)
     String gender;
 
     @Column(name = "`date_of_birth`")
     LocalDate dateOfBirth;
 
-    @Column(name = "`place_of_birth`")
+    @Column(name = "`place_of_birth`", length = 100)
     String placeOfBirth;
 
     @Column(name = "`profile_image`")
@@ -67,7 +69,7 @@ public class Student {
     @JoinColumn(name = "`parent_id`")
     Parent parent;
 
-    @OneToMany(mappedBy = "student", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+    @OneToMany(mappedBy = "student", fetch = FetchType.LAZY)
     @EqualsAndHashCode.Exclude
     @ToString.Exclude
     List<AdmissionForm> admissionFormList;

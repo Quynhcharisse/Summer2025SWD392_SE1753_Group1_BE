@@ -17,6 +17,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.Map;
+
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("api/v1/admission")
@@ -72,4 +74,9 @@ public class AdmissionController {
         return admissionService.getAllYear();
     }
 
+    @GetMapping("/forms/status/summary")
+    @PreAuthorize("hasRole('admission')")
+    public Map<String, Long> getAdmissionFormStatusSummary() {
+        return admissionService.getAdmissionFormStatusSummary();
+    }
 }

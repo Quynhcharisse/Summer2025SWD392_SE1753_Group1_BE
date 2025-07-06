@@ -19,4 +19,6 @@ public interface AdmissionFormRepo extends JpaRepository<AdmissionForm, Integer>
 
     //    int countByAdmissionTerm_IdAndStatusAndTransaction_Status(Integer termId, String formStatus, String transactionStatus);
     List<AdmissionForm> findByTermItem_AdmissionTerm_YearAndStatusAndTermItem_Grade(Integer termYear, Status formStatus, Grade grade);
+
+    Long countByStatus(Status status);
 }

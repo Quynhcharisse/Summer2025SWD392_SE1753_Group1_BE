@@ -37,21 +37,24 @@ public class Event {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     Integer id;
 
+    @Column(length = 50)
     String name;
 
     LocalDateTime startTime;
 
     LocalDateTime endTime;
 
+    @Column(length = 100)
     String location;
 
-    @Column( length = 5000, nullable = false)
+    @Column(length = 5000, nullable = false)
     String description;
 
     @Column(name = "`created_at`")
     LocalDateTime createdAt;
 
     @Enumerated(EnumType.STRING)
+    @Column(length = 50)
     Status status;
 
     @Column(name = "`registration_deadline`")
@@ -60,7 +63,7 @@ public class Event {
     @Column(name = "`attachment_img`")
     String attachmentImg;
 
-    @Column(name = "`host_name`")
+    @Column(name = "`host_name`", length = 50)
     String hostName;
 
     @OneToMany(mappedBy = "event", fetch = FetchType.LAZY)

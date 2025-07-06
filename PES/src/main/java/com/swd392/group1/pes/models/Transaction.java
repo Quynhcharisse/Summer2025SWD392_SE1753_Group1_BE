@@ -37,18 +37,20 @@ public class Transaction {
 
     long amount;
 
+    @Column(length = 100)
     String description;
 
     @Column(name = "`payment_date`")
     LocalDate paymentDate;
 
     @Column(name = "`vnp_transactionNo`")
-    String vnpTransactionNo; // Mã giao dịch
+    String vnpTransactionNo;
 
-    @Column(name = "`txn_ref`")
-    String txnRef; //Thêm trường txnRef để lưu mã giao dịch VNPay
+    @Column(name = "`txn_ref`", length = 100)
+    String txnRef;
 
     @Enumerated(EnumType.STRING)
+    @Column(length = 50)
     Status status;
 
     @OneToOne(fetch = FetchType.LAZY)

@@ -42,19 +42,21 @@ public class TermItem {
     int maxNumberRegistration; // tự gán tự động
 
     @Enumerated(EnumType.STRING)
+    @Column(length = 50)
     Grade grade;
 
     @Enumerated(EnumType.STRING)
+    @Column(length = 50)
     Status status;
 
     @Column(name = "`students_per_class`")
-    Integer studentsPerClass; // số học sinh tự quy định = 20 người
+    Integer studentsPerClass;
 
     @Column(name = "`expected_classes`")
-    Integer expectedClasses; // Số lớp dự kiến
+    Integer expectedClasses;
 
     @Column(name = "`current_registered_students`")
-    Integer currentRegisteredStudents; //Đảm bảo có trường này, khởi tạo là 0
+    Integer currentRegisteredStudents;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "`term_id`")

@@ -40,6 +40,7 @@ public class Classes {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     Integer id;
 
+    @Column(length = 50)
     String name;
 
     @Column(name = "`number_student`")
@@ -56,8 +57,10 @@ public class Classes {
     int academicYear;
 
     @Enumerated(EnumType.STRING)
+    @Column(length = 50)
     Grade grade;
 
+    @Column(length = 50)
     String status;
 
     @ManyToOne(fetch = FetchType.EAGER)

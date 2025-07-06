@@ -35,21 +35,22 @@ public class Parent {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     Integer id;
 
-    @Column(name = "`relationship_to_child`")
+    @Column(name = "`relationship_to_child`",length = 50)
     String relationshipToChild;
 
+    @Column(length = 100)
     String job;
 
     @OneToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "`account_id`")
     Account account;
 
-    @OneToMany(mappedBy = "parent", fetch = FetchType.EAGER, cascade = CascadeType.ALL)
+    @OneToMany(mappedBy = "parent", fetch = FetchType.LAZY)
     @EqualsAndHashCode.Exclude
     @ToString.Exclude
     List<Student> studentList;
 
-    @OneToMany(mappedBy = "parent", fetch = FetchType.EAGER, cascade = CascadeType.ALL) // ko cascade
+    @OneToMany(mappedBy = "parent", fetch = FetchType.LAZY)
     @EqualsAndHashCode.Exclude
     @ToString.Exclude
     List<AdmissionForm> admissionFormList;
