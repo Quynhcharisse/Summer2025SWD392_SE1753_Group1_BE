@@ -1,8 +1,8 @@
 package com.swd392.group1.pes.services;
 
-import com.swd392.group1.pes.requests.RestPasswordRequest;
-import com.swd392.group1.pes.requests.UpdateProfileRequest;
-import com.swd392.group1.pes.response.ResponseObject;
+import com.swd392.group1.pes.dto.requests.RestPasswordRequest;
+import com.swd392.group1.pes.dto.requests.UpdateProfileRequest;
+import com.swd392.group1.pes.dto.response.ResponseObject;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.ResponseEntity;
 

@@ -1,5 +1,14 @@
 package com.swd392.group1.pes.services;
 
+import com.swd392.group1.pes.dto.requests.AssignLessonsRequest;
+import com.swd392.group1.pes.dto.requests.CancelEventRequest;
+import com.swd392.group1.pes.dto.requests.CreateEventRequest;
+import com.swd392.group1.pes.dto.requests.CreateLessonRequest;
+import com.swd392.group1.pes.dto.requests.CreateSyllabusRequest;
+import com.swd392.group1.pes.dto.requests.GenerateClassesRequest;
+import com.swd392.group1.pes.dto.requests.UpdateLessonRequest;
+import com.swd392.group1.pes.dto.requests.UpdateSyllabusRequest;
+import com.swd392.group1.pes.dto.response.ResponseObject;
 import com.swd392.group1.pes.requests.AssignLessonsRequest;
 import com.swd392.group1.pes.requests.CancelEventRequest;
 import com.swd392.group1.pes.requests.CreateEventRequest;
