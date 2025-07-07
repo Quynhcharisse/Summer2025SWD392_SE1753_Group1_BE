@@ -1,6 +1,7 @@
 package com.swd392.group1.pes.models;
 
 import jakarta.persistence.CascadeType;
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
@@ -33,10 +34,13 @@ public class Lesson {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     Integer id;
 
+    @Column(length = 50)
     String topic;
 
+    @Column(length = 2000)
     String description;
 
+    @Column(length = 500)
     String objective;
 
     String toolsRequired;

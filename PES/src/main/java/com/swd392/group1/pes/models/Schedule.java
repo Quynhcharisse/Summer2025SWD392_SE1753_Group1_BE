@@ -35,7 +35,7 @@ public class Schedule {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     Integer id;
 
-    @Column(name = "`week_name`")
+    @Column(name = "`week_name`", length = 50)
     String weekName;
 
     @ManyToOne(fetch = FetchType.EAGER)
