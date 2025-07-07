@@ -12,8 +12,9 @@ public interface ClassService {
     ResponseEntity<ResponseObject> getSchedulesByClassId(String classId);
     ResponseEntity<ResponseObject> getActivitiesByScheduleId(String scheduleId);
     ResponseEntity<ResponseObject> viewNumberOfStudentsNotAssignToAnyClassByYearAdnGrade(String year, String grade);
+    ResponseEntity<ResponseObject> viewListOfStudentsNotAssignedToAnyClassByYearAndGrade(String year, String grade);
     ResponseEntity<ResponseObject> viewAssignedStudentsOfClass(String classId);
     ResponseEntity<Resource> exportStudentListToExcel();
-    ResponseEntity<ResponseObject> assignAvailableStudentsAuto();
-    ResponseEntity<ResponseObject> viewClassDetailOfChild(String childId);
+    ResponseEntity<ResponseObject> assignAvailableStudentsAuto(String year, String grade);
+    ResponseEntity<ResponseObject> viewListClassesOfChild(String childId);
 }

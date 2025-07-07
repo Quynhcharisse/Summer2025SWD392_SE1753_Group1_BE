@@ -51,6 +51,7 @@ import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -454,6 +455,15 @@ public class ClassServiceImpl implements ClassService {
                             .data(null)
                             .build());
         }
+        if(classRepo.findById(Integer.parseInt(classId)).isEmpty()){
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
+                    ResponseObject.builder()
+                            .message("Class with id " + classId + " does not exist or be deleted")
+                            .success(false)
+                            .data(null)
+                            .build()
+            );
+        }
         Classes cls = classRepo.findById(Integer.parseInt(classId)).get();
         classRepo.delete(cls);
         return ResponseEntity.ok(ResponseObject.builder()
@@ -511,6 +521,16 @@ public class ClassServiceImpl implements ClassService {
                             .build());
         }
 
+        if(scheduleRepo.findByClasses_Id(Integer.parseInt(classId)).isEmpty()){
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
+                    ResponseObject.builder()
+                            .message("Class with id " + classId + " does not exist or be deleted")
+                            .success(false)
+                            .data(null)
+                            .build()
+            );
+        }
+
         List<Schedule> schedules = scheduleRepo.findByClasses_Id(Integer.parseInt(classId));
 
         List<Map<String, Object>> scheduleList = schedules.stream()
@@ -538,6 +558,16 @@ public class ClassServiceImpl implements ClassService {
                             .success(false)
                             .data(null)
                             .build());
+        }
+
+        if (activityRepo.findBySchedule_Id(Integer.parseInt(scheduleId)).isEmpty()){
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
+                    ResponseObject.builder()
+                            .message("Schedule with id " + scheduleId + " does not exist or be deleted")
+                            .success(false)
+                            .data(null)
+                            .build()
+            );
         }
 
         List<Activity> activities = activityRepo.findBySchedule_Id(Integer.parseInt(scheduleId));
@@ -604,6 +634,11 @@ public class ClassServiceImpl implements ClassService {
                         .data(studentsToAssign.size())
                         .build()
         );
+    }
+
+    @Override
+    public ResponseEntity<ResponseObject> viewListOfStudentsNotAssignedToAnyClassByYearAndGrade(String year, String grade) {
+        return null;
     }
 
     @Override
@@ -688,13 +723,153 @@ public class ClassServiceImpl implements ClassService {
     }
 
     @Override
-    public ResponseEntity<ResponseObject> assignAvailableStudentsAuto() {
-        return null;
+    public ResponseEntity<ResponseObject> assignAvailableStudentsAuto(String year, String grade) {
+
+        List<Integer> years = admissionTermRepo.findAll()
+                .stream()
+                .map(AdmissionTerm::getYear)
+                .distinct()
+                .sorted()
+                .toList();
+
+        String error = checkAcademicYearAndGrade(year, grade, years);
+
+        if (!error.isEmpty())
+        {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
+                    ResponseObject.builder()
+                            .message(error)
+                            .success(false)
+                            .data(null)
+                            .build()
+            );
+        }
+
+        List<AdmissionForm> approvedForms = admissionFormRepo.findByTermItem_AdmissionTerm_YearAndStatusAndTermItem_Grade(
+                Integer.parseInt(year),
+                Status.APPROVED_PAID,
+                getGradeFromName(grade)
+        );
+
+        List<Student> students = approvedForms.stream()
+                .map(AdmissionForm::getStudent)
+                .toList();
+        List<StudentClass> assignedStudentClasses = studentClassRepo.findByClasses_AcademicYearAndClasses_Grade(
+                Integer.parseInt(year),
+                getGradeFromName(grade)
+        );
+        Set<Integer> assignedStudentIds = assignedStudentClasses.stream()
+                .map(sc -> sc.getStudent().getId())
+                .collect(Collectors.toSet());
+
+        List<Student> studentsToAssign = students.stream()
+                .filter(st -> !assignedStudentIds.contains(st.getId()))
+                .toList();
+        if (studentsToAssign.isEmpty()) {
+            return ResponseEntity.ok(ResponseObject.builder()
+                    .message("No new students to assign.").success(false).data(null).build());
+        }
+
+        int maxStudentPerClass = 20; // có thể set động
+
+        // Lấy danh sách lớp hiện có của năm và khối đó
+        List<Classes> availableClasses = classRepo.findByAcademicYearAndGrade(Integer.parseInt(year), getGradeFromName(grade));
+
+        if (availableClasses.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
+                    ResponseObject.builder()
+                            .message("No classes exist for this academic year and grade. Please create classes first.")
+                            .success(false)
+                            .data(null)
+                            .build()
+            );
+        }
+
+        // Filter classes that still have empty slots
+        List<Classes> classesWithSlots = availableClasses.stream()
+                .filter(cls -> cls.getNumberStudent() < maxStudentPerClass)
+                .toList();
+        // If there are no classes with available slots, return an error
+        if (classesWithSlots.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(
+                    ResponseObject.builder()
+                            .message("All classes are full. There are no available classes to assign new students.")
+                            .success(false)
+                            .data(null)
+                            .build()
+            );
+        }
+
+        List<StudentClass> newAssignments = new ArrayList<>();
+        int idx = 0;
+        for (Classes cls : classesWithSlots) {
+            int slots = maxStudentPerClass - cls.getNumberStudent();
+            for (int i = 0; i < slots && idx < studentsToAssign.size(); i++, idx++) {
+                Student student = studentsToAssign.get(idx);
+                StudentClass sc = StudentClass.builder()
+                        .classes(cls)
+                        .student(student)
+                        .build();
+                newAssignments.add(sc);
+                cls.setNumberStudent(cls.getNumberStudent() + 1);
+            }
+            if (idx >= studentsToAssign.size()) break;
+        }
+
+        studentClassRepo.saveAll(newAssignments);
+        classRepo.saveAll(classesWithSlots);
+
+        return ResponseEntity.ok(ResponseObject.builder()
+                .message(String.format("Successfully assigned %d students to classes.", studentsToAssign.size()))
+                .success(true)
+                .data(null)
+                .build());
     }
 
     @Override
-    public ResponseEntity<ResponseObject> viewClassDetailOfChild(String childId) {
-        return null;
+    public ResponseEntity<ResponseObject> viewListClassesOfChild(String childId) {
+
+        String error = checkStudentId(childId);
+
+        if(!error.isEmpty())
+        {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
+                    ResponseObject.builder()
+                            .message(error)
+                            .success(false)
+                            .data(null)
+                            .build()
+            );
+        }
+
+        if (studentRepo.findById(Integer.parseInt(childId)).isEmpty()){
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
+                    ResponseObject.builder()
+                            .message("Children with id " + childId + " does not exist or be deleted")
+                            .success(false)
+                            .data(null)
+                            .build()
+            );
+        }
+
+        List<StudentClass> studentClassList = studentClassRepo.findByStudent_Id(Integer.parseInt(childId));
+
+        List<Classes> classesList = studentClassList.stream()
+                .map(StudentClass::getClasses)
+                .toList();
+
+        List<Map<String, Object>> classes = classesList.stream()
+                .sorted(Comparator.comparing(Classes::getAcademicYear).reversed())
+                .map(this::buildClassDetail)
+                .toList();
+
+        return ResponseEntity.ok().body(
+                ResponseObject.builder()
+                        .message("View Assigned Classes Of Student Successfully")
+                        .success(true)
+                        .data(classes)
+                        .build()
+        );
     }
 
     private Grade getGradeFromName(String name) {
@@ -719,6 +894,20 @@ public class ClassServiceImpl implements ClassService {
         }
 
 
+        return "";
+    }
+
+    private String checkStudentId(String studentId) {
+
+        if (studentId.isEmpty()) {
+            return "Student Id cannot be empty";
+        }
+
+        try {
+            Integer.parseInt(studentId);
+        } catch (IllegalArgumentException ex) {
+            return "Student Id must be a number";
+        }
         return "";
     }
 

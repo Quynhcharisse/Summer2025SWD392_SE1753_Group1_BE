@@ -2,6 +2,7 @@ package com.swd392.group1.pes.utils.email;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.List;
 
 public class Format {
     /** Fragment cho tài khoản giáo viên */
@@ -123,6 +124,27 @@ public class Format {
                         "<p><strong>Note:</strong> This code will expire in <strong>1 minutes</strong>.</p>" +
                         "<p>If you did not request a password reset, please ignore this message or contact support.</p>" +
                         "<p>Best regards,<br/>Sunshine Preschool</p>";
+    }
+
+    public static String getRegisterEventBody(
+            String parentName,
+            String eventName,
+            LocalDateTime eventTime,
+            List<String> studentNames
+    ) {
+        String formattedTime = eventTime.format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"));
+        StringBuilder studentListHtml = new StringBuilder();
+        for (String name : studentNames) {
+            studentListHtml.append("<li>").append(name).append("</li>");
+        }
+
+        return "<p>Dear " + (parentName != null ? parentName : "Parent") + ",</p>"
+                + "<p>You have successfully registered the following student"
+                + (studentNames.size() > 1 ? "s" : "") + " for the event <strong>\"" + eventName + "\"</strong>:</p>"
+                + "<ul style=\"padding-left:20px\">" + studentListHtml + "</ul>"
+                + "<p><strong>Event Time:</strong> " + formattedTime + "</p>"
+                + "<p>If you have any questions, feel free to contact us "
+                + "<p>Best regards,<br/>Sunshine Preschool</p>";
     }
 
     public static String getCancelEventForParentBody(String parentName,

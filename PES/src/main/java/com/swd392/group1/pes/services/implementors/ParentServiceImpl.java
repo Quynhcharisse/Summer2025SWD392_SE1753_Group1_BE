@@ -961,11 +961,7 @@ public class ParentServiceImpl implements ParentService {
                 account.getEmail(),
                 "[PES] EVENT REGISTRATION CONFIRMATION",
                 "Event Registration Confirmation",
-                "Dear " + account.getName() + ",\n\n" +
-                        "You have successfully registered the following students for \"" +
-                        event.getName() + "\":\n- " +
-                        String.join("\n- ", registered) +
-                        "\n\nThank you,\nSunShine Preschool"
+                Format.getRegisterEventBody(account.getName(), event.getName(), event.getStartTime(), registered )
         );
         eventParticipateRepo.saveAll(toSave);
         String successMsg = "All students registered successfully: " + registered;
