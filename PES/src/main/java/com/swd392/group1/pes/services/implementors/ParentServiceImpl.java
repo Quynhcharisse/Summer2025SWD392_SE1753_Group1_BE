@@ -131,6 +131,7 @@ public class ParentServiceImpl implements ParentService {
                     studentDetail.put("birthCertificateImg", student.getBirthCertificateImg());
                     studentDetail.put("isStudent", student.isStudent());
                     studentDetail.put("hadForm", !student.getAdmissionFormList().isEmpty());//trong từng học sinh check đã tạo form chưa
+                    studentDetail.put("admissionForms", getFormListByStudent(student));
 
                     return studentDetail;
                 })
@@ -185,10 +186,16 @@ public class ParentServiceImpl implements ParentService {
         return data;
     }
 
+    private List<Map<String, Object>> getFormListByStudent (Student student) {
+        return student.getAdmissionFormList().stream()
+                .sorted(Comparator.comparing(AdmissionForm::getSubmittedDate).reversed())
+                .map(this::getFormDetail)
+                .toList();
+    }
+
     //submit form
     @Override
-    public ResponseEntity<ResponseObject> submitAdmissionForm(SubmitAdmissionFormRequest
-                                                                      request, HttpServletRequest httpRequest) {
+    public ResponseEntity<ResponseObject> submitAdmissionForm(SubmitAdmissionFormRequest request, HttpServletRequest httpRequest) {
         //Xác thực người dùng
         Account account = jwtService.extractAccountFromCookie(httpRequest);
         if (account == null || !account.getRole().equals(Role.PARENT)) {
@@ -950,15 +957,15 @@ public class ParentServiceImpl implements ParentService {
             registered.add(stu.getName());
         }
         mailService.sendMail(
-                    account.getEmail(),
-                    "[PES] EVENT REGISTRATION CONFIRMATION",
-                    "Event Registration Confirmation",
-                    "Dear " + account.getName() + ",\n\n" +
-                            "You have successfully registered the following students for \"" +
-                            event.getName() + "\":\n- " +
-                            String.join("\n- ", registered) +
-                            "\n\nThank you,\nSunShine Preschool"
-            );
+                account.getEmail(),
+                "[PES] EVENT REGISTRATION CONFIRMATION",
+                "Event Registration Confirmation",
+                "Dear " + account.getName() + ",\n\n" +
+                        "You have successfully registered the following students for \"" +
+                        event.getName() + "\":\n- " +
+                        String.join("\n- ", registered) +
+                        "\n\nThank you,\nSunShine Preschool"
+        );
         eventParticipateRepo.saveAll(toSave);
         String successMsg = "All students registered successfully: " + registered;
         return ResponseEntity.ok(
@@ -1155,7 +1162,7 @@ public class ParentServiceImpl implements ParentService {
         }
 
         String error = paymentValidation(request, admissionFormRepo, transactionRepo);
-        if(!error.isEmpty()) {
+        if (!error.isEmpty()) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
                     ResponseObject.builder()
                             .message(error)
@@ -1206,7 +1213,7 @@ public class ParentServiceImpl implements ParentService {
             transaction.getAdmissionForm().setStatus(Status.APPROVED_PAID);
             transactionRepo.save(transaction);
 
-            if(request.getResponseCode().equals("00")) {
+            if (request.getResponseCode().equals("00")) {
                 Student student = form.getStudent();
                 if (student != null && !student.isStudent()) {
                     student.setStudent(true);
