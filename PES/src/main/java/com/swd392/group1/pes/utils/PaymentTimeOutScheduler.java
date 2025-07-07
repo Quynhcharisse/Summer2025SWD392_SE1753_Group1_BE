@@ -24,45 +24,38 @@ public class PaymentTimeOutScheduler {
     private final TransactionRepo transactionRepo;
     private final MailService mailService;
 
-
-    //@Scheduled(cron = "0 */30 * * * *")
     @Scheduled(fixedDelay = 60000)
     @Transactional
     public void rejectExpiredPaymentForms() {
         log.info("Running scheduled task: Checking expired payment forms at {}", LocalDateTime.now());
 
-        //Tìm tất cả các form có status APPROVED_WAITING_PAYMENT và đã hết hạn
         List<AdmissionForm> formsToProcess = admissionFormRepo.findByStatusAndPaymentExpiryDateLessThanEqual(
                 Status.WAITING_PAYMENT,
                 LocalDateTime.now()
         );
 
         for (AdmissionForm form : formsToProcess) {
-            //check giao dịch thành công nào cho form này không? ==> nhưng trạng thái form chưa được cập nhật (ví dụ do lỗi IPN, mạng...).
             boolean hasSuccessfulPayment = transactionRepo
                     .findByAdmissionFormAndStatus(form, Status.TRANSACTION_SUCCESSFUL)
                     .isPresent();
 
             if (!hasSuccessfulPayment) {
-                //thanh toán failed, đặt form về trạng thái REJECTED
                 form.setStatus(Status.REJECTED);
-                form.setCancelReason("Payment window expired. No payment received."); // Ghi lý do từ chối
+                form.setCancelReason("Payment window expired. No payment received.");
                 admissionFormRepo.save(form);
 
                 log.error("Admission Form ID: {} has been REJECTED due to payment timeout.", form.getId());
 
-                //gửi email thông báo từ chối cho phụ huynh
                 if (form.getParent() != null && form.getParent().getAccount() != null && form.getStudent() != null) {
                     String parentEmail = form.getParent().getAccount().getEmail();
                     String studentName = form.getStudent().getName();
                     String subject = "[PES] Admission Rejected - Payment Timeout";
-                    String heading = "❌ Admission Rejected";
-                    String bodyHtml = Format.getAdmissionRejectedBody(studentName, "Thời gian thanh toán cho đơn đăng ký của bạn đã hết hạn. Vui lòng liên hệ nhà trường để biết thêm chi tiết.");
+                    String heading = "Admission Rejected";
+                    String bodyHtml = Format.getAdmissionRejectedBody(studentName, "The payment deadline for your application has expired. Please contact the school for further details.");
                     mailService.sendMail(parentEmail, subject, heading, bodyHtml);
                 }
 
             } else {
-                //nếu thấy thanh toán success, form vẫn ở APPROVED_WAITING_PAYMENT --> cập nhật lại cho đúng trạng thái APPROVED_PAID
                 if (form.getStatus() != Status.APPROVED_PAID) {
                     form.setStatus(Status.APPROVED_PAID);
                     admissionFormRepo.save(form);

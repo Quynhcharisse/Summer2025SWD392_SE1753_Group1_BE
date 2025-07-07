@@ -31,6 +31,7 @@ import com.swd392.group1.pes.repositories.TransactionRepo;
 import com.swd392.group1.pes.services.JWTService;
 import com.swd392.group1.pes.services.MailService;
 import com.swd392.group1.pes.services.ParentService;
+import com.swd392.group1.pes.utils.InvoiceGenerator;
 import com.swd392.group1.pes.utils.email.Format;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
@@ -447,7 +448,7 @@ public class ParentServiceImpl implements ParentService {
         //Gửi email thông báo hủy
         try {
             String subject = "[PES] Admission Form Cancelled";
-            String heading = "❌ Admission Form Cancelled";
+            String heading = "Admission Form Cancelled";
             String bodyHtml = Format.getAdmissionCancelledBody(account.getName());
             mailService.sendMail(
                     account.getEmail(),
@@ -1019,8 +1020,7 @@ public class ParentServiceImpl implements ParentService {
     }
 
     @Override
-    public ResponseEntity<ResponseObject> getPaymentURL(GetPaymentURLRequest request, HttpServletRequest
-            httpRequest) {
+    public ResponseEntity<ResponseObject> getPaymentURL(GetPaymentURLRequest request, HttpServletRequest httpRequest) {
         String version = "2.1.1";
         String command = "pay";
         String tmnCode = "NSLIVTOU";
@@ -1037,13 +1037,11 @@ public class ParentServiceImpl implements ParentService {
         String locale = "vn";
 
         String studentName = form.getStudent().getName();
-        String grade = form.getTermItem().getGrade().name();
         String orderInfo = String.format(
-                "Thanh toan hoc phi đau vao nam hoc %d - %d cho hoc sinh %s, khoi %s",
+                "Thanh toan hoc phi dau vao nam hoc %d - %d cho hoc sinh %s",
                 LocalDate.now().getYear(),
                 LocalDate.now().getYear() + 1,
-                studentName,
-                grade
+                studentName
         );
         String orderType = "education";
         String returnUrl = vnpayReturnUrl;
@@ -1183,43 +1181,74 @@ public class ParentServiceImpl implements ParentService {
             );
         }
 
-
-        Transaction existedTransaction = transactionRepo.findByAdmissionFormIdAndStatus(form.getId(), Status.WAITING_PAYMENT);
-        if (existedTransaction != null) {
+        if (form.getStatus() == Status.APPROVED_PAID) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
                     ResponseObject.builder()
-                            .message("Transaction already exists for this form")
+                            .message("This admission form has already been paid.")
                             .success(false)
                             .data(null)
-                            .build()
-            );
+                            .build());
         }
 
-        // Sinh txnRef tại backend
+
+        // Không cần kiểm tra transaction WAITING_PAYMENT nếu bạn chỉ cho thanh toán 1 lần
+        if (!"00".equals(request.getResponseCode())) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
+                    ResponseObject.builder()
+                            .message("VNPay payment failed or canceled.")
+                            .success(false)
+                            .data(null)
+                            .build());
+        }
+
         String txnRef = getTxnRef(8);
-        //Tạo bản ghi Transaction MỚI và lưu vào DB với trạng thái PENDING
 
         try {
+            form.setStatus(Status.APPROVED_PAID);
+            admissionFormRepo.save(form);
+
+            Student student = form.getStudent();
+            if (student != null && !student.isStudent()) {
+                student.setStudent(true);
+                studentRepo.save(student);
+            }
+
             Transaction transaction = Transaction.builder()
-                    .admissionForm(form) // Liên kết giao dịch với AdmissionForm
+                    .admissionForm(form)
                     .amount(sumFee(form.getTermItem().getGrade()))
                     .vnpTransactionNo(request.getTransactionInfo())
-                    .description(request.getTransactionInfo())
+                    .description(request.getDescription())
                     .status(Status.APPROVED_PAID)
                     .paymentDate(LocalDate.now())
-                    .txnRef(txnRef)  // Gán txnRef do backend sinh ở trên
+                    .txnRef(txnRef)
                     .build();
 
-            transaction.getAdmissionForm().setStatus(Status.APPROVED_PAID);
             transactionRepo.save(transaction);
 
-            if (request.getResponseCode().equals("00")) {
-                Student student = form.getStudent();
-                if (student != null && !student.isStudent()) {
-                    student.setStudent(true);
-                    studentRepo.save(student);
-                }
-            }
+            assert student != null;
+            byte[] pdf = InvoiceGenerator.generateInvoicePdf(
+                    form.getParent().getAccount().getName(),
+                    student.getName(),
+                    txnRef,
+                    transaction.getAmount(),
+                    transaction.getPaymentDate().atStartOfDay()
+            );
+
+            String htmlBody = Format.getPaymentSuccessBody(
+                    form.getParent().getAccount().getName(),
+                    student.getName(),
+                    txnRef,
+                    transaction.getAmount(),
+                    transaction.getPaymentDate().atStartOfDay()
+            );
+
+            mailService.sendInvoiceEmail(
+                    form.getParent().getAccount().getEmail(),
+                    "Xác nhận thanh toán học phí đầu vào",
+                    htmlBody,
+                    pdf,
+                    "Sunshine-Invoice-" + txnRef + ".pdf"
+            );
 
             Map<String, Object> data = new HashMap<>();
             data.put("txnRef", txnRef);
@@ -1228,22 +1257,19 @@ public class ParentServiceImpl implements ParentService {
 
             return ResponseEntity.ok(
                     ResponseObject.builder()
-                            .message("Transaction created, ready for payment.")
+                            .message("Thanh toán thành công.")
                             .success(true)
                             .data(data)
-                            .build()
-            );
+                            .build());
 
         } catch (Exception e) {
-            // Xử lý lỗi nếu không thể lưu Transaction
             System.err.println("Error saving transaction: " + e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(
                     ResponseObject.builder()
-                            .message("Failed to create payment transaction. Please try again. Error: " + e.getMessage())
+                            .message("Failed to process payment. Please try again.")
                             .success(false)
                             .data(null)
-                            .build()
-            );
+                            .build());
         }
     }
 

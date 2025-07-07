@@ -185,4 +185,23 @@ public class Format {
                 , teacherName, className, startDateStr
         );
     }
+
+    /** Fragment khi thanh toán học phí thành công */
+    public static String getPaymentSuccessBody(String parentName, String studentName, String txnRef, long amount, LocalDateTime paymentDate) {
+        String formattedDate = paymentDate.format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"));
+        String formattedAmount = String.format("%,d", amount);
+
+        return "<p>Dear " + parentName + ",</p>" +
+                "<p>We are pleased to inform you that your tuition fee payment has been <strong>successfully processed</strong>.</p>" +
+                "<p><strong>Details:</strong></p>" +
+                "<ul style=\"padding-left:16px;\">" +
+                "  <li><strong>Student:</strong> " + studentName + "</li>" +
+                "  <li><strong>Transaction Ref:</strong> " + txnRef + "</li>" +
+                "  <li><strong>Amount:</strong> " + formattedAmount + " VND</li>" +
+                "  <li><strong>Date:</strong> " + formattedDate + "</li>" +
+                "</ul>" +
+                "<p>Thank you for completing the payment. You may now track your child's enrollment status in our portal.</p>" +
+                "<p>For any questions, feel free to contact us at <a href=\"mailto:info@sunshinepreschool.edu\">info@sunshinepreschool.edu</a>.</p>" +
+                "<p>Best regards,<br/>Sunshine Preschool</p>";
+    }
 }

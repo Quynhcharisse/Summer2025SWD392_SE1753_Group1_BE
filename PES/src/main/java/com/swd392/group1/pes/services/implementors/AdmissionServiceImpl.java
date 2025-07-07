@@ -13,18 +13,31 @@ import com.swd392.group1.pes.models.AdmissionForm;
 import com.swd392.group1.pes.models.AdmissionTerm;
 import com.swd392.group1.pes.models.Student;
 import com.swd392.group1.pes.models.TermItem;
+import com.swd392.group1.pes.models.Transaction;
 import com.swd392.group1.pes.repositories.AdmissionFormRepo;
 import com.swd392.group1.pes.repositories.AdmissionTermRepo;
 import com.swd392.group1.pes.repositories.StudentRepo;
 import com.swd392.group1.pes.repositories.TermItemRepo;
+import com.swd392.group1.pes.repositories.TransactionRepo;
+import com.swd392.group1.pes.dto.requests.DailyTotalTransactionRequest;
 import com.swd392.group1.pes.services.AdmissionService;
 import com.swd392.group1.pes.services.MailService;
 import com.swd392.group1.pes.utils.email.Format;
 import lombok.RequiredArgsConstructor;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.ByteArrayResource;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -35,6 +48,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.ArrayList;
+import java.time.format.DateTimeFormatter;
 
 @Service
 @RequiredArgsConstructor
@@ -44,6 +59,10 @@ public class AdmissionServiceImpl implements AdmissionService {
     private final AdmissionTermRepo admissionTermRepo;
     private final TermItemRepo termItemRepo;
     private final MailService mailService;
+    private final TransactionRepo transactionRepo;
+
+    @Value("${vnpay.hash.key}")
+    String hashKey;
 
     @Override
     public ResponseEntity<ResponseObject> createAdmissionTerm(CreateAdmissionTermRequest request) {
@@ -600,18 +619,15 @@ public class AdmissionServiceImpl implements AdmissionService {
         String parentEmail = form.getParent().getAccount().getEmail();
 
         if (request.isApproved()) {
-            // Cập nhật trạng thái thành APPROVED_WAITING_PAYMENT
             form.setStatus(Status.APPROVED);
-            // Lưu thời gian duyệt form
             form.setApprovedDate(LocalDateTime.now());
-            // Đặt thời gian hết hạn thanh toán (ví dụ: 2 ngày sau)
             form.setPaymentExpiryDate(LocalDateTime.now().plusDays(2));
 
-            student.setStudent(true); // Đặt student là true khi form được duyệt
-            studentRepo.save(student); // Lưu thay đổi cho student
+            student.setStudent(true);
+            studentRepo.save(student);
 
             String subject = "[PES] Admission Approved";
-            String heading = "🎉 Admission Approved";
+            String heading = "Admission Approved";
             String bodyHtml = Format.getAdmissionApprovedBody(student.getName());
             mailService.sendMail(parentEmail, subject, heading, bodyHtml);
 
@@ -620,7 +636,7 @@ public class AdmissionServiceImpl implements AdmissionService {
             form.setCancelReason(request.getReason());
 
             String subject = "[PES] Admission Rejected";
-            String heading = "❌ Admission Rejected";
+            String heading = "Admission Rejected";
             String bodyHtml = Format.getAdmissionRejectedBody(student.getName(), request.getReason());
             mailService.sendMail(parentEmail, subject, heading, bodyHtml);
         }
@@ -675,23 +691,129 @@ public class AdmissionServiceImpl implements AdmissionService {
     @Override
     public Map<String, Long> getAdmissionFormStatusSummary() {
         Map<String, Long> summary = new HashMap<>();
-        for (Status status : List.of(
-                Status.PENDING_APPROVAL,
-                Status.REFILLED,
-                Status.APPROVED,
-                Status.APPROVED_PAID,
-                Status.REJECTED)) {
-
-            Long count = admissionFormRepo.countByStatus(status);
-            summary.put(status.name(), count);
-        }
-
         summary.put("pendingApprovalCount", admissionFormRepo.countByStatus(Status.PENDING_APPROVAL));
         summary.put("refilledCount", admissionFormRepo.countByStatus(Status.REFILLED));
         summary.put("approvedCount", admissionFormRepo.countByStatus(Status.APPROVED));
         summary.put("rejectedCount", admissionFormRepo.countByStatus(Status.REJECTED));
         summary.put("paymentCount", admissionFormRepo.countByStatus(Status.APPROVED_PAID));
-
         return summary;
+    }
+
+    @Override
+    public ResponseEntity<ByteArrayResource> exportTransactionsToExcel() {
+        List<Transaction> transactionList = transactionRepo
+                .findAllByPaymentDateAndStatus(LocalDate.now(), Status.APPROVED_PAID)
+                .stream()
+                .sorted(Comparator.comparing(Transaction::getPaymentDate).reversed())
+                .toList();
+
+        try (Workbook workbook = new XSSFWorkbook()) {
+            Sheet sheet = workbook.createSheet("Transactions");
+
+            // Header
+            String[] headers = {"ID", "Student Name", "Parent Name", "Txn Ref", "Description", "Amount", "Status", "Payment Date"};
+            Row headerRow = sheet.createRow(0);
+            for (int i = 0; i < headers.length; i++) {
+                headerRow.createCell(i).setCellValue(headers[i]);
+            }
+
+            int rowIdx = 1;
+            for (Transaction t : transactionList) {
+                Row row = sheet.createRow(rowIdx++);
+                row.createCell(0).setCellValue(t.getId());
+                row.createCell(1).setCellValue(t.getAdmissionForm().getStudent().getName());
+                row.createCell(2).setCellValue(t.getAdmissionForm().getParent().getAccount().getName());
+                row.createCell(3).setCellValue(t.getTxnRef());
+                row.createCell(4).setCellValue(t.getDescription());
+                row.createCell(5).setCellValue(t.getAmount());
+                row.createCell(6).setCellValue(t.getStatus().getValue());
+                row.createCell(7).setCellValue(t.getPaymentDate() != null ? t.getPaymentDate().toString() : "");
+            }
+
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
+            workbook.write(out);
+
+            ByteArrayResource resource = new ByteArrayResource(out.toByteArray());
+
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=today-transactions.xlsx")
+                    .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                    .body(resource);
+
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to export Excel", e);
+        }
+    }
+
+    @Override
+    public ResponseEntity<ResponseObject> getTransactionList() {
+
+        List<Map<String, Object>> transactionList = transactionRepo.findAllByPaymentDateAndStatus(LocalDate.now(), Status.APPROVED_PAID).stream()
+                .sorted(Comparator.comparing(Transaction::getPaymentDate).reversed())
+                .map(this::getTransactionDetail)
+                .toList();
+
+
+        return ResponseEntity.status(HttpStatus.OK).body(
+                ResponseObject.builder()
+                        .message("Successfully queried transaction from VNPAY")
+                        .success(true)
+                        .data(transactionList)
+                        .build()
+        );
+    }
+
+    private Map<String, Object> getTransactionDetail(Transaction transaction) {
+        Map<String, Object> data = new HashMap<>();
+        data.put("id", transaction.getId());
+        data.put("description", transaction.getDescription());
+        data.put("status", transaction.getStatus());
+        data.put("amount", transaction.getAmount());
+        data.put("vnpTransactionNo", transaction.getPaymentDate());
+        data.put("paymentDate", transaction.getPaymentDate());
+        data.put("txnRef", transaction.getTxnRef());
+        return data;
+    }
+
+    @Override
+    public ResponseEntity<ResponseObject> getDailyTotal(DailyTotalTransactionRequest request) {
+        LocalDate endDate = LocalDate.now();
+        LocalDate startDate = endDate.minusDays(6);
+
+        List<Map<String, Object>> dailyTotals = new ArrayList<>();
+        long totalSum = 0;
+
+        for (LocalDate currentDate = startDate; !currentDate.isAfter(endDate); currentDate = currentDate.plusDays(1)) {
+            long dailyTotal = transactionRepo
+                    .findAllByPaymentDateAndStatus(currentDate, Status.APPROVED_PAID)
+                    .stream()
+                    .mapToLong(Transaction::getAmount)
+                    .sum();
+
+            totalSum += dailyTotal;
+
+            Map<String, Object> data = new HashMap<>();
+            data.put("date", currentDate.format(DateTimeFormatter.ofPattern("dd/MM")));
+            data.put("amount", dailyTotal);
+            data.put("totalAmount", totalSum);
+
+            dailyTotals.add(data);
+        }
+
+        int transactionCount = transactionRepo.countByStatusAndPaymentDateBetween(
+                Status.APPROVED_PAID, startDate, endDate
+        );
+
+        Map<String, Object> responseData = new HashMap<>();
+        responseData.put("dailyData", dailyTotals);
+        responseData.put("transactionCount", transactionCount);
+
+        return ResponseEntity.status(HttpStatus.OK).body(
+                ResponseObject.builder()
+                        .message("Success")
+                        .success(true)
+                        .data(responseData)
+                        .build()
+        );
     }
 }
