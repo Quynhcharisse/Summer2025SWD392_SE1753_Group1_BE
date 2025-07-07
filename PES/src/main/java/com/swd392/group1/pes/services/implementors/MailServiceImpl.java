@@ -1,8 +1,10 @@
 package com.swd392.group1.pes.services.implementors;
 
 import com.swd392.group1.pes.services.MailService;
+import jakarta.activation.DataSource;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
+import jakarta.mail.util.ByteArrayDataSource;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.mail.javamail.JavaMailSender;
@@ -20,10 +22,10 @@ public class MailServiceImpl implements MailService {
     private final SpringTemplateEngine templateEngine;
 
     /**
-     * @param to địa chỉ nhận
+     * @param to      địa chỉ nhận
      * @param subject tiêu đề email (<title> và mailbox)
      * @param heading tiêu đề hiển thị trong <h2>
-     * @param body HTML fragment để chèn vào <div th:utext="${body}">…</div>
+     * @param body    HTML fragment để chèn vào <div th:utext="${body}">…</div>
      */
 
     @Async
@@ -59,6 +61,34 @@ public class MailServiceImpl implements MailService {
 
         } catch (MessagingException ex) {
             throw new IllegalStateException("Failed to send email", ex);
+        }
+    }
+
+    @Override
+    public void sendInvoiceEmail(String to, String subject, String htmlBody, byte[] pdfAttachment, String filename) {
+        try {
+            MimeMessage message = javaMailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+
+            Context context = new Context();
+            context.setVariable("title", subject);
+            context.setVariable("heading", "Hóa đơn học phí");
+            context.setVariable("body", htmlBody);
+            String html = templateEngine.process("email/base", context);
+
+            helper.setTo(to);
+            helper.setSubject(subject);
+            helper.setText(html, true);
+
+            DataSource dataSource = new ByteArrayDataSource(pdfAttachment, "application/pdf");
+            helper.addAttachment(filename, dataSource);
+
+            ClassPathResource logo = new ClassPathResource("static/img/logo.png");
+            helper.addInline("logo", logo);
+
+            javaMailSender.send(message);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to send invoice email: " + e.getMessage());
         }
     }
 }
