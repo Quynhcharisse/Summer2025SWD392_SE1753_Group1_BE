@@ -54,6 +54,7 @@ import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -465,6 +466,14 @@ public class ClassServiceImpl implements ClassService {
             );
         }
         Classes cls = classRepo.findById(Integer.parseInt(classId)).get();
+        if (!Status.CLASS_ACTIVE.getValue().equalsIgnoreCase(cls.getStatus())) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(ResponseObject.builder()
+                            .message("Only classes with status 'ACTIVE' can be deleted")
+                            .success(false)
+                            .data(null)
+                            .build());
+        }
         classRepo.delete(cls);
         return ResponseEntity.ok(ResponseObject.builder()
                 .success(true)
@@ -572,15 +581,27 @@ public class ClassServiceImpl implements ClassService {
 
         List<Activity> activities = activityRepo.findBySchedule_Id(Integer.parseInt(scheduleId));
 
-        List<Map<String, Object>> activityList = activities.stream()
-                .map(this::buildActivityDetail)
+        Map<String, List<Map<String, Object>>> grouped = activities.stream()
+                .collect(Collectors.groupingBy(
+                        a -> a.getDayOfWeek().toString(), // key: "MONDAY", "TUESDAY",...
+                        LinkedHashMap::new,                // giữ thứ tự ngày nếu muốn
+                        Collectors.mapping(this::buildActivityDetail, Collectors.toList())
+                ));
+
+        List<Map<String, Object>> groupedList = grouped.entrySet().stream()
+                .map(e -> {
+                    Map<String, Object> group = new HashMap<>();
+                    group.put("dayOfWeek", e.getKey());
+                    group.put("activities", e.getValue());
+                    return group;
+                })
                 .toList();
 
         return ResponseEntity.ok().body(
                 ResponseObject.builder()
                         .message("View All Activities Of Schedule Successfully")
                         .success(true)
-                        .data(activityList)
+                        .data(groupedList)
                         .build()
         );
     }
@@ -634,11 +655,6 @@ public class ClassServiceImpl implements ClassService {
                         .data(studentsToAssign.size())
                         .build()
         );
-    }
-
-    @Override
-    public ResponseEntity<ResponseObject> viewListOfStudentsNotAssignedToAnyClassByYearAndGrade(String year, String grade) {
-        return null;
     }
 
     @Override
@@ -827,6 +843,77 @@ public class ClassServiceImpl implements ClassService {
     }
 
     @Override
+    public ResponseEntity<ResponseObject> viewListOfStudentsNotAssignedToAnyClassByYearAndGrade(String year, String grade, int page, int size) {
+        List<Integer> years = admissionTermRepo.findAll()
+                .stream()
+                .map(AdmissionTerm::getYear)
+                .distinct()
+                .sorted()
+                .toList();
+
+        String error = checkAcademicYearAndGrade(year, grade, years);
+
+        if (!error.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
+                    ResponseObject.builder()
+                            .message(error)
+                            .success(false)
+                            .data(null)
+                            .build()
+            );
+        }
+
+        List<AdmissionForm> approvedForms = admissionFormRepo.findByTermItem_AdmissionTerm_YearAndStatusAndTermItem_Grade(
+                Integer.parseInt(year),
+                Status.APPROVED_PAID,
+                getGradeFromName(grade)
+        );
+
+        List<Student> students = approvedForms.stream()
+                .map(AdmissionForm::getStudent)
+                .toList();
+        List<StudentClass> assignedStudentClasses = studentClassRepo.findByClasses_AcademicYearAndClasses_Grade(
+                Integer.parseInt(year),
+                getGradeFromName(grade)
+        );
+        Set<Integer> assignedStudentIds = assignedStudentClasses.stream()
+                .map(sc -> sc.getStudent().getId())
+                .collect(Collectors.toSet());
+
+        List<Student> studentsToAssign = students.stream()
+                .filter(st -> !assignedStudentIds.contains(st.getId()))
+                .toList();
+
+        // Tính toán phân trang
+        int total = studentsToAssign.size();
+        int fromIndex = page * size;
+        int toIndex = Math.min(fromIndex + size, total);
+
+        List<Student> pagedList = new ArrayList<>();
+        if (fromIndex < total) {
+            pagedList = studentsToAssign.subList(fromIndex, toIndex);
+        }
+        List<Map<String, Object>> dataList = pagedList.stream()
+                .map(this::buildStudentDetail)
+                .toList();
+        // Trả về cả tổng số lượng và trang hiện tại cho FE
+        Map<String, Object> response = new HashMap<>();
+        response.put("page", page);
+        response.put("size", size);
+        response.put("totalElements", total);
+        response.put("totalPages", (int) Math.ceil((double) total / size));
+        response.put("data", dataList);
+
+        return ResponseEntity.ok().body(
+                ResponseObject.builder()
+                        .message("View List Of Students Not Assigned To Any Classes By Grade And Year Successfully")
+                        .success(true)
+                        .data(response)
+                        .build()
+        );
+    }
+
+    @Override
     public ResponseEntity<ResponseObject> viewListClassesOfChild(String childId) {
 
         String error = checkStudentId(childId);
@@ -991,7 +1078,6 @@ public class ClassServiceImpl implements ClassService {
         data.put("id", activity.getId());
         data.put("name", activity.getName());
         data.put("syllabusName", activity.getSyllabusName());
-        data.put("dayOfWeek", activity.getDayOfWeek());
         data.put("startTime", activity.getStartTime());
         data.put("endTime", activity.getEndTime());
         data.put("date", activity.getDate());

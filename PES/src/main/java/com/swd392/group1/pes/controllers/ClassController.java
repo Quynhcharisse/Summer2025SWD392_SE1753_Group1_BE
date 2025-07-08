@@ -52,7 +52,7 @@ public class ClassController {
         return classService.getActivitiesByScheduleId(scheduleId);
     }
 
-    @GetMapping("/numberOfAvailableStudents")
+    @GetMapping("/numberOfAvailableChildren")
     @PreAuthorize("hasRole('education')")
     public ResponseEntity<ResponseObject> viewNumberOfStudentsNotAssignToAnyClassByYearAdnGrade(@RequestParam String year, @RequestParam String grade){
         return classService.viewNumberOfStudentsNotAssignToAnyClassByYearAdnGrade(year, grade);
@@ -68,6 +68,13 @@ public class ClassController {
     @PreAuthorize("hasRole('education')")
     public ResponseEntity<ResponseObject> viewAssignedStudentsOfClass(@RequestParam String classId){
         return classService.viewAssignedStudentsOfClass(classId);
+    }
+
+    @GetMapping("/availableChildren/list")
+    @PreAuthorize("hasRole('education')")
+    public ResponseEntity<ResponseObject> viewListOfStudentsNotAssignedToAnyClassByYearAndGrade(@RequestParam String year, @RequestParam String grade, @RequestParam(defaultValue = "0") int page,
+                                                                                                @RequestParam(defaultValue = "10") int size){
+        return classService.viewListOfStudentsNotAssignedToAnyClassByYearAndGrade(year, grade, page, size);
     }
 
     @GetMapping("/assignedClassesOfChild/list")

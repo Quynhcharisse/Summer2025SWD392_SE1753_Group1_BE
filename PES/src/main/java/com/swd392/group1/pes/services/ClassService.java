@@ -12,7 +12,7 @@ public interface ClassService {
     ResponseEntity<ResponseObject> getSchedulesByClassId(String classId);
     ResponseEntity<ResponseObject> getActivitiesByScheduleId(String scheduleId);
     ResponseEntity<ResponseObject> viewNumberOfStudentsNotAssignToAnyClassByYearAdnGrade(String year, String grade);
-    ResponseEntity<ResponseObject> viewListOfStudentsNotAssignedToAnyClassByYearAndGrade(String year, String grade);
+    ResponseEntity<ResponseObject> viewListOfStudentsNotAssignedToAnyClassByYearAndGrade(String year, String grade, int page, int size);
     ResponseEntity<ResponseObject> viewAssignedStudentsOfClass(String classId);
     ResponseEntity<Resource> exportStudentListToExcel();
     ResponseEntity<ResponseObject> assignAvailableStudentsAuto(String year, String grade);
