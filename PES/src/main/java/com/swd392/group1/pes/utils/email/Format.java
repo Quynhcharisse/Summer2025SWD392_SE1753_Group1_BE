@@ -2,6 +2,7 @@ package com.swd392.group1.pes.utils.email;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.List;
 
 public class Format {
     /** Fragment cho tài khoản giáo viên */
@@ -125,6 +126,27 @@ public class Format {
                         "<p>Best regards,<br/>Sunshine Preschool</p>";
     }
 
+    public static String getRegisterEventBody(
+            String parentName,
+            String eventName,
+            LocalDateTime eventTime,
+            List<String> studentNames
+    ) {
+        String formattedTime = eventTime.format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"));
+        StringBuilder studentListHtml = new StringBuilder();
+        for (String name : studentNames) {
+            studentListHtml.append("<li>").append(name).append("</li>");
+        }
+
+        return "<p>Dear " + (parentName != null ? parentName : "Parent") + ",</p>"
+                + "<p>You have successfully registered the following student"
+                + (studentNames.size() > 1 ? "s" : "") + " for the event <strong>\"" + eventName + "\"</strong>:</p>"
+                + "<ul style=\"padding-left:20px\">" + studentListHtml + "</ul>"
+                + "<p><strong>Event Time:</strong> " + formattedTime + "</p>"
+                + "<p>If you have any questions, feel free to contact us "
+                + "<p>Best regards,<br/>Sunshine Preschool</p>";
+    }
+
     public static String getCancelEventForParentBody(String parentName,
                                             String childName,
                                             String eventName,
@@ -184,5 +206,24 @@ public class Format {
                         "School Administration"
                 , teacherName, className, startDateStr
         );
+    }
+
+    /** Fragment khi thanh toán học phí thành công */
+    public static String getPaymentSuccessBody(String parentName, String studentName, String txnRef, long amount, LocalDateTime paymentDate) {
+        String formattedDate = paymentDate.format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"));
+        String formattedAmount = String.format("%,d", amount);
+
+        return "<p>Dear " + parentName + ",</p>" +
+                "<p>We are pleased to inform you that your tuition fee payment has been <strong>successfully processed</strong>.</p>" +
+                "<p><strong>Details:</strong></p>" +
+                "<ul style=\"padding-left:16px;\">" +
+                "  <li><strong>Student:</strong> " + studentName + "</li>" +
+                "  <li><strong>Transaction Ref:</strong> " + txnRef + "</li>" +
+                "  <li><strong>Amount:</strong> " + formattedAmount + " VND</li>" +
+                "  <li><strong>Date:</strong> " + formattedDate + "</li>" +
+                "</ul>" +
+                "<p>Thank you for completing the payment. You may now track your child's enrollment status in our portal.</p>" +
+                "<p>For any questions, feel free to contact us at <a href=\"mailto:info@sunshinepreschool.edu\">info@sunshinepreschool.edu</a>.</p>" +
+                "<p>Best regards,<br/>Sunshine Preschool</p>";
     }
 }

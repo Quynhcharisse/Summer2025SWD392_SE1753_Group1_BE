@@ -11,4 +11,6 @@ public interface StudentClassRepo extends JpaRepository<StudentClass, Integer> {
     List<StudentClass> findByClasses_AcademicYearAndClasses_Grade(int classes_academicYear, Grade classes_grade);
 
     List<StudentClass> findByClasses_Id(int id);
+
+    List<StudentClass> findByStudent_Id(int id);
 }

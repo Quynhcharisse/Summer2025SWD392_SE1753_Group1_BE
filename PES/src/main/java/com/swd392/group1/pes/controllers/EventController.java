@@ -5,6 +5,7 @@ import com.swd392.group1.pes.dto.requests.CreateEventRequest;
 import com.swd392.group1.pes.dto.response.ResponseObject;
 import com.swd392.group1.pes.services.EventService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -50,6 +51,18 @@ public class EventController {
     @PreAuthorize("hasRole('education')")
     public ResponseEntity<ResponseObject> viewAssignedTeachersOfEvent(@RequestParam String id) {
         return eventService.viewAssignedTeachersOfEvent(id);
+    }
+
+    @GetMapping("/event/assign/students")
+    @PreAuthorize("hasRole('education')")
+    public ResponseEntity<ResponseObject> viewAssignedStudentsOfEvent(@RequestParam String id) {
+        return eventService.viewAssignedStudentsOfEvent(id);
+    }
+
+    @GetMapping("/event/participants/export")
+    @PreAuthorize("hasRole('education')")
+    public ResponseEntity<ByteArrayResource> exportEventParticipateOfEvent(@RequestParam String id) {
+        return eventService.exportEventParticipateOfEvent(id);
     }
 
 }

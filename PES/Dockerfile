@@ -8,12 +8,6 @@ RUN chmod +x ./mvnw
 
 RUN ./mvnw clean package -DskipTests
 
-RUN ./mvnw dependency:go-offline
-
-COPY wait-for-it.sh .
-COPY entrypoint.sh .
-RUN chmod +x entrypoint.sh wait-for-it.sh
-
 EXPOSE 8080
 
-CMD ["./entrypoint.sh"]
+ENTRYPOINT ["java", "-jar", "target/PES-0.0.1-SNAPSHOT.jar"]

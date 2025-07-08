@@ -5,8 +5,10 @@ import com.swd392.group1.pes.dto.requests.CreateExtraTermRequest;
 import com.swd392.group1.pes.dto.requests.ProcessAdmissionFormRequest;
 import com.swd392.group1.pes.dto.requests.UpdateAdmissionTermRequest;
 import com.swd392.group1.pes.dto.response.ResponseObject;
+import com.swd392.group1.pes.dto.requests.DailyTotalTransactionRequest;
 import com.swd392.group1.pes.services.AdmissionService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -79,4 +81,22 @@ public class AdmissionController {
     public Map<String, Long> getAdmissionFormStatusSummary() {
         return admissionService.getAdmissionFormStatusSummary();
     }
+
+    @GetMapping("/transactions")
+    @PreAuthorize("hasRole('admission')")
+    public ResponseEntity<ResponseObject> getTransactionList() {
+        return admissionService.getTransactionList();
+    }
+
+    @GetMapping("/export")
+    @PreAuthorize("hasRole('admission')")
+    public ResponseEntity<ByteArrayResource> exportTransactionsToExcel() {
+        return admissionService.exportTransactionsToExcel();
+    }
+
+    @PostMapping("/daily/total/transaction")
+    public ResponseEntity<ResponseObject> getDailyTotal(@RequestBody DailyTotalTransactionRequest request) {
+        return admissionService.getDailyTotal(request);
+    }
+
 }

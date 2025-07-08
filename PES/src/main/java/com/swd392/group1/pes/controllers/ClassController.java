@@ -10,6 +10,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -51,16 +52,35 @@ public class ClassController {
         return classService.getActivitiesByScheduleId(scheduleId);
     }
 
-    @GetMapping("/numberOfAvailableStudents")
+    @GetMapping("/numberOfAvailableChildren")
     @PreAuthorize("hasRole('education')")
     public ResponseEntity<ResponseObject> viewNumberOfStudentsNotAssignToAnyClassByYearAdnGrade(@RequestParam String year, @RequestParam String grade){
         return classService.viewNumberOfStudentsNotAssignToAnyClassByYearAdnGrade(year, grade);
+    }
+
+    @PutMapping("/assignAvailableStudentsAuto")
+    @PreAuthorize("hasRole('education')")
+    public ResponseEntity<ResponseObject> assignAvailableStudentsAuto(@RequestParam String year, @RequestParam String grade){
+        return classService.assignAvailableStudentsAuto(year, grade);
     }
 
     @GetMapping("/assignedStudentOfClass/list")
     @PreAuthorize("hasRole('education')")
     public ResponseEntity<ResponseObject> viewAssignedStudentsOfClass(@RequestParam String classId){
         return classService.viewAssignedStudentsOfClass(classId);
+    }
+
+    @GetMapping("/availableChildren/list")
+    @PreAuthorize("hasRole('education')")
+    public ResponseEntity<ResponseObject> viewListOfStudentsNotAssignedToAnyClassByYearAndGrade(@RequestParam String year, @RequestParam String grade, @RequestParam(defaultValue = "0") int page,
+                                                                                                @RequestParam(defaultValue = "10") int size){
+        return classService.viewListOfStudentsNotAssignedToAnyClassByYearAndGrade(year, grade, page, size);
+    }
+
+    @GetMapping("/assignedClassesOfChild/list")
+    @PreAuthorize("hasRole('education')")
+    public ResponseEntity<ResponseObject> viewAssignedClassesOfChild(@RequestParam String childId){
+        return classService.viewListClassesOfChild(childId);
     }
 
     @GetMapping("/student/export")

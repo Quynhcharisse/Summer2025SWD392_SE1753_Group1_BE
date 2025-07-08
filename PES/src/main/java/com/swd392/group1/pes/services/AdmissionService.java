@@ -5,6 +5,8 @@ import com.swd392.group1.pes.dto.requests.CreateExtraTermRequest;
 import com.swd392.group1.pes.dto.requests.ProcessAdmissionFormRequest;
 import com.swd392.group1.pes.dto.requests.UpdateAdmissionTermRequest;
 import com.swd392.group1.pes.dto.response.ResponseObject;
+import com.swd392.group1.pes.dto.requests.DailyTotalTransactionRequest;
+import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.ResponseEntity;
 
 import java.util.Map;
@@ -27,4 +29,10 @@ public interface AdmissionService {
     ResponseEntity<ResponseObject> getAllYear();
 
     Map<String, Long> getAdmissionFormStatusSummary();
+
+    ResponseEntity<ByteArrayResource> exportTransactionsToExcel();
+
+    ResponseEntity<ResponseObject> getTransactionList();
+
+    ResponseEntity<ResponseObject> getDailyTotal(DailyTotalTransactionRequest request);
 }
