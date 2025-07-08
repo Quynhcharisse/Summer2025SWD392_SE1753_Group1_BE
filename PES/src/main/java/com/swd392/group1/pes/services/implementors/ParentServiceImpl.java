@@ -901,7 +901,7 @@ public class ParentServiceImpl implements ParentService {
             }
 
             LocalDate dob = stu.getDateOfBirth();
-            int age = Period.between(dob, now.toLocalDate()).getYears();
+            int age = Period.between(dob, event.getRegistrationDeadline().toLocalDate()).getYears();
             if (age < 3 || age > 5) {
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                         .body(ResponseObject.builder()
