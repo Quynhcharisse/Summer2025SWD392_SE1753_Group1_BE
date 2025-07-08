@@ -89,6 +89,18 @@ public class Format {
                 "<p>Best regards,<br/>Sunshine Preschool</p>";
     }
 
+    /** Fragment cho email xác thực đăng ký tài khoản */
+    public static String getEmailVerificationBody(String verificationLink, int expiryMinutes) {
+        return "<p>Dear User,</p>" +
+                "<p>You have requested to register an account with Sunshine Preschool. Please click the link below to complete your registration:</p>" +
+                "<div style=\"background-color:#eef5f0;padding:20px;text-align:center;margin:20px 0;border-radius:6px;\">" +
+                "  <a href=\"" + verificationLink + "\" style=\"color:#1C5A2A;text-decoration:none;font-weight:bold;\">Complete Registration</a>" +
+                "</div>" +
+                "<p><strong>Note:</strong> This link will expire in <strong>" + expiryMinutes + " minutes</strong>.</p>" +
+                "<p>If you did not request this registration, please ignore this message.</p>" +
+                "<p>Best regards,<br/>Sunshine Preschool</p>";
+    }
+
     /** Fragment khi phụ huynh yêu cầu đổi mật khẩu thành công */
     public static String getPasswordChangedFormat(String name) {
         return

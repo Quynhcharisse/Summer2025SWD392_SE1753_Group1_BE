@@ -22,6 +22,7 @@ import com.swd392.group1.pes.repositories.AdmissionTermRepo;
 import com.swd392.group1.pes.repositories.ClassRepo;
 import com.swd392.group1.pes.repositories.ScheduleRepo;
 import com.swd392.group1.pes.repositories.StudentClassRepo;
+import com.swd392.group1.pes.repositories.StudentRepo;
 import com.swd392.group1.pes.repositories.SyllabusRepo;
 import com.swd392.group1.pes.repositories.TermItemRepo;
 import com.swd392.group1.pes.services.ClassService;
@@ -74,6 +75,7 @@ public class ClassServiceImpl implements ClassService {
     private final MailService mailService;
     private final ScheduleRepo scheduleRepo;
     private final ActivityRepo activityRepo;
+    private final StudentRepo studentRepo;
 
     @Override
     public ResponseEntity<ResponseObject> generateClassesAuto(GenerateClassesRequest request) {

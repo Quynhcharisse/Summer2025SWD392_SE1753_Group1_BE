@@ -42,6 +42,11 @@ public class AuthController {
         return authService.refresh(request, response);
     }
 
+    @PostMapping("/register/otp/send")
+    public ResponseEntity<ResponseObject> sendRegisterOtp(@RequestParam String email) {
+        return authService.sendRegisterOtp(email);
+    }
+
     @PostMapping("/register")
     public ResponseEntity<ResponseObject> register (@RequestBody RegisterRequest request){
         return authService.register(request);
@@ -65,16 +70,6 @@ public class AuthController {
     @GetMapping("/event/detail")
     public ResponseEntity<ResponseObject> viewEventDetail(@RequestParam String id) {
         return eventService.viewEventDetail(id);
-    }
-
-    @PostMapping("/register/otp/send")
-    public ResponseEntity<ResponseObject> sendRegisterOtp(@RequestParam String email) {
-        return authService.sendRegisterOtp(email);
-    }
-
-    @PostMapping("/register/otp/verify")
-    public ResponseEntity<ResponseObject> verifyRegisterOtp(@RequestParam String email, @RequestParam String otp) {
-        return authService.verifyRegisterOtp(email, otp);
     }
 
 }

@@ -164,63 +164,40 @@ public class AuthServiceImpl implements AuthService {
     public ResponseEntity<ResponseObject> sendRegisterOtp(String email) {
         if (email == null || email.trim().isEmpty()) {
             return ResponseEntity.badRequest().body(
-                ResponseObject.builder().message("Email is required.").success(false).data(null).build()
+                    ResponseObject.builder().message("Email is required.").success(false).data(null).build()
             );
         }
         if (accountRepo.existsByEmail(email)) {
             return ResponseEntity.badRequest().body(
-                ResponseObject.builder().message("Email is already in use by another account.").success(false).data(null).build()
+                    ResponseObject.builder().message("Email is already in use by another account.").success(false).data(null).build()
             );
         }
+
         String otp = OtpUtil.generateOtp();
         long expiry = System.currentTimeMillis() + OtpUtil.OTP_EXPIRY_MINUTES * 60 * 1000;
         OtpUtil.otpStore(email, otp, expiry);
-        mailService.sendMail(
-            email,
-            "[PES] Registration OTP",
-            "🔐 Your OTP Code",
-            Format.getRegisterOtpBody(otp, OtpUtil.OTP_EXPIRY_MINUTES)
-        );
-        return ResponseEntity.ok(
-            ResponseObject.builder().message("OTP sent to email.").success(true).data(null).build()
-        );
-    }
 
-    @Override
-    public ResponseEntity<ResponseObject> verifyRegisterOtp(String email, String otp) {
-        OtpUtil.OtpInfo info = OtpUtil.getOtpInfo(email);
-        if (info == null || System.currentTimeMillis() > info.expiryTime) {
-            OtpUtil.removeOtp(email);
-            return ResponseEntity.badRequest().body(
-                ResponseObject.builder().message("OTP expired or not found.").success(false).data(null).build()
-            );
-        }
-        if (!info.otp.equals(otp)) {
-            return ResponseEntity.badRequest().body(
-                ResponseObject.builder().message("Invalid OTP.").success(false).data(null).build()
-            );
-        }
-        info.verified = true;
+        String code = RandomPasswordUtil.generateRandomString(7) + otp + RandomPasswordUtil.generateRandomString(6);
+        String verificationLink = "http://localhost:5173/register?code=" + code;
+
+        mailService.sendMail(
+                email,
+                "[PES] Email Verification",
+                "✉️ Complete Your Registration",
+                Format.getEmailVerificationBody(verificationLink, OtpUtil.OTP_EXPIRY_MINUTES)
+        );
+
         return ResponseEntity.ok(
-            ResponseObject.builder().message("OTP verified successfully.").success(true).data(null).build()
+                ResponseObject.builder()
+                        .message("Registration link sent to email.")
+                        .success(true)
+                        .data(null)
+                        .build()
         );
     }
 
     @Override
     public ResponseEntity<ResponseObject> register(RegisterRequest request) {
-
-        // OTP check
-        OtpUtil.OtpInfo info = OtpUtil.getOtpInfo(request.getEmail());
-        if (info == null || !info.verified) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
-                ResponseObject.builder()
-                    .message("OTP verification required before registration.")
-                    .success(false)
-                    .data(null)
-                    .build()
-            );
-        }
-        OtpUtil.removeOtp(request.getEmail());
         String error = registerValidation(request, accountRepo);
         if (!error.isEmpty()) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
@@ -232,51 +209,91 @@ public class AuthServiceImpl implements AuthService {
             );
         }
 
-        if (accountRepo.existsByEmail(request.getEmail())) {
+        try {
+            String code = request.getCode();
+            if (code.contains("?code=")) {
+                code = code.substring(code.indexOf("?code=") + 6);
+            }
+            String otp = code.substring(7, code.length() - 6);
+
+            OtpUtil.OtpInfo info = OtpUtil.getOtpInfo(request.getEmail());
+            if (info == null || System.currentTimeMillis() > info.expiryTime) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
+                        ResponseObject.builder()
+                                .message("Registration link expired. Please request a new one.")
+                                .success(false)
+                                .data(null)
+                                .build()
+                );
+            }
+
+            if (!info.otp.equals(otp)) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
+                        ResponseObject.builder()
+                                .message("Invalid verification code.")
+                                .success(false)
+                                .data(null)
+                                .build()
+                );
+            }
+
+            if (accountRepo.existsByEmail(request.getEmail())) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
+                        ResponseObject.builder()
+                                .message("Email is already in use by another account.")
+                                .success(false)
+                                .data(null)
+                                .build()
+                );
+            }
+
+            Account account = new Account();
+            account.setEmail(request.getEmail());
+            account.setPassword(request.getPassword());
+            account.setName(request.getName());
+            account.setPhone(request.getPhone());
+            account.setGender(request.getGender());
+            account.setIdentityNumber(request.getIdentityNumber());
+            account.setRole(Role.PARENT);
+            account.setStatus(Status.ACCOUNT_ACTIVE.getValue());
+            account.setCreatedAt(LocalDateTime.now());
+            account.setAddress(request.getAddress());
+
+            accountRepo.save(account);
+
+            Parent parent = Parent.builder()
+                    .job(request.getJob())
+                    .relationshipToChild(request.getRelationshipToChild())
+                    .account(account)
+                    .build();
+            parentRepo.save(parent);
+
+            OtpUtil.removeOtp(request.getEmail());
+
+            mailService.sendMail(
+                    account.getEmail(),
+                    "[PES] Account Registration Successful",
+                    "🎉 Account Created Successfully",
+                    Format.getParentRegisterFormat(account.getName(), account.getEmail())
+            );
+
+            return ResponseEntity.status(HttpStatus.OK).body(
+                    ResponseObject.builder()
+                            .message("Registration successful")
+                            .success(true)
+                            .data(null)
+                            .build()
+            );
+
+        } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
                     ResponseObject.builder()
-                            .message("Email is already in use by another account.")
+                            .message("Invalid registration code")
                             .success(false)
                             .data(null)
                             .build()
             );
         }
-
-        Account account = new Account();
-        account.setEmail(request.getEmail());
-        account.setPassword(request.getPassword());
-        account.setName(request.getName());
-        account.setPhone(request.getPhone());
-        account.setGender(request.getGender());
-        account.setIdentityNumber(request.getIdentityNumber());
-        account.setRole(Role.PARENT);
-        account.setStatus(Status.ACCOUNT_ACTIVE.getValue());
-        account.setCreatedAt(LocalDateTime.now());
-        account.setAddress(request.getAddress());
-
-        accountRepo.save(account);
-
-        Parent parent = Parent.builder()
-                .job(request.getJob())
-                .relationshipToChild(request.getRelationshipToChild())
-                .account(account)
-                .build();
-        parentRepo.save(parent);
-
-        mailService.sendMail(
-                account.getEmail(),
-                "[PES] Account Registration Successful",
-                "🎉 Account Created Successfully",
-                Format.getParentRegisterFormat(account.getName(), account.getEmail())
-        );
-
-        return ResponseEntity.status(HttpStatus.OK).body(
-                ResponseObject.builder()
-                        .message("Register Successfully")
-                        .success(true)
-                        .data(null)
-                        .build()
-        );
     }
 
     public static String registerValidation(RegisterRequest request, AccountRepo accountRepo) {
