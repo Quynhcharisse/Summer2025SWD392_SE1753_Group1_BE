@@ -22,7 +22,6 @@ import com.swd392.group1.pes.repositories.AdmissionTermRepo;
 import com.swd392.group1.pes.repositories.ClassRepo;
 import com.swd392.group1.pes.repositories.ScheduleRepo;
 import com.swd392.group1.pes.repositories.StudentClassRepo;
-import com.swd392.group1.pes.repositories.StudentRepo;
 import com.swd392.group1.pes.repositories.SyllabusRepo;
 import com.swd392.group1.pes.repositories.TermItemRepo;
 import com.swd392.group1.pes.services.ClassService;
@@ -30,6 +29,7 @@ import com.swd392.group1.pes.services.MailService;
 import com.swd392.group1.pes.utils.email.Format;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.io.output.ByteArrayOutputStream;
+import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
@@ -57,7 +57,6 @@ import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -75,7 +74,6 @@ public class ClassServiceImpl implements ClassService {
     private final MailService mailService;
     private final ScheduleRepo scheduleRepo;
     private final ActivityRepo activityRepo;
-    private final StudentRepo studentRepo;
 
     @Override
     public ResponseEntity<ResponseObject> generateClassesAuto(GenerateClassesRequest request) {
@@ -692,34 +690,50 @@ public class ClassServiceImpl implements ClassService {
     }
 
     @Override
-    public ResponseEntity<Resource> exportStudentListToExcel() {
-        List<Student> students = studentRepo.findAllByIsStudentTrue();
-        String dateTimeStr = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
+    public ResponseEntity<Resource> exportStudentListOfClassToExcel(String classId) {
+        int classIdInt;
+        try {
+            classIdInt = Integer.parseInt(classId);
+        } catch (NumberFormatException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+        }
 
-        String[] columns = {
-                "Parent Email", "Parent Name",
-                "Student Name", "Student Gender", "Student Date of Birth", "Student Place of Birth"
-        };
+        Classes cls = classRepo.findById(classIdInt).orElse(null);
+        if (cls == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
+        }
 
-        try (Workbook workbook = new XSSFWorkbook();
-             ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+        List<StudentClass> studentClasses = studentClassRepo.findByClasses_Id(cls.getId());
+        String[] columns = {"ID", "Name", "Gender", "Date of Birth", "Place of Birth", "Class Name", "Grade", "Academic Year", "Teacher Name", "Teacher Phone"};
+        String fileNameTimestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
 
+        try (Workbook workbook = new XSSFWorkbook(); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
             Sheet sheet = workbook.createSheet("Students");
+
             Row header = sheet.createRow(0);
             for (int i = 0; i < columns.length; i++) {
-                header.createCell(i).setCellValue(columns[i]);
+                Cell cell = header.createCell(i);
+                cell.setCellValue(columns[i]);
             }
 
             int rowIdx = 1;
-            for (Student student : students) {
+            for (StudentClass sc : studentClasses) {
+                Student student = sc.getStudent();
+                if (student == null) continue;
+
                 Row row = sheet.createRow(rowIdx++);
-                Account parentAcc = (student.getParent() != null) ? student.getParent().getAccount() : null;
-                row.createCell(0).setCellValue(Objects.toString(parentAcc != null ? parentAcc.getEmail() : null, ""));
-                row.createCell(1).setCellValue(Objects.toString(parentAcc != null ? parentAcc.getName() : null, ""));
-                row.createCell(2).setCellValue(Objects.toString(student.getName(), ""));
-                row.createCell(3).setCellValue(Objects.toString(student.getGender(), ""));
-                row.createCell(4).setCellValue(student.getDateOfBirth() != null ? student.getDateOfBirth().toString() : "");
-                row.createCell(5).setCellValue(Objects.toString(student.getPlaceOfBirth(), ""));
+                row.createCell(0).setCellValue(student.getId());
+                row.createCell(1).setCellValue(student.getName());
+                row.createCell(2).setCellValue(student.getGender());
+                row.createCell(3).setCellValue(student.getDateOfBirth() != null
+                        ? student.getDateOfBirth().toString() : "");
+                row.createCell(4).setCellValue(student.getPlaceOfBirth());
+                row.createCell(5).setCellValue(cls.getName());
+                row.createCell(6).setCellValue(cls.getGrade() != null ? cls.getGrade().name() : "");
+                int year = cls.getAcademicYear();
+                row.createCell(7).setCellValue(year + "-" + (year + 1));
+                row.createCell(8).setCellValue(cls.getTeacher() != null ? cls.getTeacher().getName() : "");
+                row.createCell(9).setCellValue(cls.getTeacher() != null ? cls.getTeacher().getPhone() : "");
             }
 
             for (int i = 0; i < columns.length; i++) {
@@ -729,12 +743,15 @@ public class ClassServiceImpl implements ClassService {
             workbook.write(out);
             ByteArrayResource resource = new ByteArrayResource(out.toByteArray());
 
+            String filename = "students_class_" + classId + "_" + fileNameTimestamp + ".xlsx";
             return ResponseEntity.ok()
-                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=students_" + dateTimeStr + ".xlsx")
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + filename)
                     .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
                     .body(resource);
+
         } catch (Exception e) {
-            throw new RuntimeException("Excel export failed", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(null);
         }
     }
 

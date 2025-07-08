@@ -14,7 +14,7 @@ public interface ClassService {
     ResponseEntity<ResponseObject> viewNumberOfStudentsNotAssignToAnyClassByYearAdnGrade(String year, String grade);
     ResponseEntity<ResponseObject> viewListOfStudentsNotAssignedToAnyClassByYearAndGrade(String year, String grade, int page, int size);
     ResponseEntity<ResponseObject> viewAssignedStudentsOfClass(String classId);
-    ResponseEntity<Resource> exportStudentListToExcel();
+    ResponseEntity<Resource> exportStudentListOfClassToExcel(String classId);
     ResponseEntity<ResponseObject> assignAvailableStudentsAuto(String year, String grade);
     ResponseEntity<ResponseObject> viewListClassesOfChild(String childId);
 }
