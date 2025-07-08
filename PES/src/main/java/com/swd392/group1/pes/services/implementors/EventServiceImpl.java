@@ -508,9 +508,7 @@ public class EventServiceImpl implements EventService {
             for (int i = 0; i < headers.length; i++) {
                 header.createCell(i).setCellValue(headers[i]);
             }
-
             int rowIdx = 1;
-
             for(Student student : students){
                 Row row = sheet.createRow(rowIdx++);
                 Account parentAcc = (student.getParent() != null) ? student.getParent().getAccount() : null;

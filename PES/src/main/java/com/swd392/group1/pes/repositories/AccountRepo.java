@@ -1,5 +1,6 @@
 package com.swd392.group1.pes.repositories;
 
+import com.swd392.group1.pes.enums.Grade;
 import com.swd392.group1.pes.enums.Role;
 import com.swd392.group1.pes.models.Account;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -25,4 +26,17 @@ public interface AccountRepo extends JpaRepository<Account, Integer> {
     long countByRole(Role role);
 
     Account findByIdAndRole(int teacherId, Role role);
+
+    Account findByClasses_Id(int classId);
+
+    List<Account> findByRoleAndClassesIsEmpty(
+            Role role
+    );
+
+    List<Account> findByRoleAndClasses_AcademicYearAndClasses_Grade(
+            Role role,
+            int academicYear,
+            Grade grade
+    );
+
 }

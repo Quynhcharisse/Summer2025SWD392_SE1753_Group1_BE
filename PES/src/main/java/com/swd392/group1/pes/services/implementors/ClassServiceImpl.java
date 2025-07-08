@@ -1,6 +1,8 @@
 package com.swd392.group1.pes.services.implementors;
 
+import com.swd392.group1.pes.dto.requests.AssignStudentsToClassRequest;
 import com.swd392.group1.pes.dto.requests.GenerateClassesRequest;
+import com.swd392.group1.pes.dto.requests.UnassignStudentsFromClassRequest;
 import com.swd392.group1.pes.dto.response.ResponseObject;
 import com.swd392.group1.pes.enums.Grade;
 import com.swd392.group1.pes.enums.Role;
@@ -10,11 +12,13 @@ import com.swd392.group1.pes.models.Activity;
 import com.swd392.group1.pes.models.AdmissionForm;
 import com.swd392.group1.pes.models.AdmissionTerm;
 import com.swd392.group1.pes.models.Classes;
+import com.swd392.group1.pes.models.Lesson;
 import com.swd392.group1.pes.models.Parent;
 import com.swd392.group1.pes.models.Schedule;
 import com.swd392.group1.pes.models.Student;
 import com.swd392.group1.pes.models.StudentClass;
 import com.swd392.group1.pes.models.Syllabus;
+import com.swd392.group1.pes.models.SyllabusLesson;
 import com.swd392.group1.pes.repositories.AccountRepo;
 import com.swd392.group1.pes.repositories.ActivityRepo;
 import com.swd392.group1.pes.repositories.AdmissionFormRepo;
@@ -65,6 +69,7 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class ClassServiceImpl implements ClassService {
+
     private final ClassRepo classRepo;
     private final SyllabusRepo syllabusRepo;
     private final TermItemRepo termItemRepo;
@@ -245,27 +250,30 @@ public class ClassServiceImpl implements ClassService {
             return ResponseEntity.ok(ResponseObject.builder()
                     .message("No new students to assign.").success(false).data(null).build());
         }
-        // Đếm số lớp hiện có của năm đó
         int existing = classRepo.countByAcademicYearAndGrade(Integer.parseInt(request.getYear()), grade);
 
-        // Tính số lớp mới cần tạo
+        int expectedClass = termItemRepo.findByAdmissionTerm_YearAndGrade(
+                Integer.parseInt(request.getYear()), syllabus.getGrade()).getExpectedClasses();
+
         int numberOfStudentsPerClass = 20;
+        int maxNewClassesCanCreate = expectedClass - existing;
         int numberOfNeededClasses = (studentsToAssign.size() + numberOfStudentsPerClass - 1) / numberOfStudentsPerClass;
-        int totalClassIfCreate = existing + numberOfNeededClasses;
-        int expectedClass = termItemRepo.findByAdmissionTerm_YearAndGrade(Integer.parseInt(request.getYear()), syllabus.getGrade()).getExpectedClasses();
-        if (totalClassIfCreate > expectedClass) {
-            return ResponseEntity.status(HttpStatus.CONFLICT).body(ResponseObject.builder()
-                    .message(String.format("Number of classes after assignment (%d) exceeds expected classes (%d). Please update your plan or increase expected classes.",
-                            totalClassIfCreate, expectedClass))
-                    .success(false).data(null).build());
+
+        int numberOfClassesToCreate = Math.min(numberOfNeededClasses, maxNewClassesCanCreate);
+
+        if (numberOfClassesToCreate <= 0) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(
+                    ResponseObject.builder()
+                            .message("All planned classes have already been created. No additional classes can be generated.")
+                            .success(false)
+                            .data(null)
+                            .build()
+            );
         }
-        if (numberOfNeededClasses + existing > expectedClass) {
-            return ResponseEntity.status(HttpStatus.CONFLICT).body(ResponseObject.builder()
-                    .message(String.format("Number of needed classes (%d) exceeds expected classes (%d). Please update your plan or increase expected classes.",
-                            numberOfNeededClasses, expectedClass))
-                    .success(false)
-                    .data(null)
-                    .build());
+
+        int maxStudentsCanAssign = numberOfClassesToCreate * numberOfStudentsPerClass;
+        if (studentsToAssign.size() > maxStudentsCanAssign) {
+            studentsToAssign = studentsToAssign.subList(0, maxStudentsCanAssign);
         }
         List<Account> availableTeachers = teachers.stream()
                 .filter(teacher -> teacher.getClasses().stream()
@@ -281,17 +289,17 @@ public class ClassServiceImpl implements ClassService {
                     .data(null)
                     .build());
         }
-        if (availableTeachers.size() < numberOfNeededClasses) {
+        if (availableTeachers.size() < numberOfClassesToCreate) {
             return ResponseEntity.status(HttpStatus.CONFLICT).body(ResponseObject.builder()
                     .message(String.format("Only %d teachers available but %d new classes required",
-                            availableTeachers.size(), numberOfNeededClasses))
+                            availableTeachers.size(), numberOfClassesToCreate))
                     .success(false)
                     .data(null)
                     .build());
         }
         List<Classes> toSave = new ArrayList<>();
         int studentIdx = 0;
-        for (int i = 0; i < numberOfNeededClasses; i++) {
+        for (int i = 0; i < numberOfClassesToCreate; i++) {
             Account assignedTeacher = availableTeachers.get(i);
             Classes cls = Classes.builder()
                     .name(grade + "-" + (existing + i + 1) + "-" + request.getYear())
@@ -387,7 +395,7 @@ public class ClassServiceImpl implements ClassService {
         }
         return ResponseEntity.ok(
                 ResponseObject.builder()
-                        .message("Classes generated successfully")
+                        .message( numberOfClassesToCreate + " classes generated successfully")
                         .success(true)
                         .data(null)
                         .build()
@@ -581,10 +589,13 @@ public class ClassServiceImpl implements ClassService {
 
         List<Activity> activities = activityRepo.findBySchedule_Id(Integer.parseInt(scheduleId));
 
+        activities.sort(Comparator.comparing(Activity::getDayOfWeek)
+                .thenComparing(Activity::getStartTime));
+
         Map<String, List<Map<String, Object>>> grouped = activities.stream()
                 .collect(Collectors.groupingBy(
-                        a -> a.getDayOfWeek().toString(), // key: "MONDAY", "TUESDAY",...
-                        LinkedHashMap::new,                // giữ thứ tự ngày nếu muốn
+                        a -> a.getDayOfWeek().toString(),
+                        LinkedHashMap::new,
                         Collectors.mapping(this::buildActivityDetail, Collectors.toList())
                 ));
 
@@ -592,7 +603,14 @@ public class ClassServiceImpl implements ClassService {
                 .map(e -> {
                     Map<String, Object> group = new HashMap<>();
                     group.put("dayOfWeek", e.getKey());
-                    group.put("activities", e.getValue());
+                    List<Map<String, Object>> activitiesOfDay = e.getValue();
+                    // Lấy ngày của activity đầu tiên trong group
+                    String date = "";
+                    if (!activitiesOfDay.isEmpty() && activitiesOfDay.get(0).get("date") != null) {
+                        date = activitiesOfDay.get(0).get("date").toString();
+                    }
+                    group.put("date", date);
+                    group.put("activities", activitiesOfDay);
                     return group;
                 })
                 .toList();
@@ -605,6 +623,63 @@ public class ClassServiceImpl implements ClassService {
                         .build()
         );
     }
+
+
+
+    @Override
+    public ResponseEntity<ResponseObject> viewClassDetail(String classId) {
+
+        String error = checkClassId(classId);
+
+        if(!error.isEmpty())
+        {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(ResponseObject.builder()
+                            .message(error)
+                            .success(false)
+                            .data(null)
+                            .build());
+        }
+
+        if (classRepo.findById(Integer.parseInt(classId)).isEmpty()){
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
+                    ResponseObject.builder()
+                            .message("Class with id " + classId + " does not exist or be deleted")
+                            .success(false)
+                            .data(null)
+                            .build()
+            );        }
+
+        Classes classes = classRepo.findById(Integer.parseInt(classId)).get();
+
+        List<SyllabusLesson> lessons = classes.getSyllabus().getSyllabusLessonList();
+
+        List<Map<String, Object>> lessonList = lessons.stream()
+                .map(SyllabusLesson::getLesson)
+                .map(this::buildLessonDetail)
+                .toList();
+
+        Map<String, Object> data = new HashMap<>();
+        data.put("id", classes.getId());
+        data.put("name", classes.getName());
+        data.put("startDate", classes.getStartDate());
+        data.put("endDate", classes.getEndDate());
+        data.put("year", classes.getAcademicYear());
+        data.put("teacherName", classes.getTeacher().getName());
+        data.put("teacherPhoneNumber", classes.getTeacher().getPhone());
+        data.put("teacherEmail", classes.getTeacher().getEmail());
+        data.put("numberStudents", classes.getNumberStudent());
+        data.put("status", classes.getStatus());
+        data.put("grade", classes.getGrade());
+        data.put("syllabusName", classes.getSyllabus().getSubject());
+        data.put("lessonList",  lessonList);
+        return ResponseEntity.ok().body(
+                ResponseObject.builder()
+                        .message("View Detail Class Successfully")
+                        .success(true)
+                        .data(data)
+                        .build()
+        );    }
 
     @Override
     public ResponseEntity<ResponseObject> viewNumberOfStudentsNotAssignToAnyClassByYearAdnGrade(String year, String grade) {
@@ -689,6 +764,66 @@ public class ClassServiceImpl implements ClassService {
                         .data(studentList)
                         .build()
         );
+    }
+
+    @Override
+    public ResponseEntity<ResponseObject> unassignStudentsFromClass(UnassignStudentsFromClassRequest request) {
+        if (classRepo.findById(request.getClassId()).isEmpty())
+
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(ResponseObject.builder()
+                            .success(false)
+                            .message("Class with id " + request.getClassId() + "doesn't found or be deleted")
+                            .data(null)
+                            .build());
+
+        Classes cls = classRepo.findById(request.getClassId()).get();
+
+        if (cls.getStatus().equalsIgnoreCase(Status.CLASS_IN_PROGRESS.getValue())
+                || cls.getStatus().equalsIgnoreCase(Status.CLASS_CLOSED.getValue()))
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body(ResponseObject.builder()
+                            .success(false)
+                            .message("Cannot unassign students because class is already in progress or closed.")
+                            .data(null)
+                            .build());
+
+        List<StudentClass> toRemove = studentClassRepo.findByClasses_IdAndStudent_IdIn(request.getClassId(), request.getStudentIds());
+
+        if (toRemove.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(ResponseObject.builder()
+                            .success(false)
+                            .message("No matching students are currently assigned to this class.")
+                            .data(null)
+                            .build());
+        }
+
+        int currentCount = studentClassRepo.countByClasses_Id(request.getClassId());
+        int remaining = currentCount - toRemove.size();
+        int minAllowedToRemove = 10;
+
+        if (remaining < minAllowedToRemove) {
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body(ResponseObject.builder()
+                            .success(false)
+                            .message("Cannot unassign. Minimum allowed students in a class is " + minAllowedToRemove +
+                                    ".\n Current: " + currentCount + ", Trying to unassign: " + toRemove.size())
+                            .data(null)
+                            .build());
+        }
+
+        // 4. Thực hiện xoá
+        studentClassRepo.deleteAll(toRemove);
+        cls.setNumberStudent(remaining);
+        classRepo.save(cls);
+
+        return ResponseEntity.ok(
+                ResponseObject.builder()
+                        .success(true)
+                        .message("Unassigned " + toRemove.size() + " students from class successfully.")
+                        .data(null)
+                        .build());
     }
 
     @Override
@@ -933,6 +1068,74 @@ public class ClassServiceImpl implements ClassService {
     }
 
     @Override
+    public ResponseEntity<ResponseObject> assignAvailableStudents(AssignStudentsToClassRequest request) {
+        List<Integer> studentIds = request.getStudentIds();
+        List<Student> found = studentRepo.findAllByIdIn(studentIds);
+
+        Set<Integer> foundIds = found.stream()
+                .map(Student::getId)
+                .collect(Collectors.toSet());
+
+        List<Integer> missingIds = studentIds.stream()
+                .filter(id -> !foundIds.contains(id))
+                .toList();
+
+        if (missingIds.size() == studentIds.size()) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(ResponseObject.builder()
+                            .success(false)
+                            .message("The following student IDs do not exist or be deleted: " + missingIds)
+                            .data(null)
+                            .build());
+        }
+
+        if(classRepo.findById(request.getClassId()).isEmpty())
+
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(ResponseObject.builder()
+                            .success(false)
+                            .message("Class with id " + request.getClassId() + "doesn't found or be deleted")
+                            .data(null)
+                            .build());
+
+        Classes cls = classRepo.findById(request.getClassId()).get();
+
+        if (cls.getStatus().equalsIgnoreCase(Status.CLASS_IN_PROGRESS.getValue())
+                || cls.getStatus().equalsIgnoreCase(Status.CLASS_CLOSED.getValue()))
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body(ResponseObject.builder()
+                            .success(false)
+                            .message("Cannot assign students because class is already in progress or closed.")
+                            .data(null)
+                            .build());
+
+        List<StudentClass> scList = new ArrayList<>();
+        for (Student student : found) {
+            scList.add(StudentClass.builder()
+                    .classes(cls)
+                    .student(student)
+                    .build());
+        }
+
+        cls.setStudentClassList(scList);
+        cls.setNumberStudent(scList.size());
+
+        classRepo.save(cls);
+
+        String message = "Assigned " + scList.size() + " students to class successfully.\n";
+        if (!missingIds.isEmpty()) {
+            message += " However, the following student IDs do not exist or have been deleted: " + missingIds;
+        }
+
+        return ResponseEntity.ok(
+                ResponseObject.builder()
+                        .success(true)
+                        .message(message)
+                        .data(scList)
+                        .build());
+    }
+
+    @Override
     public ResponseEntity<ResponseObject> viewListClassesOfChild(String childId) {
 
         String error = checkStudentId(childId);
@@ -976,6 +1179,23 @@ public class ClassServiceImpl implements ClassService {
                         .data(classes)
                         .build()
         );
+    }
+
+    @Override
+    public ResponseEntity<ResponseObject> viewAssignedTeacherOfClass(String classId) {
+
+        String error = checkClassId(classId);
+
+        if(!error.isEmpty()){
+
+        }
+
+        return null;
+    }
+
+    @Override
+    public ResponseEntity<ResponseObject> reportNumberOfClassesByGradeAndTermYear() {
+        return null;
     }
 
     private Grade getGradeFromName(String name) {
@@ -1100,6 +1320,16 @@ public class ClassServiceImpl implements ClassService {
         data.put("startTime", activity.getStartTime());
         data.put("endTime", activity.getEndTime());
         data.put("date", activity.getDate());
+        return data;
+    }
+
+    private Map<String, Object> buildLessonDetail(Lesson lesson) {
+        Map<String, Object> data = new HashMap<>();
+        data.put("id", lesson.getId());
+        data.put("topic", lesson.getTopic());
+        data.put("description", lesson.getDescription());
+        data.put("objective", lesson.getObjective());
+        data.put("duration", lesson.getDuration());
         return data;
     }
 
