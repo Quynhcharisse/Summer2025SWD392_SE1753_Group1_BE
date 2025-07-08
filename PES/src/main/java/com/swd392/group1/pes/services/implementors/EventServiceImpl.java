@@ -20,12 +20,22 @@ import com.swd392.group1.pes.services.EventService;
 import com.swd392.group1.pes.services.MailService;
 import com.swd392.group1.pes.utils.email.Format;
 import lombok.RequiredArgsConstructor;
+import org.apache.commons.io.output.ByteArrayOutputStream;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.springframework.core.io.ByteArrayResource;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
+import java.io.IOException;
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.time.Period;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
@@ -202,7 +212,7 @@ public class EventServiceImpl implements EventService {
             return "Location is required";
         }
 
-        if (request.getLocation().length() > 200) {
+        if (request.getLocation().length() > 100) {
             return "Location must not exceed 200 characters";
         }
 
@@ -428,6 +438,111 @@ public class EventServiceImpl implements EventService {
     }
 
     @Override
+    public ResponseEntity<ResponseObject> viewAssignedStudentsOfEvent(String id) {
+        String error = checkEventId(id);
+
+        if (!error.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
+                    ResponseObject.builder()
+                            .message(error)
+                            .success(false)
+                            .data(null)
+                            .build());
+        }
+        // Lsson không tồn tại hoặc bị xóa
+        if (eventRepo.findById(Integer.parseInt(id)).isEmpty())
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
+                    ResponseObject.builder()
+                            .message("Event with id " + id + " does not exist or be deleted")
+                            .success(false)
+                            .data(null)
+                            .build()
+            );
+        List<EventParticipate> ep = eventParticipateRepo.findAllByEventId(Integer.parseInt(id));
+
+        List<Map<String, Object>> students = ep.stream()
+                .map(e -> buildStudentDetail(e.getStudent()))
+                .toList();
+
+        return ResponseEntity.ok().body(
+                ResponseObject.builder()
+                        .message("View assigned students of event successfully")
+                        .success(true)
+                        .data(students)
+                        .build()
+        );
+    }
+
+    @Override
+    public ResponseEntity<ByteArrayResource> exportEventParticipateOfEvent(String id) {
+
+        String error = checkEventId(id);
+
+        if (!error.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
+                    null
+            );
+        }
+        try (Workbook workbook = new XSSFWorkbook()) {
+
+                // Lsson không tồn tại hoặc bị xóa
+        if (eventRepo.findById(Integer.parseInt(id)).isEmpty())
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
+                   null
+            );
+
+        Event event = eventRepo.findById(Integer.parseInt(id)).get();
+
+            List<EventParticipate> ep = eventParticipateRepo.findAllByEventId(Integer.parseInt(id));
+
+        List<Student> students =  ep.stream()
+                .map(EventParticipate::getStudent)
+                .toList();
+
+            Sheet sheet = workbook.createSheet("Students");
+
+            String[] headers = {"ID", "Student Name", "Gender", "Age" , "Place Of Birth", "Parent Name", "Parent Phone number"};
+
+            Row header = sheet.createRow(0);
+
+            for (int i = 0; i < headers.length; i++) {
+                header.createCell(i).setCellValue(headers[i]);
+            }
+
+            int rowIdx = 1;
+
+            for(Student student : students){
+                Row row = sheet.createRow(rowIdx++);
+                Account parentAcc = (student.getParent() != null) ? student.getParent().getAccount() : null;
+                row.createCell(0).setCellValue(Objects.toString(student.getId(), ""));
+                row.createCell(1).setCellValue(Objects.toString(student.getName(), ""));
+                row.createCell(2).setCellValue(Objects.toString(student.getGender(), ""));
+                row.createCell(3).setCellValue(Objects.toString(Period.between(student.getDateOfBirth(), event.getRegistrationDeadline().toLocalDate()).getYears(), ""));
+                row.createCell(4).setCellValue(Objects.toString(student.getPlaceOfBirth(), ""));
+                row.createCell(5).setCellValue(Objects.toString(parentAcc != null ? parentAcc.getName() : null, ""));
+                row.createCell(6).setCellValue(Objects.toString(parentAcc != null ? parentAcc.getPhone() : null, ""));
+            }
+
+            for (int i = 0; i < headers.length; i++) {
+                sheet.autoSizeColumn(i);
+            }
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
+            workbook.write(out);
+            ByteArrayResource resource = new ByteArrayResource(out.toByteArray());
+            String fileName = event.getName().replaceAll("\\s+", "_") + "-participants.xlsx";
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + fileName)
+                    .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                    .body(resource);
+
+        } catch (IOException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(
+                    null
+            );
+        }
+    }
+
+    @Override
     public ResponseEntity<ResponseObject> viewAssignedTeachersOfEvent(String id) {
         String error = checkEventId(id);
 
@@ -470,7 +585,6 @@ public class EventServiceImpl implements EventService {
                     tMap.put("phone", account.getPhone());
                     tMap.put("gender", account.getGender());
                     tMap.put("avatarUrl", account.getAvatarUrl());
-                    tMap.put("role", account.getRole());
                     return tMap;
                 })
                 .toList();
@@ -512,6 +626,18 @@ public class EventServiceImpl implements EventService {
         data.put("attachmentImg", event.getAttachmentImg());
         data.put("hostName", event.getHostName());
         return data;
+    }
+
+    private Map<String, Object> buildStudentDetail(Student student) {
+        Map<String, Object> studentDetail = new HashMap<>();
+        studentDetail.put("id", student.getId());
+        studentDetail.put("name", student.getName());
+        studentDetail.put("parentName", student.getParent().getAccount().getName());
+        studentDetail.put("parentPhoneNumber", student.getParent().getAccount().getPhone());
+        studentDetail.put("gender", student.getGender());
+        studentDetail.put("dateOfBirth", student.getDateOfBirth());
+        studentDetail.put("placeOfBirth", student.getPlaceOfBirth());
+        return studentDetail;
     }
 
 }
