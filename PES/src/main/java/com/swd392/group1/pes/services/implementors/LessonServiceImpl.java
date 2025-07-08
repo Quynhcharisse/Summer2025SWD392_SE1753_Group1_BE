@@ -370,7 +370,6 @@ public class LessonServiceImpl implements LessonService {
         data.put("description", lesson.getDescription());
         data.put("objective", lesson.getObjective());
         data.put("duration", lesson.getDuration());
-        data.put("toolsRequired", lesson.getToolsRequired());
         return data;
     }
 

@@ -34,6 +34,12 @@ public class ClassController {
         return classService.deleteClassById(classId);
     }
 
+    @GetMapping("/class/detail")
+    @PreAuthorize("hasAnyRole('education', 'parent')")
+    public ResponseEntity<ResponseObject> viewClassDetail (@RequestParam String classId){
+        return classService.viewClassDetail(classId);
+    }
+
     @GetMapping("/class/listByGradeAndYear")
     @PreAuthorize("hasRole('education')")
     public ResponseEntity<ResponseObject> viewAllClassesByYearAndGrade (@RequestParam String year, @RequestParam String grade){
