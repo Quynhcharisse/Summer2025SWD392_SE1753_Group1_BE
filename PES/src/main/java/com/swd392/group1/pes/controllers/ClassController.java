@@ -1,6 +1,9 @@
 package com.swd392.group1.pes.controllers;
 
+import com.swd392.group1.pes.dto.requests.AssignStudentsToClassRequest;
+import com.swd392.group1.pes.dto.requests.DeleteActivitiesByDateRequest;
 import com.swd392.group1.pes.dto.requests.GenerateClassesRequest;
+import com.swd392.group1.pes.dto.requests.UnassignStudentsFromClassRequest;
 import com.swd392.group1.pes.dto.response.ResponseObject;
 import com.swd392.group1.pes.services.ClassService;
 import lombok.RequiredArgsConstructor;
@@ -87,6 +90,30 @@ public class ClassController {
     @PreAuthorize("hasRole('education')")
     public ResponseEntity<ResponseObject> viewAssignedClassesOfChild(@RequestParam String childId){
         return classService.viewListClassesOfChild(childId);
+    }
+
+    @GetMapping("/classes/reportByYear")
+    @PreAuthorize("hasRole('education')")
+    public ResponseEntity<ResponseObject> reportNumberOfClassesByTermYear(@RequestParam String year){
+        return classService.reportNumberOfClassesByTermYear(year);
+    }
+
+    @PutMapping("/availableStudents/assign")
+    @PreAuthorize("hasRole('education')")
+    public ResponseEntity<ResponseObject> assignAvailableStudents(AssignStudentsToClassRequest request){
+        return classService.assignAvailableStudents(request);
+    }
+
+    @PutMapping("/studentsOfClass/unassign")
+    @PreAuthorize("hasRole('education')")
+    public ResponseEntity<ResponseObject> unassignStudentsFromClass(UnassignStudentsFromClassRequest request){
+        return classService.unassignStudentsFromClass(request);
+    }
+
+    @DeleteMapping("/activitiesByDayAndSchedule")
+    @PreAuthorize("hasRole('education')")
+    public ResponseEntity<ResponseObject> deleteActivitiesByScheduleAndDay(@RequestBody DeleteActivitiesByDateRequest request){
+        return classService.deleteActivitiesByDates(request.getScheduleId(), request.getDate());
     }
 
     @GetMapping("/student/export")

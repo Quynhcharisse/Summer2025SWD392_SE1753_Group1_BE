@@ -6,6 +6,9 @@ import com.swd392.group1.pes.dto.requests.UnassignStudentsFromClassRequest;
 import com.swd392.group1.pes.dto.response.ResponseObject;
 import org.springframework.core.io.Resource;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.RequestParam;
+
+import java.util.List;
 
 public interface ClassService {
     ResponseEntity<ResponseObject> generateClassesAuto(GenerateClassesRequest request);
@@ -21,11 +24,11 @@ public interface ClassService {
     ResponseEntity<ResponseObject> viewAssignedStudentsOfClass(String classId);
     ResponseEntity<ResponseObject> unassignStudentsFromClass(UnassignStudentsFromClassRequest request);
 
+    ResponseEntity<ResponseObject> deleteActivitiesByDates(String scheduleId, String dateStrings);
+
     ResponseEntity<Resource> exportStudentListOfClassToExcel(String classId);
     ResponseEntity<ResponseObject> assignAvailableStudentsAuto(String year, String grade);
     ResponseEntity<ResponseObject> viewListClassesOfChild(String childId);
 
-    ResponseEntity<ResponseObject> viewAssignedTeacherOfClass(String classId);
-
-    ResponseEntity<ResponseObject> reportNumberOfClassesByGradeAndTermYear();
+    ResponseEntity<ResponseObject> reportNumberOfClassesByTermYear(String year);
 }
