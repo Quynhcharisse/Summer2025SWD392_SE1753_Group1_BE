@@ -119,16 +119,16 @@ public class JWTServiceImpl implements JWTService {
     }
 
     @Override
-    public String generateResetToken(UserDetails user) {
+    public String generateVerifyToken(String email) {
         Map<String, Object> claims = new HashMap<>();
         long expiredTime = 5 * 60 * 1000; // 5 phút
-        return generateTokenCode(claims, user, expiredTime);
+        return generateTokenCode(claims, email, expiredTime);
     }
 
-    private String generateTokenCode(Map<String, Object> extractClaims, UserDetails user, long expiredTime) {
+    private String generateTokenCode(Map<String, Object> claims, String email, long expiredTime) {
         return Jwts.builder()
-                .setClaims(extractClaims)
-                .setSubject(user.getUsername())
+                .setClaims(claims)
+                .setSubject(email)
                 .setIssuedAt(new Date())
                 .setExpiration(new Date(System.currentTimeMillis() + expiredTime))
                 .signWith(getSigningKey())
