@@ -2,10 +2,10 @@ package com.swd392.group1.pes.services.implementors;
 
 import com.swd392.group1.pes.dto.requests.ForgotPasswordRequest;
 import com.swd392.group1.pes.dto.requests.LoginRequest;
+import com.swd392.group1.pes.dto.requests.OtpVerifyRequest;
 import com.swd392.group1.pes.dto.requests.RegisterRequest;
 import com.swd392.group1.pes.dto.requests.ResetPassRequest;
 import com.swd392.group1.pes.dto.response.ResponseObject;
-import com.swd392.group1.pes.enums.Role;
 import com.swd392.group1.pes.enums.Status;
 import com.swd392.group1.pes.models.Account;
 import com.swd392.group1.pes.models.Parent;
@@ -15,7 +15,6 @@ import com.swd392.group1.pes.services.AuthService;
 import com.swd392.group1.pes.services.JWTService;
 import com.swd392.group1.pes.services.MailService;
 import com.swd392.group1.pes.utils.CookieUtil;
-import com.swd392.group1.pes.utils.OtpUtil;
 import com.swd392.group1.pes.utils.RandomPasswordUtil;
 import com.swd392.group1.pes.utils.email.Format;
 import jakarta.servlet.http.Cookie;
@@ -27,7 +26,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.regex.Pattern;
@@ -161,35 +159,35 @@ public class AuthServiceImpl implements AuthService {
     }
 
     @Override
-    public ResponseEntity<ResponseObject> sendRegisterOtp(String email) {
-        if (email == null || email.trim().isEmpty()) {
-            return ResponseEntity.badRequest().body(
-                    ResponseObject.builder().message("Email is required.").success(false).data(null).build()
-            );
-        }
-        if (accountRepo.existsByEmail(email)) {
-            return ResponseEntity.badRequest().body(
-                    ResponseObject.builder().message("Email is already in use by another account.").success(false).data(null).build()
+    public ResponseEntity<ResponseObject> registerVerifyEmail(OtpVerifyRequest request) {
+        if (accountRepo.findByEmail(request.getEmail()).isPresent()) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
+                    ResponseObject.builder()
+                            .message("This email is already in use.")
+                            .success(false)
+                            .data(null)
+                            .build()
             );
         }
 
-        String otp = OtpUtil.generateOtp();
-        long expiry = System.currentTimeMillis() + OtpUtil.OTP_EXPIRY_MINUTES * 60 * 1000;
-        OtpUtil.otpStore(email, otp, expiry);
+        String token = jwtService.generateVerifyToken(request.getEmail());
 
-        String code = RandomPasswordUtil.generateRandomString(7) + otp + RandomPasswordUtil.generateRandomString(6);
-        String verificationLink = "http://localhost:5173/register?code=" + code;
+        String prefix = RandomPasswordUtil.generateRandomString(7);
+        String suffix = RandomPasswordUtil.generateRandomString(6);
+        String code = prefix + token + suffix;
+
+        String verifyLink = "http://localhost:5173/register?code=" + code;
 
         mailService.sendMail(
-                email,
+                request.getEmail(),
                 "[PES] Email Verification",
-                "✉️ Complete Your Registration",
-                Format.getEmailVerificationBody(verificationLink, OtpUtil.OTP_EXPIRY_MINUTES)
+                "Please verify your email to continue registration.",
+                Format.getEmailVerificationBody(verifyLink, request.getEmail())
         );
 
         return ResponseEntity.ok(
                 ResponseObject.builder()
-                        .message("Registration link sent to email.")
+                        .message("A verification email has been sent to " + request.getEmail())
                         .success(true)
                         .data(null)
                         .build()
@@ -200,7 +198,7 @@ public class AuthServiceImpl implements AuthService {
     public ResponseEntity<ResponseObject> register(RegisterRequest request) {
         String error = registerValidation(request, accountRepo);
         if (!error.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
+            return ResponseEntity.badRequest().body(
                     ResponseObject.builder()
                             .message(error)
                             .success(false)
@@ -209,92 +207,83 @@ public class AuthServiceImpl implements AuthService {
             );
         }
 
+        String token = extractTokenFromCode(request.getCode());
+
+        String email;
         try {
-            String code = request.getCode();
-            if (code.contains("?code=")) {
-                code = code.substring(code.indexOf("?code=") + 6);
-            }
-            String otp = code.substring(7, code.length() - 6);
-
-            OtpUtil.OtpInfo info = OtpUtil.getOtpInfo(request.getEmail());
-            if (info == null || System.currentTimeMillis() > info.expiryTime) {
+            if (!jwtService.checkIfNotExpired(token)) {
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
                         ResponseObject.builder()
-                                .message("Registration link expired. Please request a new one.")
+                                .message("The verification link has expired.")
                                 .success(false)
                                 .data(null)
                                 .build()
                 );
             }
 
-            if (!info.otp.equals(otp)) {
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
-                        ResponseObject.builder()
-                                .message("Invalid verification code.")
-                                .success(false)
-                                .data(null)
-                                .build()
-                );
-            }
-
-            if (accountRepo.existsByEmail(request.getEmail())) {
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
-                        ResponseObject.builder()
-                                .message("Email is already in use by another account.")
-                                .success(false)
-                                .data(null)
-                                .build()
-                );
-            }
-
-            Account account = new Account();
-            account.setEmail(request.getEmail());
-            account.setPassword(request.getPassword());
-            account.setName(request.getName());
-            account.setPhone(request.getPhone());
-            account.setGender(request.getGender());
-            account.setIdentityNumber(request.getIdentityNumber());
-            account.setRole(Role.PARENT);
-            account.setStatus(Status.ACCOUNT_ACTIVE.getValue());
-            account.setCreatedAt(LocalDateTime.now());
-            account.setAddress(request.getAddress());
-
-            accountRepo.save(account);
-
-            Parent parent = Parent.builder()
-                    .job(request.getJob())
-                    .relationshipToChild(request.getRelationshipToChild())
-                    .account(account)
-                    .build();
-            parentRepo.save(parent);
-
-            OtpUtil.removeOtp(request.getEmail());
-
-            mailService.sendMail(
-                    account.getEmail(),
-                    "[PES] Account Registration Successful",
-                    "🎉 Account Created Successfully",
-                    Format.getParentRegisterFormat(account.getName(), account.getEmail())
-            );
-
-            return ResponseEntity.status(HttpStatus.OK).body(
-                    ResponseObject.builder()
-                            .message("Registration successful")
-                            .success(true)
-                            .data(null)
-                            .build()
-            );
-
+            email = jwtService.extractEmailFromJWT(token);
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(
                     ResponseObject.builder()
-                            .message("Invalid registration code")
+                            .message("Invalid or tampered token.")
                             .success(false)
                             .data(null)
                             .build()
             );
         }
+
+        if (accountRepo.findByEmail(email).isPresent()) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
+                    ResponseObject.builder()
+                            .message("This email has already been registered.")
+                            .success(false)
+                            .data(null)
+                            .build()
+            );
+        }
+
+        Account account = Account.builder()
+                .email(email)
+                .password(request.getPassword())
+                .name(request.getName())
+                .phone(request.getPhone())
+                .gender(request.getGender())
+                .address(request.getAddress())
+                .identityNumber(request.getIdentityNumber())
+                .status(Status.ACCOUNT_ACTIVE.getValue())
+                .build();
+
+        accountRepo.save(account);
+
+        parentRepo.save(Parent.builder()
+                .account(account)
+                .job(request.getJob())
+                .relationshipToChild(request.getRelationshipToChild())
+                .build());
+
+        mailService.sendMail(
+                account.getEmail(),
+                "[PES] Registration Successful",
+                "Welcome to PES!",
+                Format.getRegistrationSuccessBody(account.getName())
+        );
+
+        return ResponseEntity.ok(
+                ResponseObject.builder()
+                        .message("Registration successful. Your account has been activated.")
+                        .success(true)
+                        .data(null)
+                        .build()
+        );
     }
+
+    private String extractTokenFromCode(String code) {
+        if (code.contains("?code=")) {
+            code = code.substring(code.indexOf("?code=") + 6);
+        }
+        return code.substring(7, code.length() - 6);
+    }
+
 
     public static String registerValidation(RegisterRequest request, AccountRepo accountRepo) {
         if (request.getEmail() == null || request.getEmail().trim().isEmpty()) {
@@ -385,6 +374,7 @@ public class AuthServiceImpl implements AuthService {
         return "";
     }
 
+
     @Override
     public ResponseEntity<ResponseObject> forgotPassword(ForgotPasswordRequest request) {
         String error = forgotPasswordValidation(request, accountRepo);
@@ -398,8 +388,7 @@ public class AuthServiceImpl implements AuthService {
             );
         }
 
-        Account account = accountRepo.findByEmailAndStatus(request.getEmail(), Status.ACCOUNT_ACTIVE.getValue()).orElse(null);
-        if (account == null) {
+        if (accountRepo.findByEmailAndStatus(request.getEmail(), Status.ACCOUNT_ACTIVE.getValue()).isPresent()) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
                     ResponseObject.builder()
                             .message("Account not found")
@@ -409,7 +398,7 @@ public class AuthServiceImpl implements AuthService {
             );
         }
 
-        String token = jwtService.generateResetToken(account);
+        String token = jwtService.generateVerifyToken(request.getEmail());
 
         String prefix = RandomPasswordUtil.generateRandomString(7);
         String suffix = RandomPasswordUtil.generateRandomString(6);
@@ -418,7 +407,7 @@ public class AuthServiceImpl implements AuthService {
         String resetLink = "http://localhost:5173/reset-pass?code=" + code;
 
         mailService.sendMail(
-                account.getEmail(),
+                request.getEmail(),
                 "[PES] Password Reset Request",
                 "Reset Your Password",
                 Format.getForgotPasswordBody(resetLink)
@@ -431,21 +420,6 @@ public class AuthServiceImpl implements AuthService {
                         .build()
         );
     }
-
-    public static String forgotPasswordValidation(ForgotPasswordRequest request, AccountRepo accountRepo) {
-        if (request.getEmail() == null || request.getEmail().trim().isEmpty()) {
-            return "Email is required.";
-        }
-
-        Account acc = accountRepo.findByEmailAndStatus(request.getEmail(), Status.ACCOUNT_ACTIVE.getValue()).orElse(null);
-
-        if (acc == null) {
-            return "No active account found with this email.";
-        }
-
-        return "";
-    }
-
 
     @Override
     public ResponseEntity<ResponseObject> resetPass(ResetPassRequest request) {
@@ -546,4 +520,19 @@ public class AuthServiceImpl implements AuthService {
 
         return "";
     }
+
+    public static String forgotPasswordValidation(ForgotPasswordRequest request, AccountRepo accountRepo) {
+        if (request.getEmail() == null || request.getEmail().trim().isEmpty()) {
+            return "Email is required.";
+        }
+
+        Account acc = accountRepo.findByEmailAndStatus(request.getEmail(), Status.ACCOUNT_ACTIVE.getValue()).orElse(null);
+
+        if (acc == null) {
+            return "No active account found with this email.";
+        }
+
+        return "";
+    }
+
 }

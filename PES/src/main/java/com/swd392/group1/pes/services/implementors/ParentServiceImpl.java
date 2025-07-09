@@ -257,7 +257,7 @@ public class ParentServiceImpl implements ParentService {
 
         // 8. Gửi email notification
         String subject = "[PES] Admission Form Submitted";
-        String heading = "📨 Admission Form Submitted";
+        String heading = "Admission Form Submitted";
         String bodyHtml = Format.getAdmissionSubmittedBody(
                 account.getName(),
                 LocalDate.now().toString()
@@ -360,7 +360,6 @@ public class ParentServiceImpl implements ParentService {
         return age >= 3 && age <= 5;
     }
 
-    //refill form
     @Override
     public ResponseEntity<ResponseObject> refillForm(RefillFormRequest request, HttpServletRequest httpRequest) {
         AdmissionForm form = admissionFormRepo.findById(request.getFormId()).orElse(null);

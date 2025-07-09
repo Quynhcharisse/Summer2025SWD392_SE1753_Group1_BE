@@ -2,6 +2,7 @@ package com.swd392.group1.pes.controllers;
 
 import com.swd392.group1.pes.dto.requests.ForgotPasswordRequest;
 import com.swd392.group1.pes.dto.requests.LoginRequest;
+import com.swd392.group1.pes.dto.requests.OtpVerifyRequest;
 import com.swd392.group1.pes.dto.requests.RegisterRequest;
 import com.swd392.group1.pes.dto.requests.ResetPassRequest;
 import com.swd392.group1.pes.dto.response.ResponseObject;
@@ -42,14 +43,14 @@ public class AuthController {
         return authService.refresh(request, response);
     }
 
-    @PostMapping("/register/otp/send")
-    public ResponseEntity<ResponseObject> sendRegisterOtp(@RequestParam String email) {
-        return authService.sendRegisterOtp(email);
-    }
-
     @PostMapping("/register")
     public ResponseEntity<ResponseObject> register (@RequestBody RegisterRequest request){
         return authService.register(request);
+    }
+
+    @PostMapping("/register/otp/verify")
+    public ResponseEntity<ResponseObject> registerVerifyEmail(@RequestBody OtpVerifyRequest request) {
+        return authService.registerVerifyEmail(request);
     }
 
     @PostMapping("/password/forgot")
