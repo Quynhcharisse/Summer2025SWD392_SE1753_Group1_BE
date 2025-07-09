@@ -62,6 +62,7 @@ import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -279,6 +280,7 @@ public class ClassServiceImpl implements ClassService {
                 .filter(teacher -> teacher.getClasses().stream()
                         .noneMatch(cls ->
                                 cls.getAcademicYear() == Integer.parseInt(request.getYear())
+                                        || Status.CLASS_IN_PROGRESS.getValue().equalsIgnoreCase(cls.getStatus())
                         )
                 )
                 .toList();
@@ -826,6 +828,204 @@ public class ClassServiceImpl implements ClassService {
                         .build());
     }
 
+    @Transactional
+    @Override
+    public ResponseEntity<ResponseObject> deleteActivitiesByDates(String scheduleId, String dateStr) {
+        Integer scheduleIdInt;
+        try {
+            scheduleIdInt = Integer.parseInt(scheduleId);
+        } catch (NumberFormatException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
+                    ResponseObject.builder().success(false).message("Invalid schedule ID").data(null).build());
+        }
+
+        LocalDate deleteDate;
+        try {
+            deleteDate = LocalDate.parse(dateStr.trim());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
+                    ResponseObject.builder().success(false).message("Invalid date format (expected yyyy-MM-dd)").data(null).build());
+        }
+
+        Optional<Schedule> optionalSchedule = scheduleRepo.findById(scheduleIdInt);
+        if (optionalSchedule.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
+                    ResponseObject.builder().success(false).message("Schedule not found").data(null).build());
+        }
+
+        LocalDate today = LocalDate.now();
+        if (deleteDate.isBefore(today)) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
+                    ResponseObject.builder()
+                            .success(false)
+                            .message("Activities in the past cannot be deleted")
+                            .data(null)
+                            .build()
+            );
+        }
+
+        Schedule oldSchedule = optionalSchedule.get();
+        Classes cls = oldSchedule.getClasses();
+        List<Schedule> allSchedules = cls.getScheduleList();
+
+        if (cls.getStatus().equalsIgnoreCase(Status.CLASS_IN_PROGRESS.getValue()) ) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
+                    ResponseObject.builder()
+                            .success(false)
+                            .message("Cannot delete activities for a class that is IN_PROGRESS")
+                            .data(null)
+                            .build()
+            );
+        }
+
+        // 1. Lấy các activity theo ngày cần xóa
+        List<Activity> toReassign = activityRepo.findBySchedule_Id(scheduleIdInt).stream()
+                .filter(act -> act.getDate().equals(deleteDate))
+                .sorted(Comparator.comparing(Activity::getDate))
+                .toList();
+
+        if (toReassign.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
+                    ResponseObject.builder().success(false).message("No activities found for provided dates").data(null).build());
+        }
+
+        // 2. Gom theo từng ngày
+        Map<LocalDate, List<Activity>> activitiesByDate = toReassign.stream()
+                .collect(Collectors.groupingBy(Activity::getDate, LinkedHashMap::new, Collectors.toList()));
+
+        // 3. Xóa các activity khỏi schedule.activityList (gỡ liên kết entity trước)
+        for (Schedule sch : allSchedules) {
+            if (sch.getActivityList() != null) {
+                sch.getActivityList().removeIf(toReassign::contains);
+            }
+        }
+
+
+        // 3.1. Nếu schedule hiện tại không còn activity nào -> xóa schedule đó
+        List<Schedule> emptySchedules = allSchedules.stream()
+                .filter(sch -> sch.getActivityList() == null || sch.getActivityList().isEmpty())
+                .toList();
+        scheduleRepo.deleteAll(emptySchedules);
+
+// 3.2. Lấy lại danh sách Schedule sau khi xóa
+        List<Schedule> updatedSchedules = cls.getScheduleList().stream()
+                .filter(sch -> !emptySchedules.contains(sch))
+                .sorted(Comparator.comparing(sch -> sch.getActivityList().stream()
+                        .map(Activity::getDate)
+                        .min(Comparator.naturalOrder())
+                        .orElse(LocalDate.MAX)))
+                .toList();
+
+        for (Schedule sch : updatedSchedules) {
+            if (sch.getActivityList() != null) {
+                List<Activity> cleaned = sch.getActivityList().stream()
+                        .filter(a -> a.getId() != null && !toReassign.contains(a)) // bỏ activity vừa xoá
+                        .toList();
+                sch.getActivityList().clear(); // giữ nguyên danh sách được Hibernate quản lý
+                sch.getActivityList().addAll(cleaned); // thêm lại phần tử hợp lệ
+            }
+        }
+
+        for (int i = 0; i < updatedSchedules.size(); i++) {
+            updatedSchedules.get(i).setWeekName("Week - " + (i + 1));
+        }
+        scheduleRepo.saveAll(updatedSchedules);
+
+// Cập nhật lại danh sách allSchedules để dùng ở dưới
+        allSchedules = updatedSchedules;
+
+        // 4. Tìm endDate hiện tại và ngày tiếp theo sau đó (bỏ qua T7/CN)
+        LocalDate currentEndDate = cls.getEndDate();
+        LocalDate nextDate = currentEndDate.plusDays(1);
+        while (nextDate.getDayOfWeek() == DayOfWeek.SATURDAY || nextDate.getDayOfWeek() == DayOfWeek.SUNDAY) {
+            nextDate = nextDate.plusDays(1);
+        }
+
+        int weekCounter = allSchedules.size();
+        List<Activity> reassigned = new ArrayList<>();
+        Schedule currentSchedule = null;
+        int activitiesInCurrentWeek = 0;
+
+
+// Nếu lớp đã có Schedule, thử tái sử dụng tuần cuối nếu còn chỗ
+        if (!allSchedules.isEmpty()) {
+            Schedule lastSchedule = allSchedules.get(allSchedules.size() - 1);
+
+            Set<LocalDate> uniqueDates = lastSchedule.getActivityList().stream()
+                    .map(Activity::getDate)
+                    .collect(Collectors.toSet());
+
+            long weekdayCount = uniqueDates.stream()
+                    .filter(date -> date.getDayOfWeek().getValue() >= 1 && date.getDayOfWeek().getValue() <= 5)
+                    .count();
+
+            if (weekdayCount < 5) {
+                currentSchedule = lastSchedule;
+                activitiesInCurrentWeek = (int) weekdayCount;
+            }
+        }
+
+        for (List<Activity> dailyActivities : activitiesByDate.values()) {
+            // Nếu hết tuần (5 ngày), tạo tuần mới
+            if (currentSchedule == null || activitiesInCurrentWeek >= 5) {
+                weekCounter++;
+                currentSchedule = Schedule.builder()
+                        .weekName("Week - " + weekCounter)
+                        .classes(cls)
+                        .activityList(new ArrayList<>())
+                        .build();
+                scheduleRepo.save(currentSchedule);
+                activitiesInCurrentWeek = 0;
+                nextDate = currentEndDate.plusDays(1);
+                while (nextDate.getDayOfWeek() != DayOfWeek.MONDAY) {
+                    nextDate = nextDate.plusDays(1);
+                }
+            }
+
+            // Tạo lại các hoạt động cho ngày mới
+            for (Activity old : dailyActivities) {
+                Activity newAct = Activity.builder()
+                        .name(old.getName())
+                        .syllabusName(old.getSyllabusName())
+                        .startTime(old.getStartTime())
+                        .endTime(old.getEndTime())
+                        .date(nextDate)
+                        .dayOfWeek(nextDate.getDayOfWeek())
+                        .schedule(currentSchedule)
+                        .build();
+
+                currentSchedule.getActivityList().add(newAct);
+                reassigned.add(newAct);
+            }
+
+            activitiesInCurrentWeek++;
+
+            // Tìm ngày kế tiếp hợp lệ (bỏ qua Thứ 7 & CN)
+            nextDate = nextDate.plusDays(1);
+            while (nextDate.getDayOfWeek() == DayOfWeek.SATURDAY || nextDate.getDayOfWeek() == DayOfWeek.SUNDAY) {
+                nextDate = nextDate.plusDays(1);
+            }
+        }
+
+        // 5. Cập nhật endDate mới cho lớp
+        LocalDate newEndDate = reassigned.stream()
+                .map(Activity::getDate)
+                .max(Comparator.naturalOrder())
+                .orElse(currentEndDate);
+        cls.setEndDate(newEndDate);
+        classRepo.save(cls);
+
+        return ResponseEntity.ok(
+                ResponseObject.builder()
+                        .success(true)
+                        .message("Deleted " + toReassign.size() + " activities and reassigned them from " + dateStr + " to " + newEndDate)
+                        .data(null)
+                        .build()
+        );
+    }
+
+
+
     @Override
     public ResponseEntity<Resource> exportStudentListOfClassToExcel(String classId) {
         int classIdInt;
@@ -842,7 +1042,7 @@ public class ClassServiceImpl implements ClassService {
 
         List<StudentClass> studentClasses = studentClassRepo.findByClasses_Id(cls.getId());
         String[] columns = {"ID", "Name", "Gender", "Date of Birth", "Place of Birth", "Class Name", "Grade", "Academic Year", "Teacher Name", "Teacher Phone"};
-        String fileNameTimestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
+        String fileNameTimestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd HHmmss"));
 
         try (Workbook workbook = new XSSFWorkbook(); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
             Sheet sheet = workbook.createSheet("Students");
@@ -856,8 +1056,6 @@ public class ClassServiceImpl implements ClassService {
             int rowIdx = 1;
             for (StudentClass sc : studentClasses) {
                 Student student = sc.getStudent();
-                if (student == null) continue;
-
                 Row row = sheet.createRow(rowIdx++);
                 row.createCell(0).setCellValue(student.getId());
                 row.createCell(1).setCellValue(student.getName());
@@ -1182,21 +1380,67 @@ public class ClassServiceImpl implements ClassService {
     }
 
     @Override
-    public ResponseEntity<ResponseObject> viewAssignedTeacherOfClass(String classId) {
+    public ResponseEntity<ResponseObject> reportNumberOfClassesByTermYear(String year) {
 
-        String error = checkClassId(classId);
+        List<Integer> years = admissionTermRepo.findAll()
+                .stream()
+                .map(AdmissionTerm::getYear)
+                .distinct()
+                .sorted()
+                .toList();
 
-        if(!error.isEmpty()){
+        if (year.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
+                    ResponseObject.builder()
+                            .message("Year cannot be empty")
+                            .success(false)
+                            .data(null)
+                            .build()
+            );
+        }
+        try {
+            int numberYear = Integer.parseInt(year);
 
+            if (!years.contains(numberYear)) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
+                        ResponseObject.builder()
+                                .message("The academic year you selected does not exist in any admission term. Please verify your selection and try again.")
+                                .success(false)
+                                .data(null)
+                                .build()
+                );
+            }
+
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
+                    ResponseObject.builder()
+                            .message("Year must be number")
+                            .success(false)
+                            .data(null)
+                            .build()
+            );        }
+        int total = classRepo.countByAcademicYear(Integer.parseInt(year));
+
+        Map<String, Integer> gradeCounts = new LinkedHashMap<>();
+        for (Grade grade : Grade.values()) {
+            int count = classRepo.countByAcademicYearAndGrade(Integer.parseInt(year), grade);
+            gradeCounts.put(grade.name(), count);
         }
 
-        return null;
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("totalClasses", total);
+        result.put("byGrade", gradeCounts);
+
+        return ResponseEntity.ok(
+                ResponseObject.builder()
+                        .success(true)
+                        .message("Class statistics for academic year " + year)
+                        .data(result)
+                        .build()
+        );
     }
 
-    @Override
-    public ResponseEntity<ResponseObject> reportNumberOfClassesByGradeAndTermYear() {
-        return null;
-    }
+
 
     private Grade getGradeFromName(String name) {
         for (Grade grade : Grade.values()) {
