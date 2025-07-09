@@ -2,6 +2,7 @@ package com.swd392.group1.pes.services;
 
 import com.swd392.group1.pes.dto.requests.ForgotPasswordRequest;
 import com.swd392.group1.pes.dto.requests.LoginRequest;
+import com.swd392.group1.pes.dto.requests.OtpVerifyRequest;
 import com.swd392.group1.pes.dto.requests.RegisterRequest;
 import com.swd392.group1.pes.dto.requests.ResetPassRequest;
 import com.swd392.group1.pes.dto.response.ResponseObject;
@@ -18,10 +19,9 @@ public interface AuthService {
 
     ResponseEntity<ResponseObject> register (RegisterRequest request);
 
+    ResponseEntity<ResponseObject> registerVerifyEmail (OtpVerifyRequest request);
+
     ResponseEntity<ResponseObject> forgotPassword (ForgotPasswordRequest request);
 
     ResponseEntity<ResponseObject> resetPass (ResetPassRequest request);
-
-    ResponseEntity<ResponseObject> sendRegisterOtp(String email);
-
 }

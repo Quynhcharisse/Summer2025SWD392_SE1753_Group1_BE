@@ -16,5 +16,5 @@ public interface JWTService {
 
     boolean checkIfNotExpired(String jwt);
 
-    String generateResetToken(UserDetails user);
+    String generateVerifyToken(String email);
 }
