@@ -6,6 +6,7 @@ import com.swd392.group1.pes.dto.requests.OtpVerifyRequest;
 import com.swd392.group1.pes.dto.requests.RegisterRequest;
 import com.swd392.group1.pes.dto.requests.ResetPassRequest;
 import com.swd392.group1.pes.dto.response.ResponseObject;
+import com.swd392.group1.pes.enums.Role;
 import com.swd392.group1.pes.enums.Status;
 import com.swd392.group1.pes.models.Account;
 import com.swd392.group1.pes.models.Parent;
@@ -250,6 +251,7 @@ public class AuthServiceImpl implements AuthService {
                 .gender(request.getGender())
                 .address(request.getAddress())
                 .identityNumber(request.getIdentityNumber())
+                .role(Role.PARENT)
                 .status(Status.ACCOUNT_ACTIVE.getValue())
                 .build();
 
