@@ -3,6 +3,8 @@ package com.swd392.group1.pes.services.implementors;
 import com.swd392.group1.pes.dto.requests.AssignStudentsToClassRequest;
 import com.swd392.group1.pes.dto.requests.GenerateClassesRequest;
 import com.swd392.group1.pes.dto.requests.UnassignStudentsFromClassRequest;
+import com.swd392.group1.pes.dto.requests.ViewCurrentScheduleRequest;
+
 import com.swd392.group1.pes.dto.response.ResponseObject;
 import com.swd392.group1.pes.enums.Grade;
 import com.swd392.group1.pes.enums.Role;
@@ -12,6 +14,8 @@ import com.swd392.group1.pes.models.Activity;
 import com.swd392.group1.pes.models.AdmissionForm;
 import com.swd392.group1.pes.models.AdmissionTerm;
 import com.swd392.group1.pes.models.Classes;
+import com.swd392.group1.pes.models.Event;
+import com.swd392.group1.pes.models.EventParticipate;
 import com.swd392.group1.pes.models.Lesson;
 import com.swd392.group1.pes.models.Parent;
 import com.swd392.group1.pes.models.Schedule;
@@ -24,6 +28,8 @@ import com.swd392.group1.pes.repositories.ActivityRepo;
 import com.swd392.group1.pes.repositories.AdmissionFormRepo;
 import com.swd392.group1.pes.repositories.AdmissionTermRepo;
 import com.swd392.group1.pes.repositories.ClassRepo;
+import com.swd392.group1.pes.repositories.EventParticipateRepo;
+import com.swd392.group1.pes.repositories.EventRepo;
 import com.swd392.group1.pes.repositories.ScheduleRepo;
 import com.swd392.group1.pes.repositories.StudentClassRepo;
 import com.swd392.group1.pes.repositories.StudentRepo;
@@ -56,6 +62,7 @@ import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -82,6 +89,8 @@ public class ClassServiceImpl implements ClassService {
     private final ScheduleRepo scheduleRepo;
     private final ActivityRepo activityRepo;
     private final StudentRepo studentRepo;
+    private final EventParticipateRepo eventParticipateRepo;
+    private final EventRepo eventRepo;
 
     @Override
     public ResponseEntity<ResponseObject> generateClassesAuto(GenerateClassesRequest request) {
@@ -112,6 +121,21 @@ public class ClassServiceImpl implements ClassService {
                     .build());
         }
         Grade grade = syllabus.getGrade();
+
+        Optional<Syllabus> existingOpt = syllabusRepo
+                .findFirstByAssignedToClassesTrueAndGradeAndClassesList_AcademicYear(grade, Integer.parseInt(request.getYear()));
+
+        if (existingOpt.isPresent() && !existingOpt.get().getId().equals(syllabus.getId())) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(
+                    ResponseObject.builder()
+                            .message("Syllabus '" + existingOpt.get().getSubject() +
+                                    "' has already been assigned to this grade in year " + request.getYear() +
+                                    ". \n Please use the same syllabus or choose a different grade or year.")                            .success(false)
+                            .data(null)
+                            .build()
+            );
+        }
+
         LocalDate start = request.getStartDate();
         LocalDate end = start.plusWeeks(syllabus.getNumberOfWeek()).minusDays(1);
         if (start.getYear() != end.getYear()) {
@@ -137,6 +161,15 @@ public class ClassServiceImpl implements ClassService {
                     return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                             .body(ResponseObject.builder()
                                     .message("Activity name '" + token + "' contains special characters. Only letters, numbers and spaces are allowed.")
+                                    .success(false)
+                                    .data(null)
+                                    .build());
+                }
+                // Kiểm tra độ dài tên activity (chỉ với activity thường, không phải lesson)
+                if (!token.startsWith("LE_") && token.length() > 50) {
+                    return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                            .body(ResponseObject.builder()
+                                    .message("Activity name '" + token + "' must not exceed 50 characters.")
                                     .success(false)
                                     .data(null)
                                     .build());
@@ -303,8 +336,13 @@ public class ClassServiceImpl implements ClassService {
         int studentIdx = 0;
         for (int i = 0; i < numberOfClassesToCreate; i++) {
             Account assignedTeacher = availableTeachers.get(i);
+            String className = grade + "-" + (existing + i + 1) + "-" + request.getYear();
+            boolean isClassNameUsed = classRepo.existsByName(className);
+            if (isClassNameUsed) {
+                continue; // hoặc tăng chỉ số i để tránh trùng
+            }
             Classes cls = Classes.builder()
-                    .name(grade + "-" + (existing + i + 1) + "-" + request.getYear())
+                    .name(className)
                     .startDate(start)
                     .endDate(end)
                     .academicYear(Integer.parseInt(request.getYear()))
@@ -315,7 +353,20 @@ public class ClassServiceImpl implements ClassService {
                     .build();
             List<StudentClass> scList = new ArrayList<>();
             for (int j = 0; j < numberOfStudentsPerClass && studentIdx < studentsToAssign.size(); j++, studentIdx++) {
-                scList.add(StudentClass.builder().classes(cls).student(studentsToAssign.get(studentIdx)).build());
+                Student student = studentsToAssign.get(studentIdx);
+
+                if (studentClassRepo.existsByStudent_Id(student.getId())) {
+                    studentIdx++;
+                    continue;
+                }
+
+                scList.add(StudentClass.builder()
+                        .classes(cls)
+                        .student(student)
+                        .build());
+                            }
+            if (scList.isEmpty()) {
+                continue;
             }
             cls.setStudentClassList(scList);
             cls.setNumberStudent(scList.size());
@@ -477,7 +528,7 @@ public class ClassServiceImpl implements ClassService {
         }
         Classes cls = classRepo.findById(Integer.parseInt(classId)).get();
         if (!Status.CLASS_ACTIVE.getValue().equalsIgnoreCase(cls.getStatus())) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(ResponseObject.builder()
                             .message("Only classes with status 'ACTIVE' can be deleted")
                             .success(false)
@@ -704,6 +755,18 @@ public class ClassServiceImpl implements ClassService {
             );
         }
 
+        int currentYear = LocalDate.now().getYear();
+        if (Integer.parseInt(year) != currentYear) {
+            return ResponseEntity.ok().body(
+                    ResponseObject.builder()
+                            .message("View Number Of Students Not Assigned To Any Classes By Grade And Year Successfully")
+                            .success(true)
+                            .data(0)
+                            .build()
+            );
+        }
+
+
         List<AdmissionForm> approvedForms = admissionFormRepo.findByTermItem_AdmissionTerm_YearAndStatusAndTermItem_Grade(
                 Integer.parseInt(year),
                 Status.APPROVED_PAID,
@@ -770,81 +833,106 @@ public class ClassServiceImpl implements ClassService {
 
     @Override
     public ResponseEntity<ResponseObject> unassignStudentsFromClass(UnassignStudentsFromClassRequest request) {
+        Optional<Classes> optionalClass = classRepo.findById(request.getClassId());
+
         if (classRepo.findById(request.getClassId()).isEmpty())
 
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body(ResponseObject.builder()
                             .success(false)
-                            .message("Class with id " + request.getClassId() + "doesn't found or be deleted")
+                            .message("Class with id " + request.getClassId() + " doesn't found or be deleted")
                             .data(null)
                             .build());
 
-        Classes cls = classRepo.findById(request.getClassId()).get();
+        Classes cls = optionalClass.get();
 
         if (cls.getStatus().equalsIgnoreCase(Status.CLASS_IN_PROGRESS.getValue())
-                || cls.getStatus().equalsIgnoreCase(Status.CLASS_CLOSED.getValue()))
+                || cls.getStatus().equalsIgnoreCase(Status.CLASS_CLOSED.getValue())) {
             return ResponseEntity.status(HttpStatus.CONFLICT)
                     .body(ResponseObject.builder()
                             .success(false)
-                            .message("Cannot unassign students because class is already in progress or closed.")
+                            .message("Cannot unassign students because the class is already in progress or closed.")
                             .data(null)
                             .build());
+        }
 
-        List<StudentClass> toRemove = studentClassRepo.findByClasses_IdAndStudent_IdIn(request.getClassId(), request.getStudentIds());
+        List<Integer> studentIds = request.getStudentIds();
+
+        List<Student> existingStudents = studentRepo.findAllByIdIn(request.getStudentIds());
+        Set<Integer> existingIds = existingStudents.stream()
+                .map(Student::getId)
+                .collect(Collectors.toSet());
+
+        List<Integer> notExistIds = request.getStudentIds().stream()
+                .filter(id -> !existingIds.contains(id))
+                .toList();
+
+        // Tìm những student thực sự đang học lớp này
+        List<StudentClass> toRemove = studentClassRepo.findByClasses_IdAndStudent_IdIn(
+                request.getClassId(), studentIds);
+
+        Set<Integer> assignedIds = toRemove.stream()
+                .map(sc -> sc.getStudent().getId())
+                .collect(Collectors.toSet());
+
+        // 4. Xác định student tồn tại nhưng không được assign vào lớp
+        List<Integer> existButNotAssigned = existingIds.stream()
+                .filter(id -> !assignedIds.contains(id))
+                .toList();
 
         if (toRemove.isEmpty()) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(ResponseObject.builder()
                             .success(false)
-                            .message("No matching students are currently assigned to this class.")
+                            .message("No valid students were found to unassign from this class.")
                             .data(null)
                             .build());
         }
 
+        // Kiểm tra còn đủ số lượng sau khi gỡ
         int currentCount = studentClassRepo.countByClasses_Id(request.getClassId());
         int remaining = currentCount - toRemove.size();
-        int minAllowedToRemove = 10;
-
-        if (remaining < minAllowedToRemove) {
+        int minAllowed = 10;
+        if (remaining < minAllowed) {
             return ResponseEntity.status(HttpStatus.CONFLICT)
                     .body(ResponseObject.builder()
                             .success(false)
-                            .message("Cannot unassign. Minimum allowed students in a class is " + minAllowedToRemove +
-                                    ".\n Current: " + currentCount + ", Trying to unassign: " + toRemove.size())
+                            .message("Cannot unassign. Minimum allowed students in a class is " + minAllowed +
+                                    ". Current: " + currentCount + ", Trying to unassign: " + toRemove.size())
                             .data(null)
                             .build());
         }
 
-        // 4. Thực hiện xoá
         studentClassRepo.deleteAll(toRemove);
         cls.setNumberStudent(remaining);
         classRepo.save(cls);
 
+        // 8. Tạo thông báo
+        StringBuilder message = new StringBuilder("Unassigned " + toRemove.size() + " students from class successfully.");
+        if (!notExistIds.isEmpty()) {
+            message.append(" The following student IDs do not exist in the system: ").append(notExistIds).append(".");
+        }
+        if (!existButNotAssigned.isEmpty()) {
+            message.append(" The following students are not assigned to this class: ").append(existButNotAssigned).append(".");
+        }
+
         return ResponseEntity.ok(
                 ResponseObject.builder()
                         .success(true)
-                        .message("Unassigned " + toRemove.size() + " students from class successfully.")
+                        .message(message.toString())
                         .data(null)
                         .build());
     }
 
     @Transactional
     @Override
-    public ResponseEntity<ResponseObject> deleteActivitiesByDates(String scheduleId, String dateStr) {
+    public ResponseEntity<ResponseObject> deleteActivitiesByDates(String scheduleId, LocalDate dateStr) {
         Integer scheduleIdInt;
         try {
             scheduleIdInt = Integer.parseInt(scheduleId);
         } catch (NumberFormatException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
                     ResponseObject.builder().success(false).message("Invalid schedule ID").data(null).build());
-        }
-
-        LocalDate deleteDate;
-        try {
-            deleteDate = LocalDate.parse(dateStr.trim());
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
-                    ResponseObject.builder().success(false).message("Invalid date format (expected yyyy-MM-dd)").data(null).build());
         }
 
         Optional<Schedule> optionalSchedule = scheduleRepo.findById(scheduleIdInt);
@@ -854,7 +942,7 @@ public class ClassServiceImpl implements ClassService {
         }
 
         LocalDate today = LocalDate.now();
-        if (deleteDate.isBefore(today)) {
+        if (dateStr.isBefore(today)) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
                     ResponseObject.builder()
                             .success(false)
@@ -880,7 +968,7 @@ public class ClassServiceImpl implements ClassService {
 
         // 1. Lấy các activity theo ngày cần xóa
         List<Activity> toReassign = activityRepo.findBySchedule_Id(scheduleIdInt).stream()
-                .filter(act -> act.getDate().equals(deleteDate))
+                .filter(act -> act.getDate().equals(dateStr))
                 .sorted(Comparator.comparing(Activity::getDate))
                 .toList();
 
@@ -921,7 +1009,7 @@ public class ClassServiceImpl implements ClassService {
                 List<Activity> cleaned = sch.getActivityList().stream()
                         .filter(a -> a.getId() != null && !toReassign.contains(a)) // bỏ activity vừa xoá
                         .toList();
-                sch.getActivityList().clear(); // giữ nguyên danh sách được Hibernate quản lý
+                sch.getActivityList().clear();
                 sch.getActivityList().addAll(cleaned); // thêm lại phần tử hợp lệ
             }
         }
@@ -1113,6 +1201,17 @@ public class ClassServiceImpl implements ClassService {
             );
         }
 
+        int currentYear = LocalDate.now().getYear();
+        if (Integer.parseInt(year) != currentYear) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
+                    ResponseObject.builder()
+                            .message(String.format("Year must be the current year (%d)", currentYear))
+                            .success(false)
+                            .data(null)
+                            .build()
+            );
+        }
+
         List<AdmissionForm> approvedForms = admissionFormRepo.findByTermItem_AdmissionTerm_YearAndStatusAndTermItem_Grade(
                 Integer.parseInt(year),
                 Status.APPROVED_PAID,
@@ -1155,13 +1254,14 @@ public class ClassServiceImpl implements ClassService {
 
         // Filter classes that still have empty slots
         List<Classes> classesWithSlots = availableClasses.stream()
-                .filter(cls -> cls.getNumberStudent() < maxStudentPerClass)
+                .filter(cls -> cls.getStatus().equalsIgnoreCase(Status.CLASS_ACTIVE.getValue()) && cls.getNumberStudent() < maxStudentPerClass)
                 .toList();
+
         // If there are no classes with available slots, return an error
         if (classesWithSlots.isEmpty()) {
             return ResponseEntity.status(HttpStatus.CONFLICT).body(
                     ResponseObject.builder()
-                            .message("All classes are full. There are no available classes to assign new students.")
+                            .message("No active classes with available slots.")
                             .success(false)
                             .data(null)
                             .build()
@@ -1187,8 +1287,33 @@ public class ClassServiceImpl implements ClassService {
         studentClassRepo.saveAll(newAssignments);
         classRepo.saveAll(classesWithSlots);
 
+        for (StudentClass sc : newAssignments) {
+            Student student = sc.getStudent();
+            Classes cls = sc.getClasses();
+            Parent parent = student.getParent();
+            Account parentAccount = parent != null ? parent.getAccount() : null;
+
+            if (parentAccount != null) {
+                String parentName = parentAccount.getName();
+                String parentEmail = parentAccount.getEmail();
+                String studentName = student.getName();
+                String className = cls.getName();
+                String teacherName = cls.getTeacher() != null ? cls.getTeacher().getName() : "N/A";
+                String startDateStr = cls.getStartDate().toString();
+
+                String subject = "Thông báo xếp lớp cho học sinh " + studentName;
+                String header = "Class Assignment Notification";
+                String body = Format.getAssignClassSuccessfulForParentBody(
+                        parentName, studentName, className, teacherName, startDateStr
+                );
+
+                mailService.sendMail(parentEmail, subject, header, body);
+            }
+        }
+
+
         return ResponseEntity.ok(ResponseObject.builder()
-                .message(String.format("Successfully assigned %d students to classes.", studentsToAssign.size()))
+                .message(String.format("Successfully assigned %d students to active classes.", newAssignments.size()))
                 .success(true)
                 .data(null)
                 .build());
@@ -1268,69 +1393,123 @@ public class ClassServiceImpl implements ClassService {
     @Override
     public ResponseEntity<ResponseObject> assignAvailableStudents(AssignStudentsToClassRequest request) {
         List<Integer> studentIds = request.getStudentIds();
+
+        // Tìm student theo ID
         List<Student> found = studentRepo.findAllByIdIn(studentIds);
 
         Set<Integer> foundIds = found.stream()
                 .map(Student::getId)
                 .collect(Collectors.toSet());
 
+        // ID không tồn tại trong DB
         List<Integer> missingIds = studentIds.stream()
                 .filter(id -> !foundIds.contains(id))
                 .toList();
 
-        if (missingIds.size() == studentIds.size()) {
+        Optional<Classes> optionalClass = classRepo.findById(request.getClassId());
+        if (optionalClass.isEmpty()) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body(ResponseObject.builder()
                             .success(false)
-                            .message("The following student IDs do not exist or be deleted: " + missingIds)
+                            .message("Class with id " + request.getClassId() + " doesn't exist or has been deleted.")
                             .data(null)
                             .build());
         }
 
-        if(classRepo.findById(request.getClassId()).isEmpty())
-
-            return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body(ResponseObject.builder()
-                            .success(false)
-                            .message("Class with id " + request.getClassId() + "doesn't found or be deleted")
-                            .data(null)
-                            .build());
-
-        Classes cls = classRepo.findById(request.getClassId()).get();
+        Classes cls = optionalClass.get();
 
         if (cls.getStatus().equalsIgnoreCase(Status.CLASS_IN_PROGRESS.getValue())
-                || cls.getStatus().equalsIgnoreCase(Status.CLASS_CLOSED.getValue()))
+                || cls.getStatus().equalsIgnoreCase(Status.CLASS_CLOSED.getValue())) {
             return ResponseEntity.status(HttpStatus.CONFLICT)
                     .body(ResponseObject.builder()
                             .success(false)
-                            .message("Cannot assign students because class is already in progress or closed.")
+                            .message("Cannot assign students because class is already in progress or closed or deleted.")
                             .data(null)
                             .build());
-
-        List<StudentClass> scList = new ArrayList<>();
-        for (Student student : found) {
-            scList.add(StudentClass.builder()
-                    .classes(cls)
-                    .student(student)
-                    .build());
         }
 
-        cls.setStudentClassList(scList);
-        cls.setNumberStudent(scList.size());
+        // Danh sách ID đã gán trước đó
+        Set<Integer> alreadyAssignedIds = cls.getStudentClassList().stream()
+                .map(sc -> sc.getStudent().getId())
+                .collect(Collectors.toSet());
 
+        List<Integer> duplicateIds = studentIds.stream()
+                .filter(alreadyAssignedIds::contains)
+                .toList();
+
+        // Nếu tất cả ID đều lỗi (đã gán hoặc không tồn tại)
+        int validNewAssignments = found.size() - duplicateIds.size();
+        if (validNewAssignments == 0) {
+            StringBuilder errorMsg = new StringBuilder("No students were assigned.");
+            if (!duplicateIds.isEmpty()) {
+                errorMsg.append(" The following student IDs were already assigned: ").append(duplicateIds).append(".");
+            }
+            if (!missingIds.isEmpty()) {
+                errorMsg.append(" The following student IDs do not exist or have been deleted: ").append(missingIds).append(".");
+            }
+
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body(ResponseObject.builder()
+                            .success(false)
+                            .message(errorMsg.toString())
+                            .data(null)
+                            .build());
+        }
+
+        // Tiến hành gán các học sinh hợp lệ
+        List<StudentClass> scList = new ArrayList<>();
+        for (Student student : found) {
+            if (!alreadyAssignedIds.contains(student.getId())) {
+                scList.add(StudentClass.builder()
+                        .classes(cls)
+                        .student(student)
+                        .build());
+            }
+        }
+
+        cls.getStudentClassList().addAll(scList);
+        cls.setNumberStudent(cls.getStudentClassList().size());
         classRepo.save(cls);
 
-        String message = "Assigned " + scList.size() + " students to class successfully.\n";
+        for (StudentClass sc : scList) {
+            Student student = sc.getStudent();
+            Parent parent = student.getParent();
+            Account parentAccount = parent != null ? parent.getAccount() : null;
+
+            if (parentAccount != null) {
+                String parentName = parentAccount.getName();
+                String parentEmail = parentAccount.getEmail();
+                String studentName = student.getName();
+                String className = cls.getName();
+                String teacherName = cls.getTeacher() != null ? cls.getTeacher().getName() : "N/A";
+                String startDateStr = cls.getStartDate().toString();
+
+                String subject = "Thông báo xếp lớp mới cho học sinh " + studentName;
+                String header = "Class Assignment Change Notification";
+                String body = Format.getChangedAssignClassSuccessfulForParentBody(
+                        parentName, studentName, className, teacherName, startDateStr
+                );
+
+                mailService.sendMail(parentEmail, subject, header, body);
+            }
+        }
+
+        // Tạo message thành công kèm cảnh báo nếu có
+        StringBuilder message = new StringBuilder("Assigned " + scList.size() + " students to class successfully.");
+        if (!duplicateIds.isEmpty()) {
+            message.append(" The following student IDs were already assigned: ").append(duplicateIds).append(".");
+        }
         if (!missingIds.isEmpty()) {
-            message += " However, the following student IDs do not exist or have been deleted: " + missingIds;
+            message.append(" The following student IDs do not exist or have been deleted: ").append(missingIds).append(".");
         }
 
         return ResponseEntity.ok(
                 ResponseObject.builder()
                         .success(true)
-                        .message(message)
-                        .data(scList)
-                        .build());
+                        .message(message.toString())
+                        .data(null)
+                        .build()
+        );
     }
 
     @Override
@@ -1378,6 +1557,56 @@ public class ClassServiceImpl implements ClassService {
                         .build()
         );
     }
+
+    @Override
+    public ResponseEntity<ResponseObject> viewCurrentSchedule(String classId, ViewCurrentScheduleRequest request) {
+        Optional<Classes> optionalClass = classRepo.findById(Integer.parseInt(classId));
+        Classes cls = optionalClass.get();
+
+        LocalDate monday = request.getDate();
+
+        while (monday.getDayOfWeek().getValue() != 1) { // 1 = Monday
+            monday = monday.minusDays(1);
+        }
+        LocalDate sunday = monday.plusDays(6); // Chủ nhật
+
+        // 4. Tìm schedule chứa ít nhất 1 activity nằm trong tuần đó
+        for (Schedule schedule : cls.getScheduleList()) {
+            if (schedule.getActivityList() == null || schedule.getActivityList().isEmpty()) continue;
+
+            LocalDate finalMonday = monday;
+            boolean hasActivityInWeek = schedule.getActivityList().stream()
+                    .anyMatch(act -> {
+                        LocalDate actDate = act.getDate();
+                        return !actDate.isBefore(finalMonday) && !actDate.isAfter(sunday);
+                    });
+
+            if (hasActivityInWeek) {
+                Map<String, Object> response = new LinkedHashMap<>();
+                response.put("scheduleId", schedule.getId());
+                response.put("scheduleName", schedule.getWeekName());
+
+                return ResponseEntity.ok(
+                        ResponseObject.builder()
+                                .success(true)
+                                .message("Schedule found for week: " + monday + " to " + sunday)
+                                .data(response)
+                                .build()
+                );
+            }
+        }
+
+        // 5. Không có schedule nào chứa activity trong tuần đó
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
+                ResponseObject.builder()
+                        .success(false)
+                        .message("No schedule found for week: " + monday + " to " + sunday)
+                        .data(null)
+                        .build()
+        );
+
+    }
+
 
     @Override
     public ResponseEntity<ResponseObject> reportNumberOfClassesByTermYear(String year) {
@@ -1439,6 +1668,7 @@ public class ClassServiceImpl implements ClassService {
                         .build()
         );
     }
+
 
 
 

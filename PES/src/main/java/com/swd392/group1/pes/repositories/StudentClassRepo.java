@@ -17,4 +17,6 @@ public interface StudentClassRepo extends JpaRepository<StudentClass, Integer> {
     List<StudentClass> findByClasses_IdAndStudent_IdIn(int classId, List<Integer> studentIds);
 
     int countByClasses_Id(int classId);
+
+    boolean existsByStudent_Id(Integer id);
 }

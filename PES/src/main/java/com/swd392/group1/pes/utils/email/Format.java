@@ -232,6 +232,23 @@ public class Format {
                 + "<p>Sincerely,<br/>The School Administration</p>";
     }
 
+    public static String getChangedAssignClassSuccessfulForParentBody(
+            String parentName,
+            String studentName,
+            String className,
+            String teacherName,
+            String startDate
+    ) {
+        return "<p>Dear " + parentName + ",</p>"
+                + "<p>We would like to notify you that your child, <strong>" + studentName + "</strong>, has been <strong>reassigned to a new class</strong> for the upcoming academic term.</p>"
+                + "<p>The new class is <strong>" + className + "</strong>, which will be taught by <strong>teacher " + teacherName + "</strong>.</p>"
+                + "<p>The class will officially start on <strong>" + startDate + "</strong>.</p>"
+                + "<p>If you have any questions or need further information about this change, please do not hesitate to contact us.</p>"
+                + "<p>Thank you for your cooperation and understanding.</p>"
+                + "<p>Sincerely,<br/>The School Administration</p>";
+    }
+
+
     public static String getAssignClassSuccessfulForTeacherBody(
             String teacherName, String className, String startDateStr
     ) {
