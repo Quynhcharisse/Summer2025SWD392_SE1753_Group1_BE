@@ -78,8 +78,7 @@ public class AdmissionServiceImpl implements AdmissionService {
             );
         }
 
-        int currentYear = LocalDate.now().getYear();
-        String name = "Admission Term for " + currentYear;
+        String name = "Admission Term for " + request.getStartDate().getYear();
 
         // Nếu hợp lệ, tiếp tục tạo term
         AdmissionTerm term = admissionTermRepo.save(
@@ -129,11 +128,11 @@ public class AdmissionServiceImpl implements AdmissionService {
         }
 
         if (request.getStartDate().isAfter(request.getEndDate())) {
-            return "Start date must be before end date";
-        }
+            return "Start date must be before the end date"; // hien thi tong bao : ngày tương lai  (lỡ tạo trong ngày hôm nay)
+        }           //block date da dc chon
 
         if (request.getStartDate().isBefore(LocalDateTime.now())) {
-            return "Start date must be in the future";
+            return "Start date must be in the future (after today)";
         }
 
         if (request.getStartDate().getYear() != request.getEndDate().getYear()) {
@@ -142,12 +141,12 @@ public class AdmissionServiceImpl implements AdmissionService {
 
         int year = request.getStartDate().getYear();
         if (admissionTermRepo.existsByYear(year)) {
-            return "Admission term for year " + year + " already exists.";
+            return "Admission term for year " + year + " already exists";
         }
 
         //trong 1 term phai it nhat 1 grade trong create term do
         if (request.getTermItemList() == null || request.getTermItemList().isEmpty()) {
-            return "At least one grade must be included in the term.";
+            return "At least one grade must be included in the term";
         }
 
         Set<String> grades = new HashSet<>();
