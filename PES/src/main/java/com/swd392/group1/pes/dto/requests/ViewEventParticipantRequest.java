@@ -8,14 +8,13 @@ import lombok.NoArgsConstructor;
 import lombok.experimental.FieldDefaults;
 
 import java.time.LocalDate;
-import java.util.List;
 
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
 @FieldDefaults(level = AccessLevel.PRIVATE)
-public class DeleteActivitiesByDateRequest {
-    String scheduleId;
-    LocalDate date;
+public class ViewEventParticipantRequest {
+    LocalDate startDate;
+    LocalDate endDate;
 }

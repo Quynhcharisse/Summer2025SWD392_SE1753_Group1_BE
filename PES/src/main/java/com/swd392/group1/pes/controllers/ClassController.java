@@ -4,6 +4,7 @@ import com.swd392.group1.pes.dto.requests.AssignStudentsToClassRequest;
 import com.swd392.group1.pes.dto.requests.DeleteActivitiesByDateRequest;
 import com.swd392.group1.pes.dto.requests.GenerateClassesRequest;
 import com.swd392.group1.pes.dto.requests.UnassignStudentsFromClassRequest;
+import com.swd392.group1.pes.dto.requests.ViewCurrentScheduleRequest;
 import com.swd392.group1.pes.dto.response.ResponseObject;
 import com.swd392.group1.pes.services.ClassService;
 import lombok.RequiredArgsConstructor;
@@ -100,13 +101,13 @@ public class ClassController {
 
     @PutMapping("/availableStudents/assign")
     @PreAuthorize("hasRole('education')")
-    public ResponseEntity<ResponseObject> assignAvailableStudents(AssignStudentsToClassRequest request){
+    public ResponseEntity<ResponseObject> assignAvailableStudents(@RequestBody AssignStudentsToClassRequest request){
         return classService.assignAvailableStudents(request);
     }
 
     @PutMapping("/studentsOfClass/unassign")
     @PreAuthorize("hasRole('education')")
-    public ResponseEntity<ResponseObject> unassignStudentsFromClass(UnassignStudentsFromClassRequest request){
+    public ResponseEntity<ResponseObject> unassignStudentsFromClass(@RequestBody UnassignStudentsFromClassRequest request){
         return classService.unassignStudentsFromClass(request);
     }
 
@@ -120,6 +121,12 @@ public class ClassController {
     @PreAuthorize("hasRole('education')")
     public ResponseEntity<Resource> exportStudentListOfClassToExcel(@RequestParam String classId) {
         return classService.exportStudentListOfClassToExcel(classId);
+    }
+
+    @GetMapping("/schedule/current")
+    @PreAuthorize("hasRole('parent')")
+    public ResponseEntity<ResponseObject> viewCurrentSchedule(@RequestParam String classId, @RequestBody ViewCurrentScheduleRequest request) {
+        return classService.viewCurrentSchedule(classId, request);
     }
 
 }

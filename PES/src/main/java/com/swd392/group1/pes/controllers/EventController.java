@@ -2,6 +2,7 @@ package com.swd392.group1.pes.controllers;
 
 import com.swd392.group1.pes.dto.requests.CancelEventRequest;
 import com.swd392.group1.pes.dto.requests.CreateEventRequest;
+import com.swd392.group1.pes.dto.requests.ViewEventParticipantRequest;
 import com.swd392.group1.pes.dto.response.ResponseObject;
 import com.swd392.group1.pes.services.EventService;
 import lombok.RequiredArgsConstructor;
@@ -63,6 +64,12 @@ public class EventController {
     @PreAuthorize("hasRole('education')")
     public ResponseEntity<ByteArrayResource> exportEventParticipateOfEvent(@RequestParam String id) {
         return eventService.exportEventParticipateOfEvent(id);
+    }
+
+    @GetMapping("/event/numberOfParticipants/stats")
+    @PreAuthorize("hasRole('education')")
+    public ResponseEntity<ResponseObject> getEventParticipationStats(@RequestBody ViewEventParticipantRequest request) {
+        return eventService.getEventParticipationStats(request);
     }
 
 }

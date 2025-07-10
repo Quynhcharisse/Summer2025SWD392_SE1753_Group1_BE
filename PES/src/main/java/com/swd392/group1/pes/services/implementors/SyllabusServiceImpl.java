@@ -122,13 +122,27 @@ public class SyllabusServiceImpl implements SyllabusService {
             return "Name cannot be empty";
         }
 
+        // Thêm kiểm tra độ dài tên syllabus
+        if (request.getSubject().length() > 50) {
+            return "Name must not exceed 50 characters";
+        }
+
         //  Description không điền
         if (request.getDescription().trim().isEmpty()) {
             return "Description should not be empty";
         }
 
+        // Thêm kiểm tra độ dài mô tả syllabus
+        if (request.getDescription().length() > 2000) {
+            return "Description must not exceed 2000 characters";
+        }
+
         if (request.getNumberOfWeek() <= 0) {
             return "Number of weeks must be greater than 0";
+        }
+
+        if (request.getNumberOfWeek() > 53) {
+            return "Number of weeks must not exceed 53";
         }
 
         if (request.getLessonNames().size() < 3) {
@@ -229,12 +243,20 @@ public class SyllabusServiceImpl implements SyllabusService {
 
 
         if(request.getSubject().trim().isEmpty()){
-            return "Subject cannot be empty";
+            return "Name cannot be empty";
+        }
+
+        if (request.getSubject().length() > 50) {
+            return "Name must not exceed 50 characters";
         }
 
         //  Description không điền
         if(request.getDescription().trim().isEmpty()){
             return "Description should not be empty";
+        }
+
+        if (request.getDescription().length() > 2000) {
+            return "Description must not exceed 2000 characters";
         }
 
         // Number of week không điền

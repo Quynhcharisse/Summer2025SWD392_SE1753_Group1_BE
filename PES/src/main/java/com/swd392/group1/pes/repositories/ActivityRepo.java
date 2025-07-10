@@ -9,6 +9,4 @@ import java.util.List;
 public interface ActivityRepo extends JpaRepository<Activity, Integer> {
     List<Activity> findBySchedule_Id(Integer scheduleId);
 
-    int deleteBySchedule_IdAndDayOfWeek(Integer scheduleId, DayOfWeek dayOfWeek);
-
 }

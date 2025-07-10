@@ -22,17 +22,22 @@ public class ClassSchedulerUtil {
     public void autoUpdateClassStatus() {
         LocalDate today = LocalDate.now();
 
-        List<Classes> toInProgress = classRepo.findByStatusAndStartDateLessThanEqual(Status.CLASS_ACTIVE.getValue(), today);
-        for (Classes cls : toInProgress) {
-            cls.setStatus(Status.CLASS_IN_PROGRESS.getValue());
+
+        // 1. Chuyển lớp từ ACTIVE → IN_PROGRESS nếu ngày bắt đầu <= hôm nay
+        List<Classes> toInProgress = classRepo.findByStatusAndStartDateLessThanEqual(
+                Status.CLASS_ACTIVE.getValue(), today);
+        if (!toInProgress.isEmpty()) {
+            toInProgress.forEach(cls -> cls.setStatus(Status.CLASS_IN_PROGRESS.getValue()));
+            classRepo.saveAll(toInProgress);
         }
 
-        List<Classes> toClose = classRepo.findByStatusAndEndDateLessThan(Status.CLASS_IN_PROGRESS.getValue(), today);
-        for (Classes cls : toClose) {
-            cls.setStatus(Status.CLASS_CLOSED.getValue());
+        // 2. Chuyển lớp từ IN_PROGRESS → CLOSED nếu ngày kết thúc < hôm nay
+        List<Classes> toClose = classRepo.findByStatusAndEndDateLessThan(
+                Status.CLASS_IN_PROGRESS.getValue(), today);
+        if (!toClose.isEmpty()) {
+            toClose.forEach(cls -> cls.setStatus(Status.CLASS_CLOSED.getValue()));
+            classRepo.saveAll(toClose);
         }
-        classRepo.saveAll(toInProgress);
-        classRepo.saveAll(toClose);
     }
 
 }

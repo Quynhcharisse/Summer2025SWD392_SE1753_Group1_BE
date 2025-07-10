@@ -5,6 +5,7 @@ import com.swd392.group1.pes.models.Syllabus;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface SyllabusRepo extends JpaRepository<Syllabus, Integer> {
     boolean existsBySubjectIgnoreCase(String subject);
@@ -14,4 +15,7 @@ public interface SyllabusRepo extends JpaRepository<Syllabus, Integer> {
     List<Syllabus> findAllByGrade(Grade grade);
 
     Syllabus findByAssignedToClassesAndGrade(boolean isTrue, Grade grade);
+
+    Optional<Syllabus> findFirstByAssignedToClassesTrueAndGradeAndClassesList_AcademicYear(Grade grade, int academicYear);
+
 }

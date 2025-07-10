@@ -3,6 +3,7 @@ package com.swd392.group1.pes.services.implementors;
 import com.swd392.group1.pes.dto.requests.CancelEventRequest;
 import com.swd392.group1.pes.dto.requests.CreateEventRequest;
 import com.swd392.group1.pes.dto.requests.RegisterEventRequest;
+import com.swd392.group1.pes.dto.requests.ViewEventParticipantRequest;
 import com.swd392.group1.pes.dto.response.ResponseObject;
 import com.swd392.group1.pes.enums.Role;
 import com.swd392.group1.pes.enums.Status;
@@ -40,8 +41,10 @@ import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -608,6 +611,49 @@ public class EventServiceImpl implements EventService {
                 .success(true)
                 .data(activeEventDetails)
                 .build());
+    }
+
+    @Override
+    public ResponseEntity<ResponseObject> getEventParticipationStats(ViewEventParticipantRequest request) {
+
+        LocalDateTime startTime = request.getStartDate().atStartOfDay();
+        LocalDateTime endTime = request.getEndDate().atTime(23, 59, 59);
+
+        // 1. Lấy tất cả sự kiện trong khoảng thời gian
+        List<Event> events = eventRepo.findByStartTimeBetween(startTime, endTime);
+
+        // 2. Lấy tất cả lượt tham gia (EventParticipate) trong cùng thời gian
+        List<EventParticipate> participations =
+                eventParticipateRepo.findByEvent_StartTimeBetween(startTime, endTime);
+
+        // 3. Gom nhóm theo eventId
+        Map<Integer, List<EventParticipate>> groupedByEvent = participations.stream()
+                .collect(Collectors.groupingBy(
+                        ep -> ep.getEvent().getId(),
+                        LinkedHashMap::new,
+                        Collectors.toList()
+                ));
+
+        // 4. Tạo danh sách thống kê
+        List<Map<String, Object>> eventStats = new ArrayList<>();
+
+        for (Event event : events) {
+            List<EventParticipate> list = groupedByEvent.getOrDefault(event.getId(), Collections.emptyList());
+            Map<String, Object> map = new HashMap<>();
+            map.put("eventId", event.getId());
+            map.put("eventName", event.getName());
+            map.put("studentCount", list.size());
+
+            eventStats.add(map);
+        }
+
+        return ResponseEntity.ok(
+                ResponseObject.builder()
+                        .success(true)
+                        .message("Participation Students Statistics for Events by Start Date")
+                        .data(eventStats)
+                        .build()
+        );
     }
 
     private Map<String, Object> buildEventDetail(Event event) {
