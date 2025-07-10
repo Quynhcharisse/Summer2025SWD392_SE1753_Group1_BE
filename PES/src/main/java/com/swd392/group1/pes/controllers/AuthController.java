@@ -48,7 +48,7 @@ public class AuthController {
         return authService.register(request);
     }
 
-    @PostMapping("/register/otp/verify")
+    @PostMapping("/register/code/verify")
     public ResponseEntity<ResponseObject> registerVerifyEmail(@RequestBody OtpVerifyRequest request) {
         return authService.registerVerifyEmail(request);
     }
