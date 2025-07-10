@@ -197,7 +197,7 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     public ResponseEntity<ResponseObject> register(RegisterRequest request) {
-        String error = registerValidation(request, accountRepo);
+        String error = registerValidation(request);
         if (!error.isEmpty()) {
             return ResponseEntity.badRequest().body(
                     ResponseObject.builder()
@@ -287,20 +287,7 @@ public class AuthServiceImpl implements AuthService {
     }
 
 
-    public static String registerValidation(RegisterRequest request, AccountRepo accountRepo) {
-        if (request.getEmail() == null || request.getEmail().trim().isEmpty()) {
-            return "Email is required.";
-        }
-
-        Pattern emailPattern = Pattern.compile("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+$");
-        if (!emailPattern.matcher(request.getEmail()).matches()) {
-            return "Invalid email format.";
-        }
-
-        if (accountRepo.existsByEmail(request.getEmail())) {
-            return "This email is already registered.";
-        }
-
+    public static String registerValidation(RegisterRequest request) {
         if (request.getPassword() == null || request.getPassword().trim().isEmpty()) {
             return "Password is required.";
         }
