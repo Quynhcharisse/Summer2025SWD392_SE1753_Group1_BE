@@ -1280,7 +1280,6 @@ public class ParentServiceImpl implements ParentService {
         if (existedTransaction != null) {
             return "Transaction already exists for this form";
         }
-
         return "";
     }
 }
