@@ -25,6 +25,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.HashMap;
@@ -49,9 +50,11 @@ public class AuthServiceImpl implements AuthService {
 
     private final MailService mailService;
 
+    private final PasswordEncoder passwordEncoder;
+
     @Override
     public ResponseEntity<ResponseObject> login(LoginRequest request, HttpServletResponse response) {
-        Account account = accountRepo.findByEmailAndPassword(request.getEmail(), request.getPassword()).orElse(null);
+        Account account = accountRepo.findByEmailAndPassword(request.getEmail(), passwordEncoder.encode(request.getPassword())).orElse(null);
 
         if (account == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(
@@ -245,7 +248,7 @@ public class AuthServiceImpl implements AuthService {
 
         Account account = Account.builder()
                 .email(email)
-                .password(request.getPassword())
+                .password(passwordEncoder.encode(request.getPassword()))
                 .name(request.getName())
                 .phone(request.getPhone())
                 .gender(request.getGender())
@@ -457,7 +460,7 @@ public class AuthServiceImpl implements AuthService {
                 );
             }
 
-            account.setPassword(request.getNewPassword());
+            account.setPassword(passwordEncoder.encode(request.getNewPassword()));
             accountRepo.save(account);
 
             mailService.sendMail(

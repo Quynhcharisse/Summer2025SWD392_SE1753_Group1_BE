@@ -15,6 +15,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.HashMap;
@@ -28,6 +29,7 @@ public class AccountServiceImpl implements AccountService {
     private final AccountRepo accountRepo;
     private final JWTService jwtService;
     private final MailService mailService;
+    private final PasswordEncoder passwordEncoder;
 
     @Override
     public ResponseEntity<ResponseObject> resetPassword(RestPasswordRequest request) {
@@ -54,7 +56,7 @@ public class AccountServiceImpl implements AccountService {
             );
         }
 
-        account.setPassword(request.getNewPassword());
+        account.setPassword(passwordEncoder.encode(request.getNewPassword()));
 
         // Nếu là role không cần reset lần đầu (PARENT, HR)
         if (account.getRole().equals(Role.HR) || account.getRole().equals(Role.PARENT)) {

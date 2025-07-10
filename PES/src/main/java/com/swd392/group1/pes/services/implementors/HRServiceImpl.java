@@ -26,6 +26,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -42,6 +43,7 @@ public class HRServiceImpl implements HRService {
 
     private final AccountRepo accountRepo;
     private final MailService mailService;
+    private final PasswordEncoder passwordEncoder;
 
     @Override
     public ResponseEntity<ResponseObject> processAccount(ProcessAccountRequest request, String action) {
@@ -180,7 +182,7 @@ public class HRServiceImpl implements HRService {
         Account account = accountRepo.save(
                 Account.builder()
                         .email(GenerateEmailTeacherUtil.generateTeacherEmail(accountRepo))
-                        .password(rawPassword)
+                        .password(passwordEncoder.encode(rawPassword))
                         .name(request.getName())
                         .avatarUrl(null)
                         .gender(request.getGender())
