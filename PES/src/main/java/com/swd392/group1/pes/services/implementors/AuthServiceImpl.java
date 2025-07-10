@@ -177,7 +177,7 @@ public class AuthServiceImpl implements AuthService {
         String suffix = RandomPasswordUtil.generateRandomString(6);
         String code = prefix + token + suffix;
 
-        String verifyLink = "http://localhost:5173/auth/register?code=&?email=" + code + request.getEmail();
+        String verifyLink = "http://localhost:5173/auth/register?code=" + code + "&email=" + request.getEmail();
 
         mailService.sendMail(
                 request.getEmail(),
