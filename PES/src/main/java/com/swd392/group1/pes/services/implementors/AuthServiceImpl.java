@@ -288,10 +288,62 @@ public class AuthServiceImpl implements AuthService {
 
 
     public static String registerValidation(RegisterRequest request) {
+        // 1. Name
+        if (request.getName() == null || request.getName().trim().isEmpty()) {
+            return "Name is required.";
+        }
+        if (!request.getName().trim().matches("^[a-zA-Z\\s'-]+$")) {
+            return "Name can only contain letters, spaces, hyphens, and apostrophes.";
+        }
+        if (request.getName().trim().length() < 2 || request.getName().trim().length() > 50) {
+            return "Name must be between 2 and 50 characters.";
+        }
+
+        // 2. Phone
+        if (request.getPhone() == null || request.getPhone().trim().isEmpty()) {
+            return "Phone number is required.";
+        }
+        if (!request.getPhone().trim().matches("^(03|05|07|08|09)\\d{8}$")) {
+            return "Phone number must start with a valid prefix and be 10 digits.";
+        }
+
+        // 3. Gender
+        if (request.getGender() == null || request.getGender().trim().isEmpty()) {
+            return "Gender is required.";
+        }
+        if (!request.getGender().trim().equals("male") &&
+                !request.getGender().trim().equals("female")) {
+            return "Gender must be 'male', 'female'";
+        }
+
+        // 4. Identity Number
+        if (request.getIdentityNumber() == null || request.getIdentityNumber().trim().isEmpty()) {
+            return "Identity number is required.";
+        }
+        if (!Pattern.compile("^\\d{12}$").matcher(request.getIdentityNumber()).matches()) {
+            return "Identity number must be exactly 12 digits.";
+        }
+
+        // 5. Job
+        if (request.getJob() == null || request.getJob().trim().isEmpty()) {
+            return "Job is required.";
+        }
+        if (request.getJob().trim().length() > 100) {
+            return "Job must not exceed 100 characters.";
+        }
+
+        // 6. Relationship to Child
+        if (request.getRelationshipToChild() == null || request.getRelationshipToChild().trim().isEmpty()) {
+            return "Relationship to child is required.";
+        }
+        if (!request.getRelationshipToChild().matches("(?i)^(father|mother)$")) {
+            return "Relationship to child must be one of the following: father, mother";
+        }
+
+        // 7. Password
         if (request.getPassword() == null || request.getPassword().trim().isEmpty()) {
             return "Password is required.";
         }
-
         if (request.getPassword().length() < 8) {
             return "Password must be at least 8 characters long.";
         }
@@ -314,50 +366,12 @@ public class AuthServiceImpl implements AuthService {
             return "Password must contain at least one special character.";
         }
 
+        // 8. Confirm Password
         if (request.getConfirmPassword() == null || request.getConfirmPassword().trim().isEmpty()) {
             return "Confirm password is required.";
         }
-
         if (!request.getConfirmPassword().equals(request.getPassword())) {
             return "Confirm password does not match password.";
-        }
-
-        if (request.getName() == null || request.getName().trim().isEmpty()) {
-            return "Name is required.";
-        }
-
-        if (!request.getName().trim().matches("^[a-zA-Z\\s'-]+$")) {
-            return "Name can only contain letters, spaces, hyphens, and apostrophes.";
-        }
-
-        if (request.getName().trim().length() < 2 || request.getName().trim().length() > 50) {
-            return "Name must be between 2 and 50 characters.";
-        }
-
-        if (request.getPhone() == null || request.getPhone().trim().isEmpty()) {
-            return "Phone number is required.";
-        }
-
-        if (!request.getPhone().trim().matches("^(03|05|07|08|09)\\d{8}$")) {
-            return "Phone number must start with a valid prefix and be 10 digits.";
-        }
-
-        if (request.getGender() == null || request.getGender().trim().isEmpty()) {
-            return "Gender is required.";
-        }
-
-        if (!request.getGender().trim().equals("male") &&
-                !request.getGender().trim().equals("female")) {
-            return "Gender must be 'male', 'female'";
-        }
-
-        if (request.getIdentityNumber() == null || request.getIdentityNumber().trim().isEmpty()) {
-            return "Identity number is required.";
-        }
-
-        Pattern idPattern = Pattern.compile("^\\d{12}$");
-        if (!idPattern.matcher(request.getIdentityNumber()).matches()) {
-            return "Identity number must be exactly 12 digits.";
         }
 
         return "";
