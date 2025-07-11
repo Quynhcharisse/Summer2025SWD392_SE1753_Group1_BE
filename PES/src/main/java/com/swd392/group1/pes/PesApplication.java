@@ -28,7 +28,6 @@ public class PesApplication {
     private final ParentRepo parentRepo;
     private final AccountRepo accountRepo;
 
-    private final Random random = new Random();
     private final PasswordEncoder passwordEncoder;
 
     public static void main(String[] args) {

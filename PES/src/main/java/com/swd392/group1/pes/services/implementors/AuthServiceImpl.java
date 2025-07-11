@@ -54,9 +54,9 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     public ResponseEntity<ResponseObject> login(LoginRequest request, HttpServletResponse response) {
-        Account account = accountRepo.findByEmailAndPassword(request.getEmail(), passwordEncoder.encode(request.getPassword())).orElse(null);
+        Account account = accountRepo.findByEmail(request.getEmail()).orElse(null);
 
-        if (account == null) {
+        if (account == null || !passwordEncoder.matches(request.getPassword(), account.getPassword())) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(
                     ResponseObject.builder()
                             .message("Invalid email or password")
@@ -99,7 +99,7 @@ public class AuthServiceImpl implements AuthService {
         return body;
     }
 
-    public static String loginValidation(LoginRequest request, AccountRepo accountRepo) {
+    private String loginValidation(LoginRequest request, AccountRepo accountRepo) {
 
         if (request.getEmail() == null || request.getEmail().trim().isEmpty()) {
             return "Email is required.";
@@ -110,7 +110,7 @@ public class AuthServiceImpl implements AuthService {
 
         Account acc = accountRepo.findByEmailAndStatus(request.getEmail(), Status.ACCOUNT_ACTIVE.getValue()).orElse(null);
 
-        if (acc == null || !acc.getPassword().equals(request.getPassword()) ||
+        if (acc == null || !passwordEncoder.matches(request.getPassword(), acc.getPassword()) ||
                 acc.getStatus().equalsIgnoreCase(Status.ACCOUNT_BAN.getValue())) {
             return "Email or password is incorrect.";
         }
