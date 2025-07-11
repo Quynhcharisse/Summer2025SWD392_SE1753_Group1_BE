@@ -572,7 +572,7 @@ public class ParentServiceImpl implements ParentService {
                             .build());
         }
 
-        studentRepo.save(
+        Student savedStudent = studentRepo.save(
                 Student.builder()
                         .name(request.getName())
                         .gender(request.getGender())
@@ -582,10 +582,29 @@ public class ParentServiceImpl implements ParentService {
                         .birthCertificateImg(request.getBirthCertificateImg())
                         .householdRegistrationImg(request.getHouseholdRegistrationImg())
                         .modifiedDate(LocalDate.now())
-                        .isStudent(false)         // mặc định là chưa chính thức
-                        .parent(parent)           // gán cha mẹ
+                        .isStudent(false)        
+                        .parent(parent)           
                         .build());
 
+        // Gửi email confirmation
+        try {
+            String subject = "[PES] Child Added Successfully";
+            String heading = "Child Added to Your Account";
+            String bodyHtml = Format.getChildAddedSuccessBody(
+                    acc.getName(),
+                    savedStudent.getName(),
+                    savedStudent.getGender(),
+                    savedStudent.getDateOfBirth().toString()
+            );
+            mailService.sendMail(
+                    acc.getEmail(),
+                    subject,
+                    heading,
+                    bodyHtml
+            );
+        } catch (Exception e) {
+            System.err.println("Failed to send add child email notification: " + e.getMessage());
+        }
 
         return ResponseEntity.status(HttpStatus.OK).body(
                 ResponseObject.builder()
@@ -595,6 +614,56 @@ public class ParentServiceImpl implements ParentService {
                         .build()
         );
     }
+
+    public static String addChildValidate(AddChildRequest request) {
+        if (request.getName() == null || request.getName().trim().isEmpty()) {
+            return "Name is required.";
+        }
+        if (request.getName().length() < 2 || request.getName().length() > 50) {
+            return "Name must be between 2 and 50 characters.";
+        }
+
+        if (!isValidGender(request.getGender())) {
+            return "Gender must be Male or Female.";
+        }
+
+        if (request.getDateOfBirth() == null || request.getDateOfBirth().isAfter(LocalDate.now())) {
+            return "Date of birth must be in the past.";
+        }
+
+        int age = calculateAge(request.getDateOfBirth());
+        if (age < 3 || age >= 6) {
+            return "Child's age must be between 3 and 5 years.";
+        }
+
+        if (request.getPlaceOfBirth() == null || request.getPlaceOfBirth().trim().isEmpty()) {
+            return "Place of birth is required.";
+        }
+
+        if (request.getPlaceOfBirth().length() > 100) {
+            return "Place of birth must be less than 100 characters.";
+        }
+
+        String[] images = {
+                request.getProfileImage(),
+                request.getHouseholdRegistrationImg(),
+                request.getBirthCertificateImg(),
+        };
+        String[] imageNames = {
+                "Profile image",
+                "Household registration image",
+                "Birth certificate image",
+                "Commitment image"
+        };
+
+        for (int i = 0; i < images.length; i++) {
+            String error = validateImageField(imageNames[i], images[i]);
+            if (!error.isEmpty()) return error;
+        }
+
+        return "";
+    }
+
 
     @Override
     public ResponseEntity<ResponseObject> updateChild(UpdateChildRequest request, HttpServletRequest httpRequest) {
@@ -676,10 +745,29 @@ public class ParentServiceImpl implements ParentService {
         student.setBirthCertificateImg(request.getBirthCertificateImg());
         student.setHouseholdRegistrationImg(request.getHouseholdRegistrationImg());
         student.setModifiedDate(LocalDate.now());
-        student.setUpdateCount(count + 1); // safe increment // Tăng số lần cập nhật
-        studentRepo.save(student);
+        student.setUpdateCount(count + 1); 
+        Student updatedStudent = studentRepo.save(student);
 
-        int remaining = 5 - student.getUpdateCount();
+        int remaining = 5 - updatedStudent.getUpdateCount();
+
+        // Gửi email confirmation
+        try {
+            String subject = "[PES] Child Information Updated Successfully";
+            String heading = "Child Information Updated";
+            String bodyHtml = Format.getChildUpdatedSuccessBody(
+                    acc.getName(),
+                    updatedStudent.getName(),
+                    remaining
+            );
+            mailService.sendMail(
+                    acc.getEmail(),
+                    subject,
+                    heading,
+                    bodyHtml
+            );
+        } catch (Exception e) {
+            System.err.println("Failed to send update child email notification: " + e.getMessage());
+        }
 
         return ResponseEntity.status(HttpStatus.OK).body(
                 ResponseObject.builder()
@@ -748,55 +836,7 @@ public class ParentServiceImpl implements ParentService {
         return "";
     }
 
-    public static String addChildValidate(AddChildRequest request) {
-        if (request.getName() == null || request.getName().trim().isEmpty()) {
-            return "Name is required.";
-        }
-        if (request.getName().length() < 2 || request.getName().length() > 50) {
-            return "Name must be between 2 and 50 characters.";
-        }
-
-        if (!isValidGender(request.getGender())) {
-            return "Gender must be Male or Female.";
-        }
-
-        if (request.getDateOfBirth() == null || request.getDateOfBirth().isAfter(LocalDate.now())) {
-            return "Date of birth must be in the past.";
-        }
-
-        int age = calculateAge(request.getDateOfBirth());
-        if (age < 3 || age >= 6) {
-            return "Child's age must be between 3 and 5 years.";
-        }
-
-        if (request.getPlaceOfBirth() == null || request.getPlaceOfBirth().trim().isEmpty()) {
-            return "Place of birth is required.";
-        }
-
-        if (request.getPlaceOfBirth().length() > 100) {
-            return "Place of birth must be less than 100 characters.";
-        }
-
-        String[] images = {
-                request.getProfileImage(),
-                request.getHouseholdRegistrationImg(),
-                request.getBirthCertificateImg(),
-        };
-        String[] imageNames = {
-                "Profile image",
-                "Household registration image",
-                "Birth certificate image",
-                "Commitment image"
-        };
-
-        for (int i = 0; i < images.length; i++) {
-            String error = validateImageField(imageNames[i], images[i]);
-            if (!error.isEmpty()) return error;
-        }
-
-        return "";
-    }
-
+   
     private static boolean isValidGender(String gender) {
         return gender != null && (
                 gender.equalsIgnoreCase("Male") ||

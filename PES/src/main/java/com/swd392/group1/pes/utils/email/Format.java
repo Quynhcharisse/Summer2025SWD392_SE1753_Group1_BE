@@ -308,4 +308,37 @@ public class Format {
                 "<p>For any questions, feel free to contact us at <a href=\"mailto:info@sunshinepreschool.edu\">info@sunshinepreschool.edu</a> or call (555) 123-4567.</p>" +
                 "<p>Best regards,<br/>Sunshine Preschool</p>";
     }
+
+    /**
+     * Fragment khi phụ huynh thêm con thành công
+     */
+    public static String getChildAddedSuccessBody(String parentName, String childName, String childGender, String dateOfBirth) {
+        return "<p>Dear " + parentName + ",</p>" +
+                "<p>We are pleased to confirm that your child has been successfully added to your account.</p>" +
+                "<p><strong>Child Details:</strong></p>" +
+                "<ul style=\"padding-left:16px;\">" +
+                "  <li><strong>Name:</strong> " + childName + "</li>" +
+                "  <li><strong>Gender:</strong> " + childGender + "</li>" +
+                "  <li><strong>Date of Birth:</strong> " + dateOfBirth + "</li>" +
+                "</ul>" +
+                "<p>You can now proceed to submit an admission form for " + childName + " when an admission term becomes available.</p>" +
+                "<p>For any questions, feel free to contact us at <a href=\"mailto:info@sunshinepreschool.edu\">info@sunshinepreschool.edu</a> or call (555) 123-4567.</p>" +
+                "<p>Best regards,<br/>Sunshine Preschool</p>";
+    }
+
+    /**
+     * Fragment khi phụ huynh cập nhật thông tin con thành công
+     */
+    public static String getChildUpdatedSuccessBody(String parentName, String childName, int remainingUpdates) {
+        return "<p>Dear " + parentName + ",</p>" +
+                "<p>We are pleased to confirm that the information for your child <strong>" + childName + "</strong> has been successfully updated.</p>" +
+                "<p><strong>Important Information:</strong></p>" +
+                "<ul style=\"padding-left:16px;\">" +
+                "  <li>Update completed on: " + LocalDateTime.now().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")) + "</li>" +
+                "  <li>Remaining updates allowed: <strong>" + remainingUpdates + " out of 5</strong></li>" +
+                "</ul>" +
+                "<p><strong>Please note:</strong> Child information can only be updated 5 times for security reasons. After submitting an admission form, updates will not be allowed.</p>" +
+                "<p>For any questions, feel free to contact us at <a href=\"mailto:info@sunshinepreschool.edu\">info@sunshinepreschool.edu</a> or call (555) 123-4567.</p>" +
+                "<p>Best regards,<br/>Sunshine Preschool</p>";
+    }
 }
