@@ -410,7 +410,7 @@ public class AuthServiceImpl implements AuthService {
         String suffix = RandomPasswordUtil.generateRandomString(6);
         String code = prefix + token + suffix;
 
-        String resetLink = "http://localhost:5173/reset-pass?code=" + code;
+        String resetLink = "http://localhost:5173/auth/reset-pass?code=" + code;
 
         mailService.sendMail(
                 request.getEmail(),
