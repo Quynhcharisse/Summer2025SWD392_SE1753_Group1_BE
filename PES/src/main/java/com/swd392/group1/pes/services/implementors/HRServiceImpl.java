@@ -137,7 +137,7 @@ public class HRServiceImpl implements HRService {
         );
     }
 
-    public static String processAccountValidate(ProcessAccountRequest request, String action, AccountRepo accountRepo) {
+    private String processAccountValidate(ProcessAccountRequest request, String action, AccountRepo accountRepo) {
 
         Account acc = null;
 
@@ -217,7 +217,7 @@ public class HRServiceImpl implements HRService {
         );
     }
 
-    public static String createTeacherValidation(CreateTeacherRequest request, AccountRepo accountRepo) {
+    private String createTeacherValidation(CreateTeacherRequest request, AccountRepo accountRepo) {
 
         if (request.getName().trim().isEmpty()) {
             return "Name is required";
@@ -308,7 +308,7 @@ public class HRServiceImpl implements HRService {
         );
     }
 
-    public static String updateTeacherValidation(UpdateTeacherRequest request) {
+    private String updateTeacherValidation(UpdateTeacherRequest request) {
         if (request.getName() != null) {
             String name = request.getName().trim();
             if (name.isEmpty()) {

@@ -1,0 +1,158 @@
+classDiagram
+    %% Controllers
+    class ParentController {
+        <<Controller>>
+        +submitAdmissionForm(request, httpRequest) ResponseEntity
+    }
+
+    %% Services
+    class ParentService {
+        <<Interface>>
+        +submitAdmissionForm(request, httpRequest) ResponseEntity
+    }
+
+    class ParentServiceImpl {
+        <<Service>>
+        -jwtService: JWTService
+        -studentRepo: StudentRepo
+        -termItemRepo: TermItemRepo
+        -admissionFormRepo: AdmissionFormRepo
+        -mailService: MailService
+        +submitAdmissionForm() ResponseEntity
+        +validateForm() String
+        -calculateAge() int
+    }
+
+    class JWTService {
+        <<Service>>
+        +extractAccountFromCookie() Account
+    }
+
+    class MailService {
+        <<Service>>
+        +sendMail() void
+    }
+
+    %% DTOs
+    class SubmitAdmissionFormRequest {
+        <<DTO>>
+        +studentId: int
+        +householdRegistrationAddress: String
+        +childCharacteristicsFormImg: String
+        +commitmentImg: String
+        +note: String
+    }
+
+    class ResponseObject {
+        <<DTO>>
+        +message: String
+        +success: boolean
+        +data: Object
+    }
+
+    %% Main Entities
+    class AdmissionForm {
+        <<Entity>>
+        +id: Integer
+        +submittedDate: LocalDateTime
+        +householdRegistrationAddress: String
+        +childCharacteristicsFormImg: String
+        +commitmentImg: String
+        +note: String
+        +status: Status
+    }
+
+    class Student {
+        <<Entity>>
+        +id: Integer
+        +name: String
+        +dateOfBirth: LocalDate
+        +isStudent: boolean
+    }
+
+    class Parent {
+        <<Entity>>
+        +id: Integer
+        +account: Account
+    }
+
+    class TermItem {
+        <<Entity>>
+        +id: Integer
+        +grade: Grade
+        +status: Status
+    }
+
+    class Account {
+        <<Entity>>
+        +id: Integer
+        +name: String
+        +email: String
+        +role: Role
+    }
+
+    %% Repositories
+    class AdmissionFormRepo {
+        <<Repository>>
+        +save() AdmissionForm
+        +findExistingForms() List
+    }
+
+    class StudentRepo {
+        <<Repository>>
+        +findById() Student
+    }
+
+    class TermItemRepo {
+        <<Repository>>
+        +findActiveTerms() List
+    }
+
+    %% Enums
+    class Status {
+        <<Enumeration>>
+        PENDING_APPROVAL
+        APPROVED
+        REJECTED
+    }
+
+    class Role {
+        <<Enumeration>>
+        PARENT
+    }
+
+    class Grade {
+        <<Enumeration>>
+        SEED
+        BUD
+        LEAF
+    }
+
+    %% Main Flow Relationships
+    ParentController --> ParentService : uses
+    ParentController --> SubmitAdmissionFormRequest : receives
+    ParentController --> ResponseObject : returns
+
+    ParentService <|.. ParentServiceImpl : implements
+    
+    ParentServiceImpl --> JWTService : authentication
+    ParentServiceImpl --> MailService : notification
+    ParentServiceImpl --> AdmissionFormRepo : save form
+    ParentServiceImpl --> StudentRepo : validate student
+    ParentServiceImpl --> TermItemRepo : validate term
+
+    %% Entity Relationships
+    AdmissionForm --> Student : for student
+    AdmissionForm --> Parent : by parent
+    AdmissionForm --> TermItem : in term
+    AdmissionForm --> Status : has status
+
+    Student --> Parent : belongs to
+    Parent --> Account : has account
+    TermItem --> Grade : for grade
+    Account --> Role : has role
+
+    %% Repository manages entities
+    AdmissionFormRepo ..> AdmissionForm : manages
+    StudentRepo ..> Student : manages
+    TermItemRepo ..> TermItem : manages 

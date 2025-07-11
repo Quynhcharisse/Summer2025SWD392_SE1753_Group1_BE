@@ -90,7 +90,7 @@ public class AccountServiceImpl implements AccountService {
         );
     }
 
-    public static String validateResetPassword(RestPasswordRequest request, AccountRepo accountRepo) {
+    private String validateResetPassword(RestPasswordRequest request, AccountRepo accountRepo) {
         if (request.getEmail() == null || request.getEmail().trim().isEmpty()) {
             return "Email is required.";
         }
@@ -237,7 +237,7 @@ public class AccountServiceImpl implements AccountService {
         );
     }
 
-    public static String updateProfileValidate(UpdateProfileRequest request) {
+    private String updateProfileValidate(UpdateProfileRequest request) {
         if (request.getName() == null || request.getName().isEmpty()) {
             return "Name is required.";
         }
