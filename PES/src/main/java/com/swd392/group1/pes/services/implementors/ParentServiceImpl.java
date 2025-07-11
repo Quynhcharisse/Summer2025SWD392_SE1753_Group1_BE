@@ -65,7 +65,6 @@ import java.util.TimeZone;
 import java.util.TreeMap;
 import java.util.function.Function;
 import java.util.stream.Collectors;
-
 import static com.swd392.group1.pes.services.implementors.EventServiceImpl.validateRegisterEvent;
 
 @Service
@@ -283,7 +282,7 @@ public class ParentServiceImpl implements ParentService {
         );
     }
 
-    public static String submittedAdmissionFormValidation(SubmitAdmissionFormRequest request, StudentRepo studentRepo, TermItemRepo termItemRepo, AdmissionFormRepo admissionFormRepo) {
+    private String submittedAdmissionFormValidation(SubmitAdmissionFormRequest request, StudentRepo studentRepo, TermItemRepo termItemRepo, AdmissionFormRepo admissionFormRepo) {
         Student student = studentRepo.findById(request.getStudentId()).orElse(null);
         if (student == null) {
             return "Student not found after successful validation. This indicates a logical error.";
@@ -351,11 +350,11 @@ public class ParentServiceImpl implements ParentService {
         return "";
     }
 
-    private static boolean isNotValidImage(String fileName) {
+    private boolean isNotValidImage(String fileName) {
         return fileName == null || fileName.trim().isEmpty() || !fileName.matches("(?i)^.+\\.(jpg|jpeg|png|gif|bmp|webp)$");
     }
 
-    private static boolean isAgeValidForGrade(LocalDate dob) {
+    private boolean isAgeValidForGrade(LocalDate dob) {
         int age = calculateAge(dob);
         return age >= 3 && age <= 5;
     }
@@ -468,7 +467,7 @@ public class ParentServiceImpl implements ParentService {
         );
     }
 
-    public static String canceledValidate(CancelAdmissionForm request, Account account, AdmissionFormRepo admissionFormRepo) {
+    private String canceledValidate(CancelAdmissionForm request, Account account, AdmissionFormRepo admissionFormRepo) {
         AdmissionForm form = admissionFormRepo.findById(request.getFormId()).orElse(null);
 
         if (form == null) {
@@ -615,7 +614,7 @@ public class ParentServiceImpl implements ParentService {
         );
     }
 
-    public static String addChildValidate(AddChildRequest request) {
+    private String addChildValidate(AddChildRequest request) {
         if (request.getName() == null || request.getName().trim().isEmpty()) {
             return "Name is required.";
         }
@@ -777,7 +776,7 @@ public class ParentServiceImpl implements ParentService {
                         .build());
     }
 
-    public static String updateChildValidate(UpdateChildRequest request) {
+    private String updateChildValidate(UpdateChildRequest request) {
         if (request.getId() <= 0) {
             return "Invalid child ID.";
         }
@@ -837,14 +836,14 @@ public class ParentServiceImpl implements ParentService {
     }
 
    
-    private static boolean isValidGender(String gender) {
+    private boolean isValidGender(String gender) {
         return gender != null && (
                 gender.equalsIgnoreCase("Male") ||
                         gender.equalsIgnoreCase("Female")
         );
     }
 
-    private static String validateImageField(String name, String value) {
+    private String validateImageField(String name, String value) {
         if (value == null || value.isEmpty()) {
             return name + " is required.";
         }
@@ -854,7 +853,7 @@ public class ParentServiceImpl implements ParentService {
         return "";
     }
 
-    public static int calculateAge(LocalDate dob) {
+    private int calculateAge(LocalDate dob) {
         LocalDate today = LocalDate.now();
         return (int) ChronoUnit.YEARS.between(dob, today);
     }
@@ -1308,7 +1307,7 @@ public class ParentServiceImpl implements ParentService {
         }
     }
 
-    public static String paymentValidation(InitiateVNPayPaymentRequest request, AdmissionFormRepo admissionFormRepo, TransactionRepo transactionRepo) {
+    private String paymentValidation(InitiateVNPayPaymentRequest request, AdmissionFormRepo admissionFormRepo, TransactionRepo transactionRepo) {
 
         //Kiểm tra formId có được cung cấp không
         AdmissionForm form = admissionFormRepo.findById(request.getFormId()).orElse(null);

@@ -118,7 +118,7 @@ public class AdmissionServiceImpl implements AdmissionService {
         );
     }
 
-    public static String createTermValidate(CreateAdmissionTermRequest request, AdmissionTermRepo admissionTermRepo) {
+    private String createTermValidate(CreateAdmissionTermRequest request, AdmissionTermRepo admissionTermRepo) {
         if (request.getStartDate() == null) {
             return "Start date is required";
         }
@@ -224,7 +224,7 @@ public class AdmissionServiceImpl implements AdmissionService {
     }
 
 
-    public static String updateTermValidate(UpdateAdmissionTermRequest request) {
+    private String updateTermValidate(UpdateAdmissionTermRequest request) {
 
         System.out.println("Term ID: " + request.getTermId());
         if (request.getTermId() <= 0) {
@@ -465,7 +465,7 @@ public class AdmissionServiceImpl implements AdmissionService {
         );
     }
 
-    public static String createExtraTerm(CreateExtraTermRequest request, AdmissionTermRepo admissionTermRepo) {
+    private String createExtraTerm(CreateExtraTermRequest request, AdmissionTermRepo admissionTermRepo) {
         AdmissionTerm parentTerm = admissionTermRepo.findById(request.getParentTermId()).orElse(null);
         if (parentTerm == null) {
             return "Parent term is required.";
@@ -651,7 +651,7 @@ public class AdmissionServiceImpl implements AdmissionService {
         );
     }
 
-    public static String processFormByManagerValidate(ProcessAdmissionFormRequest request, AdmissionFormRepo admissionFormRepo) {
+    private String processFormByManagerValidate(ProcessAdmissionFormRequest request, AdmissionFormRepo admissionFormRepo) {
         AdmissionForm form = admissionFormRepo.findById(request.getId()).orElse(null);
 
         if (form == null) {

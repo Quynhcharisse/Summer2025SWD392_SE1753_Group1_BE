@@ -290,7 +290,7 @@ public class AuthServiceImpl implements AuthService {
     }
 
 
-    public static String registerValidation(RegisterRequest request) {
+    private String registerValidation(RegisterRequest request) {
         // 1. Name
         if (request.getName() == null || request.getName().trim().isEmpty()) {
             return "Name is required.";
@@ -489,7 +489,7 @@ public class AuthServiceImpl implements AuthService {
         }
     }
 
-    public static String resetPassValidation(ResetPassRequest request) {
+    private String resetPassValidation(ResetPassRequest request) {
         if (request.getNewPassword() == null || request.getNewPassword().trim().isEmpty()) {
             return "Password is required.";
         }
@@ -527,7 +527,7 @@ public class AuthServiceImpl implements AuthService {
         return "";
     }
 
-    public static String forgotPasswordValidation(ForgotPasswordRequest request, AccountRepo accountRepo) {
+    private String forgotPasswordValidation(ForgotPasswordRequest request, AccountRepo accountRepo) {
         if (request.getEmail() == null || request.getEmail().trim().isEmpty()) {
             return "Email is required.";
         }
