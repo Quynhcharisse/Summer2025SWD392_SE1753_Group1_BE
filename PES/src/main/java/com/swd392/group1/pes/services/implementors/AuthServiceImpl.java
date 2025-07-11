@@ -25,6 +25,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.HashMap;
@@ -49,11 +50,13 @@ public class AuthServiceImpl implements AuthService {
 
     private final MailService mailService;
 
+    private final PasswordEncoder passwordEncoder;
+
     @Override
     public ResponseEntity<ResponseObject> login(LoginRequest request, HttpServletResponse response) {
-        Account account = accountRepo.findByEmailAndPassword(request.getEmail(), request.getPassword()).orElse(null);
+        Account account = accountRepo.findByEmail(request.getEmail()).orElse(null);
 
-        if (account == null) {
+        if (account == null || !passwordEncoder.matches(request.getPassword(), account.getPassword())) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(
                     ResponseObject.builder()
                             .message("Invalid email or password")
@@ -96,7 +99,7 @@ public class AuthServiceImpl implements AuthService {
         return body;
     }
 
-    public static String loginValidation(LoginRequest request, AccountRepo accountRepo) {
+    private String loginValidation(LoginRequest request, AccountRepo accountRepo) {
 
         if (request.getEmail() == null || request.getEmail().trim().isEmpty()) {
             return "Email is required.";
@@ -107,7 +110,7 @@ public class AuthServiceImpl implements AuthService {
 
         Account acc = accountRepo.findByEmailAndStatus(request.getEmail(), Status.ACCOUNT_ACTIVE.getValue()).orElse(null);
 
-        if (acc == null || !acc.getPassword().equals(request.getPassword()) ||
+        if (acc == null || !passwordEncoder.matches(request.getPassword(), acc.getPassword()) ||
                 acc.getStatus().equalsIgnoreCase(Status.ACCOUNT_BAN.getValue())) {
             return "Email or password is incorrect.";
         }
@@ -245,7 +248,7 @@ public class AuthServiceImpl implements AuthService {
 
         Account account = Account.builder()
                 .email(email)
-                .password(request.getPassword())
+                .password(passwordEncoder.encode(request.getPassword()))
                 .name(request.getName())
                 .phone(request.getPhone())
                 .gender(request.getGender())
@@ -457,7 +460,7 @@ public class AuthServiceImpl implements AuthService {
                 );
             }
 
-            account.setPassword(request.getNewPassword());
+            account.setPassword(passwordEncoder.encode(request.getNewPassword()));
             accountRepo.save(account);
 
             mailService.sendMail(
