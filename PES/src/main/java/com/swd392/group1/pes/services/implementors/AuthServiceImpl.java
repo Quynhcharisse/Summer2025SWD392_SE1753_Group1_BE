@@ -394,7 +394,7 @@ public class AuthServiceImpl implements AuthService {
             );
         }
 
-        if (accountRepo.findByEmailAndStatus(request.getEmail(), Status.ACCOUNT_ACTIVE.getValue()).isPresent()) {
+        if (accountRepo.findByEmailAndStatus(request.getEmail(), Status.ACCOUNT_ACTIVE.getValue()).isEmpty()) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
                     ResponseObject.builder()
                             .message("Account not found")
