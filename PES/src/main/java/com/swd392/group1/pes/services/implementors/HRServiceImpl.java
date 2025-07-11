@@ -346,6 +346,7 @@ public class HRServiceImpl implements HRService {
                 .map(account ->
                         {
                             Map<String, Object> data = new HashMap<>();
+                            data.put("id", account.getId());
                             data.put("email", account.getEmail());
                             data.put("name", account.getName());
                             data.put("avatarUrl", account.getAvatarUrl());
@@ -371,6 +372,7 @@ public class HRServiceImpl implements HRService {
         List<Map<String, Object>> parentList = accountRepo.findByRole(Role.PARENT).stream()
                 .map(parentAcc -> {
                     Map<String, Object> data = new HashMap<>();
+                    data.put("id", parentAcc.getParent().getId());
                     data.put("email", parentAcc.getEmail());
                     data.put("name", parentAcc.getName());
                     data.put("phone", parentAcc.getPhone());
