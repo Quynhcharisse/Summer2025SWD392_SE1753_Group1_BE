@@ -57,7 +57,7 @@ public class AuthServiceImpl implements AuthService {
         Account account = accountRepo.findByEmail(request.getEmail()).orElse(null);
 
         if (account == null || !passwordEncoder.matches(request.getPassword(), account.getPassword())) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
                     ResponseObject.builder()
                             .message("Invalid email or password")
                             .success(false)
