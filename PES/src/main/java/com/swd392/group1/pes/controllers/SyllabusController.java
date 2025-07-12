@@ -1,9 +1,7 @@
 package com.swd392.group1.pes.controllers;
 
 import com.swd392.group1.pes.dto.requests.AssignLessonsRequest;
-import com.swd392.group1.pes.dto.requests.CreateLessonRequest;
 import com.swd392.group1.pes.dto.requests.CreateSyllabusRequest;
-import com.swd392.group1.pes.dto.requests.UpdateLessonRequest;
 import com.swd392.group1.pes.dto.requests.UpdateSyllabusRequest;
 import com.swd392.group1.pes.dto.response.ResponseObject;
 import com.swd392.group1.pes.services.SyllabusService;

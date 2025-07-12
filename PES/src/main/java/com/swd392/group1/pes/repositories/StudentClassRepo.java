@@ -18,5 +18,5 @@ public interface StudentClassRepo extends JpaRepository<StudentClass, Integer> {
 
     int countByClasses_Id(int classId);
 
-    boolean existsByStudent_Id(Integer id);
+    boolean existsByStudent_IdAndClasses_AcademicYearAndClasses_Grade(Integer student_id, int classes_academicYear, Grade classes_grade);
 }

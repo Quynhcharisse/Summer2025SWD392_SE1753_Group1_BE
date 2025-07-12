@@ -14,8 +14,7 @@ import com.swd392.group1.pes.models.Activity;
 import com.swd392.group1.pes.models.AdmissionForm;
 import com.swd392.group1.pes.models.AdmissionTerm;
 import com.swd392.group1.pes.models.Classes;
-import com.swd392.group1.pes.models.Event;
-import com.swd392.group1.pes.models.EventParticipate;
+
 import com.swd392.group1.pes.models.Lesson;
 import com.swd392.group1.pes.models.Parent;
 import com.swd392.group1.pes.models.Schedule;
@@ -112,43 +111,6 @@ public class ClassServiceImpl implements ClassService {
                             .build());
         }
 
-        Syllabus syllabus = syllabusRepo.findById(Integer.parseInt(request.getSyllabusId())).orElse(null);
-        if (syllabus == null) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ResponseObject.builder()
-                    .message("Syllabus not found")
-                    .success(false)
-                    .data(null)
-                    .build());
-        }
-        Grade grade = syllabus.getGrade();
-
-        Optional<Syllabus> existingOpt = syllabusRepo
-                .findFirstByAssignedToClassesTrueAndGradeAndClassesList_AcademicYear(grade, Integer.parseInt(request.getYear()));
-
-        if (existingOpt.isPresent() && !existingOpt.get().getId().equals(syllabus.getId())) {
-            return ResponseEntity.status(HttpStatus.CONFLICT).body(
-                    ResponseObject.builder()
-                            .message("Syllabus '" + existingOpt.get().getSubject() +
-                                    "' has already been assigned to this grade in year " + request.getYear() +
-                                    ". \n Please use the same syllabus or choose a different grade or year.")                            .success(false)
-                            .data(null)
-                            .build()
-            );
-        }
-
-        LocalDate start = request.getStartDate();
-        LocalDate end = start.plusWeeks(syllabus.getNumberOfWeek()).minusDays(1);
-        if (start.getYear() != end.getYear()) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ResponseObject.builder()
-                    .message("Start date and end date must be within the same calendar year")
-                    .success(false)
-                    .data(null)
-                    .build());
-        }
-        List<Account> teachers = accountRepo.findByRoleAndStatus(Role.TEACHER, Status.ACCOUNT_ACTIVE.getValue());
-        Set<String> validLessonNames = syllabus.getSyllabusLessonList().stream()
-                .map(sl -> sl.getLesson().getTopic())
-                .collect(Collectors.toSet());
         List<String> raws = request.getActivitiesNameByDay();
 
         Pattern validActivityNamePattern = Pattern.compile("^[\\p{L}0-9 ]+$");
@@ -176,6 +138,45 @@ public class ClassServiceImpl implements ClassService {
                 }
             }
         }
+
+        Syllabus syllabus = syllabusRepo.findById(Integer.parseInt(request.getSyllabusId())).orElse(null);
+        if (syllabus == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ResponseObject.builder()
+                    .message("Syllabus not found")
+                    .success(false)
+                    .data(null)
+                    .build());
+        }
+        Grade grade = syllabus.getGrade();
+
+        LocalDate start = request.getStartDate();
+        LocalDate end = start.plusWeeks(syllabus.getNumberOfWeek()).minusDays(1);
+        if (start.getYear() != end.getYear()) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(ResponseObject.builder()
+                    .message("Start date and end date must be within the same calendar year")
+                    .success(false)
+                    .data(null)
+                    .build());
+        }
+
+        Optional<Syllabus> existingOpt = syllabusRepo
+                .findFirstByAssignedToClassesTrueAndGradeAndClassesList_AcademicYear(grade, Integer.parseInt(request.getYear()));
+
+        if (existingOpt.isPresent() && !existingOpt.get().getId().equals(syllabus.getId())) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(
+                    ResponseObject.builder()
+                            .message("Syllabus '" + existingOpt.get().getSubject() +
+                                    "' has already been assigned to this grade in year " + request.getYear() +
+                                    ". \n Please use the same syllabus or choose a different grade or year.")                            .success(false)
+                            .data(null)
+                            .build()
+            );
+        }
+
+        List<Account> teachers = accountRepo.findByRoleAndStatus(Role.TEACHER, Status.ACCOUNT_ACTIVE.getValue());
+        Set<String> validLessonNames = syllabus.getSyllabusLessonList().stream()
+                .map(sl -> sl.getLesson().getTopic())
+                .collect(Collectors.toSet());
 
         Map<DayOfWeek, List<String[]>> entriesByDay = raws.stream()
                 .map(raw -> raw.split("-", 4))
@@ -222,6 +223,12 @@ public class ClassServiceImpl implements ClassService {
                         p -> DayOfWeek.valueOf(p[0].toUpperCase()),
                         Collectors.mapping(p -> p[1].substring(3), Collectors.toList())
                 ));
+        Map<String, Integer> lessonDurationMap = syllabus.getSyllabusLessonList().stream()
+                .collect(Collectors.toMap(
+                        sl -> sl.getLesson().getTopic(),
+                        sl -> sl.getLesson().getDuration()
+                ));
+        Map<String, Integer> lessonActualHours = new HashMap<>();
         for (var e : lessonsByDay.entrySet()) {
             DayOfWeek dow = e.getKey();
             List<String> lessons = e.getValue();
@@ -230,17 +237,38 @@ public class ClassServiceImpl implements ClassService {
                     .map(raw -> raw.split("-", 4))
                     .filter(parts -> parts.length == 4 && parts[1].startsWith("LE_"))
                     .mapToInt(parts -> {
+                        String topic = parts[1].substring(3);
                         LocalTime startSlot = LocalTime.parse(parts[2]);
                         LocalTime endSlot = LocalTime.parse(parts[3]);
+                        int hours = (int) Duration.between(start, end).toHours();
+                        lessonActualHours.put(topic, lessonActualHours.getOrDefault(topic, 0) + hours);
                         return (int) Duration.between(startSlot, endSlot).toHours();
                     })
                     .sum();
+
+
+            for (Map.Entry<String, Integer> entry : lessonDurationMap.entrySet()) {
+                String topic = entry.getKey();
+                int required = entry.getValue();
+                int actual = lessonActualHours.getOrDefault(topic, 0);
+                if (actual != required) {
+                    return ResponseEntity.status(HttpStatus.CONFLICT).body(
+                            ResponseObject.builder()
+                                    .message(String.format("Lesson '%s' requires exactly %d hours, but scheduled %d hours.", topic, required, actual))
+                                    .success(false)
+                                    .data(null)
+                                    .build()
+                    );
+                }
+            }
+
             if (totalWeeklyHours != 30)
                 return ResponseEntity.status(HttpStatus.CONFLICT).body(ResponseObject.builder()
                         .message("Total lesson hours per week must be 30, but found " + totalWeeklyHours)
                         .success(false)
                         .data(null)
                         .build());
+
 
             if (lessons.size() != 6) {
                 return ResponseEntity.status(HttpStatus.CONFLICT).body(ResponseObject.builder()
@@ -281,7 +309,7 @@ public class ClassServiceImpl implements ClassService {
                 .filter(st -> !assignedStudentIds.contains(st.getId()))
                 .toList();
         if (studentsToAssign.isEmpty()) {
-            return ResponseEntity.ok(ResponseObject.builder()
+            return ResponseEntity.badRequest().body(ResponseObject.builder()
                     .message("No new students to assign.").success(false).data(null).build());
         }
         int existing = classRepo.countByAcademicYearAndGrade(Integer.parseInt(request.getYear()), grade);
@@ -355,7 +383,7 @@ public class ClassServiceImpl implements ClassService {
             for (int j = 0; j < numberOfStudentsPerClass && studentIdx < studentsToAssign.size(); j++, studentIdx++) {
                 Student student = studentsToAssign.get(studentIdx);
 
-                if (studentClassRepo.existsByStudent_Id(student.getId())) {
+                if (studentClassRepo.existsByStudent_IdAndClasses_AcademicYearAndClasses_Grade(student.getId(), Integer.parseInt(request.getYear()), grade)) {
                     studentIdx++;
                     continue;
                 }
@@ -630,7 +658,7 @@ public class ClassServiceImpl implements ClassService {
                             .build());
         }
 
-        if (activityRepo.findBySchedule_Id(Integer.parseInt(scheduleId)).isEmpty()){
+        if (scheduleRepo.findById(Integer.parseInt(scheduleId)).isEmpty()){
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
                     ResponseObject.builder()
                             .message("Schedule with id " + scheduleId + " does not exist or be deleted")
@@ -931,7 +959,7 @@ public class ClassServiceImpl implements ClassService {
         try {
             scheduleIdInt = Integer.parseInt(scheduleId);
         } catch (NumberFormatException e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
+            return ResponseEntity.badRequest().body(
                     ResponseObject.builder().success(false).message("Invalid schedule ID").data(null).build());
         }
 
@@ -952,11 +980,11 @@ public class ClassServiceImpl implements ClassService {
             );
         }
 
-        Schedule oldSchedule = optionalSchedule.get();
-        Classes cls = oldSchedule.getClasses();
+        Schedule currentSchedule = optionalSchedule.get();
+        Classes cls = currentSchedule.getClasses();
         List<Schedule> allSchedules = cls.getScheduleList();
 
-        if (cls.getStatus().equalsIgnoreCase(Status.CLASS_IN_PROGRESS.getValue()) ) {
+        if (cls.getStatus().equalsIgnoreCase(Status.CLASS_IN_PROGRESS.getValue())) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
                     ResponseObject.builder()
                             .success(false)
@@ -969,7 +997,6 @@ public class ClassServiceImpl implements ClassService {
         // 1. Lấy các activity theo ngày cần xóa
         List<Activity> toReassign = activityRepo.findBySchedule_Id(scheduleIdInt).stream()
                 .filter(act -> act.getDate().equals(dateStr))
-                .sorted(Comparator.comparing(Activity::getDate))
                 .toList();
 
         if (toReassign.isEmpty()) {
@@ -977,125 +1004,104 @@ public class ClassServiceImpl implements ClassService {
                     ResponseObject.builder().success(false).message("No activities found for provided dates").data(null).build());
         }
 
-        // 2. Gom theo từng ngày
-        Map<LocalDate, List<Activity>> activitiesByDate = toReassign.stream()
-                .collect(Collectors.groupingBy(Activity::getDate, LinkedHashMap::new, Collectors.toList()));
-
-        // 3. Xóa các activity khỏi schedule.activityList (gỡ liên kết entity trước)
+        // 2. Gỡ activity khỏi activityList của tất cả các schedule liên quan
         for (Schedule sch : allSchedules) {
             if (sch.getActivityList() != null) {
                 sch.getActivityList().removeIf(toReassign::contains);
             }
         }
 
+        // 3. Xóa activity khỏi DB
+        activityRepo.deleteAllInBatch(toReassign);
 
-        // 3.1. Nếu schedule hiện tại không còn activity nào -> xóa schedule đó
-        List<Schedule> emptySchedules = allSchedules.stream()
-                .filter(sch -> sch.getActivityList() == null || sch.getActivityList().isEmpty())
+        // 4. Luôn tìm tuần cuối của class (schedule có id lớn nhất, còn activity)
+        List<Schedule> notEmptySchedules = allSchedules.stream()
+                .filter(sch -> sch.getActivityList() != null && !sch.getActivityList().isEmpty())
+                .sorted(Comparator.comparing(Schedule::getId))
                 .toList();
-        scheduleRepo.deleteAll(emptySchedules);
-
-// 3.2. Lấy lại danh sách Schedule sau khi xóa
-        List<Schedule> updatedSchedules = cls.getScheduleList().stream()
-                .filter(sch -> !emptySchedules.contains(sch))
-                .sorted(Comparator.comparing(sch -> sch.getActivityList().stream()
-                        .map(Activity::getDate)
-                        .min(Comparator.naturalOrder())
-                        .orElse(LocalDate.MAX)))
-                .toList();
-
-        for (Schedule sch : updatedSchedules) {
-            if (sch.getActivityList() != null) {
-                List<Activity> cleaned = sch.getActivityList().stream()
-                        .filter(a -> a.getId() != null && !toReassign.contains(a)) // bỏ activity vừa xoá
-                        .toList();
-                sch.getActivityList().clear();
-                sch.getActivityList().addAll(cleaned); // thêm lại phần tử hợp lệ
-            }
-        }
-
-        for (int i = 0; i < updatedSchedules.size(); i++) {
-            updatedSchedules.get(i).setWeekName("Week - " + (i + 1));
-        }
-        scheduleRepo.saveAll(updatedSchedules);
-
-// Cập nhật lại danh sách allSchedules để dùng ở dưới
-        allSchedules = updatedSchedules;
-
-        // 4. Tìm endDate hiện tại và ngày tiếp theo sau đó (bỏ qua T7/CN)
-        LocalDate currentEndDate = cls.getEndDate();
-        LocalDate nextDate = currentEndDate.plusDays(1);
-        while (nextDate.getDayOfWeek() == DayOfWeek.SATURDAY || nextDate.getDayOfWeek() == DayOfWeek.SUNDAY) {
-            nextDate = nextDate.plusDays(1);
-        }
 
         int weekCounter = allSchedules.size();
         List<Activity> reassigned = new ArrayList<>();
-        Schedule currentSchedule = null;
-        int activitiesInCurrentWeek = 0;
+        boolean assigned = false;
 
+        if (!notEmptySchedules.isEmpty()) {
+            Schedule lastSchedule = notEmptySchedules.get(notEmptySchedules.size() - 1);
+            List<LocalDate> datesInLastWeek = lastSchedule.getActivityList().stream()
+                    .map(Activity::getDate).toList();
 
-// Nếu lớp đã có Schedule, thử tái sử dụng tuần cuối nếu còn chỗ
-        if (!allSchedules.isEmpty()) {
-            Schedule lastSchedule = allSchedules.get(allSchedules.size() - 1);
-
-            Set<LocalDate> uniqueDates = lastSchedule.getActivityList().stream()
-                    .map(Activity::getDate)
-                    .collect(Collectors.toSet());
-
-            long weekdayCount = uniqueDates.stream()
-                    .filter(date -> date.getDayOfWeek().getValue() >= 1 && date.getDayOfWeek().getValue() <= 5)
-                    .count();
-
-            if (weekdayCount < 5) {
-                currentSchedule = lastSchedule;
-                activitiesInCurrentWeek = (int) weekdayCount;
+            // Lấy Monday của tuần cuối cùng
+            LocalDate lastWeekStart = datesInLastWeek.stream().min(LocalDate::compareTo).orElse(null);
+            if (lastWeekStart != null) {
+                // Duyệt các ngày từ Monday đến Friday
+                List<LocalDate> lastPossibleDays = new ArrayList<>();
+                LocalDate temp = lastWeekStart;
+                for (int i = 0; lastPossibleDays.size() < 5; temp = temp.plusDays(1)) {
+                    if (temp.getDayOfWeek().getValue() >= 1 && temp.getDayOfWeek().getValue() <= 5) {
+                        lastPossibleDays.add(temp);
+                    }
+                }
+                // Chỉ lấy slot còn trống nhỏ nhất
+                Optional<LocalDate> nextSlot = lastPossibleDays.stream()
+                        .filter(d -> !datesInLastWeek.contains(d))
+                        .findFirst();
+                if (nextSlot.isPresent()) {
+                    LocalDate reassignDate = nextSlot.get();
+                    for (Activity old : toReassign) {
+                        Activity newAct = Activity.builder()
+                                .name(old.getName())
+                                .syllabusName(old.getSyllabusName())
+                                .startTime(old.getStartTime())
+                                .endTime(old.getEndTime())
+                                .date(reassignDate)
+                                .dayOfWeek(reassignDate.getDayOfWeek())
+                                .schedule(lastSchedule)
+                                .build();
+                        lastSchedule.getActivityList().add(newAct);
+                        reassigned.add(newAct);
+                    }
+                    assigned = true;
+                }
             }
         }
 
-        for (List<Activity> dailyActivities : activitiesByDate.values()) {
-            // Nếu hết tuần (5 ngày), tạo tuần mới
-            if (currentSchedule == null || activitiesInCurrentWeek >= 5) {
-                weekCounter++;
-                currentSchedule = Schedule.builder()
-                        .weekName("Week - " + weekCounter)
-                        .classes(cls)
-                        .activityList(new ArrayList<>())
-                        .build();
-                scheduleRepo.save(currentSchedule);
-                activitiesInCurrentWeek = 0;
-                nextDate = currentEndDate.plusDays(1);
-                while (nextDate.getDayOfWeek() != DayOfWeek.MONDAY) {
-                    nextDate = nextDate.plusDays(1);
-                }
+        // Nếu tuần cuối không còn slot, tạo tuần mới (MONDAY tuần kế)
+        if (!assigned) {
+            weekCounter++;
+            // Xác định Monday tiếp theo sau endDate của lớp
+            LocalDate baseDate = cls.getEndDate().plusDays(1);
+            while (baseDate.getDayOfWeek() != DayOfWeek.MONDAY) {
+                baseDate = baseDate.plusDays(1);
             }
+            LocalDate reassignDate = baseDate;
 
-            // Tạo lại các hoạt động cho ngày mới
-            for (Activity old : dailyActivities) {
+            Schedule newSchedule = Schedule.builder()
+                    .weekName("Week - " + weekCounter)
+                    .classes(cls)
+                    .activityList(new ArrayList<>())
+                    .build();
+            scheduleRepo.save(newSchedule);
+            allSchedules.add(newSchedule);
+
+            for (Activity old : toReassign) {
                 Activity newAct = Activity.builder()
                         .name(old.getName())
                         .syllabusName(old.getSyllabusName())
                         .startTime(old.getStartTime())
                         .endTime(old.getEndTime())
-                        .date(nextDate)
-                        .dayOfWeek(nextDate.getDayOfWeek())
-                        .schedule(currentSchedule)
+                        .date(reassignDate)
+                        .dayOfWeek(reassignDate.getDayOfWeek())
+                        .schedule(newSchedule)
                         .build();
-
-                currentSchedule.getActivityList().add(newAct);
+                newSchedule.getActivityList().add(newAct);
                 reassigned.add(newAct);
-            }
-
-            activitiesInCurrentWeek++;
-
-            // Tìm ngày kế tiếp hợp lệ (bỏ qua Thứ 7 & CN)
-            nextDate = nextDate.plusDays(1);
-            while (nextDate.getDayOfWeek() == DayOfWeek.SATURDAY || nextDate.getDayOfWeek() == DayOfWeek.SUNDAY) {
-                nextDate = nextDate.plusDays(1);
             }
         }
 
-        // 5. Cập nhật endDate mới cho lớp
+        // Lưu lại các activity vừa reassign
+        activityRepo.saveAll(reassigned);
+
+        // Cập nhật lại endDate cho lớp (nếu có activity mới)
+        LocalDate currentEndDate = cls.getEndDate();
         LocalDate newEndDate = reassigned.stream()
                 .map(Activity::getDate)
                 .max(Comparator.naturalOrder())
@@ -1111,8 +1117,6 @@ public class ClassServiceImpl implements ClassService {
                         .build()
         );
     }
-
-
 
     @Override
     public ResponseEntity<Resource> exportStudentListOfClassToExcel(String classId) {
@@ -1233,7 +1237,7 @@ public class ClassServiceImpl implements ClassService {
                 .filter(st -> !assignedStudentIds.contains(st.getId()))
                 .toList();
         if (studentsToAssign.isEmpty()) {
-            return ResponseEntity.ok(ResponseObject.builder()
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ResponseObject.builder()
                     .message("No new students to assign.").success(false).data(null).build());
         }
 
@@ -1484,9 +1488,9 @@ public class ClassServiceImpl implements ClassService {
                 String teacherName = cls.getTeacher() != null ? cls.getTeacher().getName() : "N/A";
                 String startDateStr = cls.getStartDate().toString();
 
-                String subject = "Thông báo xếp lớp mới cho học sinh " + studentName;
-                String header = "Class Assignment Change Notification";
-                String body = Format.getChangedAssignClassSuccessfulForParentBody(
+                String subject = "Thông báo xếp lớp cho học sinh " + studentName;
+                String header = "Class Assignment Notification";
+                String body = Format.getAssignClassSuccessfulForParentBody(
                         parentName, studentName, className, teacherName, startDateStr
                 );
 
