@@ -1,15 +1,36 @@
 services:
+#Docker MYSQL
+  mysql_container:
+    image: mysql:latest
+    container_name: mysql_container
+    environment:
+      MYSQL_ROOT_PASSWORD: 123456
+      MYSQL_DATABASE: pes_swd
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
 
   app:
     image: huatri/pes_container
     container_name: springboot_container
+    #DOCKER MYSQL
+    depends_on:
+      - mysql_container
     env_file:
       - .env
     ports:
       - "8080:8080"
     environment:
-      MYSQL_URL: jdbc:mysql://171.244.198.239:3306/pesswd2025
-      MYSQL_USER: "dbadmin"
-      MYSQL_PASSWORD: "Huatrideptrai#1"
-      TZ: Asia/Ho_Chi_Minh
-      JAVA_TOOL_OPTIONS: "-Duser.timezone=Asia/Ho_Chi_Minh"
+      #DOCKER MYSQL
+        MYSQL_URL: jdbc:mysql://mysql_container:3306/pes_swd
+        MYSQL_USER: "root"
+        MYSQL_PASSWORD: "123456"
+#      MYSQL_URL: jdbc:mysql://171.244.198.239:3306/pesswd2025
+#      MYSQL_USER: "dbadmin"
+#      MYSQL_PASSWORD: "Huatrideptrai#1"
+        TZ: Asia/Ho_Chi_Minh
+        JAVA_TOOL_OPTIONS: "-Duser.timezone=Asia/Ho_Chi_Minh"
+#DOCKER MYSQL
+volumes:
+  mysql_data:

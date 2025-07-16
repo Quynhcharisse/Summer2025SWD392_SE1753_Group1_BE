@@ -186,7 +186,7 @@ public class AuthServiceImpl implements AuthService {
                 request.getEmail(),
                 "[PES] Email Verification",
                 "Please verify your email to continue registration.",
-                Format.getEmailVerificationBody(verifyLink, request.getEmail())
+                Format.getEmailVerificationBody(verifyLink)
         );
 
         return ResponseEntity.ok(
