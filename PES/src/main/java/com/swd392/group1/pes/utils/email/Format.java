@@ -108,13 +108,13 @@ public class Format {
     /**
      * Fragment cho email xác thực đăng ký tài khoản
      */
-    public static String getEmailVerificationBody(String verificationLink, String email) {
+    public static String getEmailVerificationBody(String verificationLink) {
         return "<p>Dear User,</p>" +
                 "<p>You have requested to register an account with Sunshine Preschool. Please click the link below to complete your registration:</p>" +
                 "<div style=\"background-color:#eef5f0;padding:20px;text-align:center;margin:20px 0;border-radius:6px;\">" +
                 "  <a href=\"" + verificationLink + "\" style=\"color:#1C5A2A;text-decoration:none;font-weight:bold;\">Complete Registration</a>" +
                 "</div>" +
-                "<p><strong>Note:</strong> This link will expire in <strong>" + email + " minutes</strong>.</p>" +
+                "<p><strong>Note:</strong> This link will expire in <strong> 5 minutes</strong>.</p>" +
                 "<p>If you did not request this registration, please ignore this message.</p>" +
                 "<p>Best regards,<br/>Sunshine Preschool</p>";
     }
@@ -157,9 +157,9 @@ public class Format {
                 "<p>Dear User,</p>" +
                         "<p>You have requested to reset your password. Please use the reset code below:</p>" +
                         "<div style=\"background-color:#eef5f0;padding:20px;text-align:center;margin:20px 0;border-radius:6px;\">" +
-                        "  <h2 style=\"color:#1C5A2A;font-size:10px;letter-spacing:2px;margin:0;\">" + code + "</h2>" +
+                        "  <a href=\"" + code + "\" style=\"color:#1C5A2A;text-decoration:none;font-weight:bold;\">Reset Password</a>" +
                         "</div>" +
-                        "<p><strong>Note:</strong> This code will expire in <strong>1 minutes</strong>.</p>" +
+                        "<p><strong>Note:</strong> This code will expire in <strong> 5 minutes</strong>.</p>" +
                         "<p>If you did not request a password reset, please ignore this message or contact support.</p>" +
                         "<p>Best regards,<br/>Sunshine Preschool</p>";
     }
@@ -231,23 +231,6 @@ public class Format {
                 + "<p>If you have any questions or need further information, please do not hesitate to contact us.</p>"
                 + "<p>Sincerely,<br/>The School Administration</p>";
     }
-
-    public static String getChangedAssignClassSuccessfulForParentBody(
-            String parentName,
-            String studentName,
-            String className,
-            String teacherName,
-            String startDate
-    ) {
-        return "<p>Dear " + parentName + ",</p>"
-                + "<p>We would like to notify you that your child, <strong>" + studentName + "</strong>, has been <strong>reassigned to a new class</strong> for the upcoming academic term.</p>"
-                + "<p>The new class is <strong>" + className + "</strong>, which will be taught by <strong>teacher " + teacherName + "</strong>.</p>"
-                + "<p>The class will officially start on <strong>" + startDate + "</strong>.</p>"
-                + "<p>If you have any questions or need further information about this change, please do not hesitate to contact us.</p>"
-                + "<p>Thank you for your cooperation and understanding.</p>"
-                + "<p>Sincerely,<br/>The School Administration</p>";
-    }
-
 
     public static String getAssignClassSuccessfulForTeacherBody(
             String teacherName, String className, String startDateStr
