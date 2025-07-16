@@ -12,12 +12,11 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
-import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.annotation.EnableAsync;
+import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.time.LocalDateTime;
-import java.util.Random;
 
 @SpringBootApplication
 @EnableAsync
@@ -25,8 +24,9 @@ import java.util.Random;
 @EnableScheduling
 public class PesApplication {
 
-    private final ParentRepo parentRepo;
     private final AccountRepo accountRepo;
+
+    private final ParentRepo parentRepo;
 
     private final PasswordEncoder passwordEncoder;
 
@@ -41,7 +41,6 @@ public class PesApplication {
             // TẠO CÁC TÀI KHOẢN MẶC ĐỊNH CHO HỆ THỐNG
             // =================================================================
             createDefaultAccounts();
-
         };
     }
     private void createDefaultAccounts() {
@@ -49,7 +48,7 @@ public class PesApplication {
         if (!accountRepo.existsByEmail("teacher@gmail.com")) {
             Account teacherAccount = Account.builder()
                     .email("teacher@gmail.com")
-                    .password(passwordEncoder.encode(RandomPasswordUtil.generateRandomString(8))) // Hoặc mật khẩu cố định đã hash
+                    .password(passwordEncoder.encode(RandomPasswordUtil.generateRandomString(8)))
                     .name("Teacher")
                     .phone("0886122578")
                     .gender("male")
@@ -57,7 +56,7 @@ public class PesApplication {
                     .status(Status.ACCOUNT_ACTIVE.getValue())
                     .role(Role.TEACHER)
                     .createdAt(LocalDateTime.now())
-                    .firstLogin(false) // Giáo viên không cần đổi mật khẩu lần đầu
+                    .firstLogin(false)
                     .build();
             accountRepo.save(teacherAccount);
         }
@@ -66,7 +65,7 @@ public class PesApplication {
         if (!accountRepo.existsByEmail("hrmanager@gmail.com")) {
             Account hrAccount = Account.builder()
                     .email("hrmanager@gmail.com")
-                    .password(passwordEncoder.encode("123456")) // Nên hash mật khẩu này
+                    .password(passwordEncoder.encode("123456"))
                     .name("HR Manager")
                     .gender("female")
                     .identityNumber("070425890001")
@@ -83,7 +82,7 @@ public class PesApplication {
         if (!accountRepo.existsByEmail("educationalmanager@gmail.com")) {
             Account educationalManagerAccount = Account.builder()
                     .email("educationalmanager@gmail.com")
-                    .password(passwordEncoder.encode("123456")) // Nên hash mật khẩu này
+                    .password(passwordEncoder.encode("123456"))
                     .name("Educational Manager")
                     .gender("male")
                     .identityNumber("070425890003")
@@ -100,7 +99,7 @@ public class PesApplication {
         if (!accountRepo.existsByEmail("admissionmanager@gmail.com")) {
             Account admissionAccount = Account.builder()
                     .email("admissionmanager@gmail.com")
-                    .password(passwordEncoder.encode("123456")) // Nên hash mật khẩu này
+                    .password(passwordEncoder.encode("123456"))
                     .name("Admission Manager")
                     .gender("female")
                     .identityNumber("070425890002")
@@ -137,6 +136,5 @@ public class PesApplication {
 
             parentRepo.save(parent1);
         }
-
     }
 }

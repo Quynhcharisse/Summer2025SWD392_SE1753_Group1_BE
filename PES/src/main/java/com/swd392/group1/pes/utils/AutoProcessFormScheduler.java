@@ -8,7 +8,6 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 @Slf4j
 public class AutoProcessFormScheduler {
-
 //    private final AdmissionFormRepo admissionFormRepo;
 //    private final StudentRepo studentRepo;
 //    private final TermItemRepo termItemRepo;

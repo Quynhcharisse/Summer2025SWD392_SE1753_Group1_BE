@@ -24,7 +24,7 @@ public class PaymentTimeOutScheduler {
     private final TransactionRepo transactionRepo;
     private final MailService mailService;
 
-    @Scheduled(fixedDelay = 60000)
+    @Scheduled(fixedDelay = 180000) //3 phút
     @Transactional
     public void rejectExpiredPaymentForms() {
         log.info("Running scheduled task: Checking expired payment forms at {}", LocalDateTime.now());
