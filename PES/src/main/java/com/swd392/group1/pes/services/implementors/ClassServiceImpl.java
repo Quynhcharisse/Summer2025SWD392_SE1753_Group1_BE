@@ -228,47 +228,50 @@ public class ClassServiceImpl implements ClassService {
                         sl -> sl.getLesson().getTopic(),
                         sl -> sl.getLesson().getDuration()
                 ));
+
         Map<String, Integer> lessonActualHours = new HashMap<>();
+
+        raws.stream()
+                .map(raw -> raw.split("-", 4))
+                .filter(parts -> parts.length == 4 && parts[1].startsWith("LE_"))
+                .forEach(parts -> {
+                    String topic = parts[1].substring(3);
+                    LocalTime startSlot = LocalTime.parse(parts[2]);
+                    LocalTime endSlot = LocalTime.parse(parts[3]);
+                    int hours = (int) Duration.between(startSlot, endSlot).toHours();
+                    lessonActualHours.put(topic, lessonActualHours.getOrDefault(topic, 0) + hours);
+                });
+
+        // 2. Kiểm tra tổng lesson hour (VD: tuần này yêu cầu tổng 30 giờ)
+        int totalWeeklyLessonHours = lessonActualHours.values().stream().mapToInt(Integer::intValue).sum();
+        if (totalWeeklyLessonHours != 30) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(ResponseObject.builder()
+                    .message("Total lesson hours per week must be 30, but found " + totalWeeklyLessonHours)
+                    .success(false)
+                    .data(null)
+                    .build());
+        }
+
+        // 3. Kiểm tra lesson actual từng topic vs required syllabus
+        for (Map.Entry<String, Integer> entry : lessonDurationMap.entrySet()) {
+            String topic = entry.getKey();
+            int required = entry.getValue();
+            int actual = lessonActualHours.getOrDefault(topic, 0);
+            if (actual != required) {
+                return ResponseEntity.status(HttpStatus.CONFLICT).body(
+                        ResponseObject.builder()
+                                .message(String.format("Lesson '%s' requires exactly %d hours, but scheduled %d hours.", topic, required, actual))
+                                .success(false)
+                                .data(null)
+                                .build()
+                );
+            }
+        }
+
         for (var e : lessonsByDay.entrySet()) {
             DayOfWeek dow = e.getKey();
             List<String> lessons = e.getValue();
             Set<String> distinct = new HashSet<>(lessons);
-            int totalWeeklyHours = raws.stream()
-                    .map(raw -> raw.split("-", 4))
-                    .filter(parts -> parts.length == 4 && parts[1].startsWith("LE_"))
-                    .mapToInt(parts -> {
-                        String topic = parts[1].substring(3);
-                        LocalTime startSlot = LocalTime.parse(parts[2]);
-                        LocalTime endSlot = LocalTime.parse(parts[3]);
-                        int hours = (int) Duration.between(start, end).toHours();
-                        lessonActualHours.put(topic, lessonActualHours.getOrDefault(topic, 0) + hours);
-                        return (int) Duration.between(startSlot, endSlot).toHours();
-                    })
-                    .sum();
-
-
-            for (Map.Entry<String, Integer> entry : lessonDurationMap.entrySet()) {
-                String topic = entry.getKey();
-                int required = entry.getValue();
-                int actual = lessonActualHours.getOrDefault(topic, 0);
-                if (actual != required) {
-                    return ResponseEntity.status(HttpStatus.CONFLICT).body(
-                            ResponseObject.builder()
-                                    .message(String.format("Lesson '%s' requires exactly %d hours, but scheduled %d hours.", topic, required, actual))
-                                    .success(false)
-                                    .data(null)
-                                    .build()
-                    );
-                }
-            }
-
-            if (totalWeeklyHours != 30)
-                return ResponseEntity.status(HttpStatus.CONFLICT).body(ResponseObject.builder()
-                        .message("Total lesson hours per week must be 30, but found " + totalWeeklyHours)
-                        .success(false)
-                        .data(null)
-                        .build());
-
 
             if (lessons.size() != 6) {
                 return ResponseEntity.status(HttpStatus.CONFLICT).body(ResponseObject.builder()
