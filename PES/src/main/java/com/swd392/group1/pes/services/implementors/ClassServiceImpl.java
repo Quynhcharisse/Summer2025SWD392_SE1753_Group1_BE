@@ -1351,11 +1351,13 @@ public class ClassServiceImpl implements ClassService {
             );
         }
 
-        List<AdmissionForm> approvedForms = admissionFormRepo.findByTermItem_AdmissionTerm_YearAndStatusAndTermItem_Grade(
-                Integer.parseInt(year),
-                Status.APPROVED_PAID,
-                getGradeFromName(grade)
+        List<TermItem> items = termItemRepo.findAllByAdmissionTerm_YearAndGrade(
+                Integer.parseInt(year), getGradeFromName(grade)
         );
+        List<AdmissionForm> approvedForms = items.stream()
+                .flatMap(item -> item.getAdmissionFormList().stream())
+                .filter(f -> f.getStatus() == Status.APPROVED_PAID)
+                .toList();
 
         List<Student> students = approvedForms.stream()
                 .map(AdmissionForm::getStudent)
