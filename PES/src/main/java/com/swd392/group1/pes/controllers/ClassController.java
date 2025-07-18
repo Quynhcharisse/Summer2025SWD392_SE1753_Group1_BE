@@ -4,7 +4,6 @@ import com.swd392.group1.pes.dto.requests.AssignStudentsToClassRequest;
 import com.swd392.group1.pes.dto.requests.DeleteActivitiesByDateRequest;
 import com.swd392.group1.pes.dto.requests.GenerateClassesRequest;
 import com.swd392.group1.pes.dto.requests.UnassignStudentsFromClassRequest;
-import com.swd392.group1.pes.dto.requests.ViewCurrentScheduleRequest;
 import com.swd392.group1.pes.dto.response.ResponseObject;
 import com.swd392.group1.pes.services.ClassService;
 import lombok.RequiredArgsConstructor;
@@ -19,6 +18,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.time.LocalDate;
 
 @RestController
 @RequiredArgsConstructor
@@ -88,7 +89,7 @@ public class ClassController {
     }
 
     @GetMapping("/assignedClassesOfChild/list")
-    @PreAuthorize("hasRole('education')")
+    @PreAuthorize("hasAnyRole('education', 'parent')")
     public ResponseEntity<ResponseObject> viewAssignedClassesOfChild(@RequestParam String childId){
         return classService.viewListClassesOfChild(childId);
     }
@@ -123,10 +124,10 @@ public class ClassController {
         return classService.exportStudentListOfClassToExcel(classId);
     }
 
-    @GetMapping("/schedule/current")
-    @PreAuthorize("hasRole('parent')")
-    public ResponseEntity<ResponseObject> viewCurrentSchedule(@RequestParam String classId, @RequestBody ViewCurrentScheduleRequest request) {
-        return classService.viewCurrentSchedule(classId, request);
-    }
+//    @GetMapping("/schedule/current")
+//    @PreAuthorize("hasRole('parent')")
+//    public ResponseEntity<ResponseObject> viewCurrentSchedule(@RequestParam String classId, @RequestParam LocalDate date) {
+//        return classService.viewCurrentSchedule(classId, date);
+//    }
 
 }

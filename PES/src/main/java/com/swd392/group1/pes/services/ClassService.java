@@ -3,7 +3,6 @@ package com.swd392.group1.pes.services;
 import com.swd392.group1.pes.dto.requests.AssignStudentsToClassRequest;
 import com.swd392.group1.pes.dto.requests.GenerateClassesRequest;
 import com.swd392.group1.pes.dto.requests.UnassignStudentsFromClassRequest;
-import com.swd392.group1.pes.dto.requests.ViewCurrentScheduleRequest;
 import com.swd392.group1.pes.dto.response.ResponseObject;
 import org.springframework.core.io.Resource;
 import org.springframework.http.ResponseEntity;
@@ -41,7 +40,7 @@ public interface ClassService {
 
     ResponseEntity<ResponseObject> viewListClassesOfChild(String childId);
 
-     ResponseEntity<ResponseObject> viewCurrentSchedule(String classId, ViewCurrentScheduleRequest request);
+//     ResponseEntity<ResponseObject> viewCurrentSchedule(String classId, LocalDate date);
 
     ResponseEntity<ResponseObject> reportNumberOfClassesByTermYear(String year);
 }

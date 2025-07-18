@@ -643,7 +643,7 @@ public class EventServiceImpl implements EventService {
             map.put("eventId", event.getId());
             map.put("eventName", event.getName());
             map.put("studentCount", list.size());
-
+            map.put("startDate", event.getStartTime().toLocalDate().toString());
             eventStats.add(map);
         }
 
