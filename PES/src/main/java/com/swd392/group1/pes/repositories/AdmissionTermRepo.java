@@ -1,5 +1,6 @@
 package com.swd392.group1.pes.repositories;
 
+import com.swd392.group1.pes.enums.Grade;
 import com.swd392.group1.pes.models.AdmissionTerm;
 import org.springframework.data.jpa.repository.JpaRepository;
 
@@ -12,5 +13,5 @@ public interface AdmissionTermRepo extends JpaRepository<AdmissionTerm, Integer>
 
     List<AdmissionTerm> findAllByYear(Integer year);
 
-    boolean existsByYear(int year);
+    boolean existsByYearAndTermItemList_Grade(int Year, Grade grade);
 }
