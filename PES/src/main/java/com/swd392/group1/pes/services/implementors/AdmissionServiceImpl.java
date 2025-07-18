@@ -80,13 +80,17 @@ public class AdmissionServiceImpl implements AdmissionService {
 
         String name = "Admission Term for " + request.getStartDate().getYear();
 
+        int year = request.getStartDate().getMonthValue() >= 6
+                ? request.getStartDate().getYear()
+                : request.getStartDate().getYear() - 1;
+
         // Nếu hợp lệ, tiếp tục tạo term
         AdmissionTerm term = admissionTermRepo.save(
                 AdmissionTerm.builder()
                         .name(name)
                         .startDate((request.getStartDate().atZone(ZoneOffset.UTC).withZoneSameInstant(ZoneId.of("Asia/Ho_Chi_Minh"))).toLocalDateTime())
                         .endDate((request.getEndDate().atZone(ZoneOffset.UTC).withZoneSameInstant(ZoneId.of("Asia/Ho_Chi_Minh"))).toLocalDateTime())
-                        .year(LocalDateTime.now().getYear())
+                        .year(year)
                         .status(Status.INACTIVE_TERM)
                         .build()
         );
@@ -139,9 +143,18 @@ public class AdmissionServiceImpl implements AdmissionService {
             return "Start date and end date must be in the same year";
         }
 
-        int year = request.getStartDate().getYear();
-        if (admissionTermRepo.existsByYear(year)) {
-            return "Admission term for year " + year + " already exists";
+        //tính năm học theo tháng bắt đầu
+        int calculatedYear = request.getStartDate().getMonthValue() >= 6
+                ? request.getStartDate().getYear()
+                : request.getStartDate().getYear() - 1;
+
+        for (CreateAdmissionTermRequest.TermItem termItem : request.getTermItemList()) {
+            Grade grade = Grade.valueOf(termItem.getGrade());
+
+            if (admissionTermRepo.existsByYearAndTermItemList_Grade(calculatedYear, grade)) {
+                return "Admission term already exists for academic year " +
+                        calculatedYear + "-" + (calculatedYear + 1) + " and grade " + grade.name();
+            }
         }
 
         //trong 1 term phai it nhat 1 grade trong create term do
