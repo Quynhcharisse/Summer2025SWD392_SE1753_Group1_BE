@@ -66,7 +66,7 @@ public class EventController {
         return eventService.exportEventParticipateOfEvent(id);
     }
 
-    @GetMapping("/event/numberOfParticipants/stats")
+    @PutMapping("/event/numberOfParticipants/stats")
     @PreAuthorize("hasRole('education')")
     public ResponseEntity<ResponseObject> getEventParticipationStats(@RequestBody ViewEventParticipantRequest request) {
         return eventService.getEventParticipationStats(request);

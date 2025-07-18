@@ -16,6 +16,5 @@ public interface SyllabusRepo extends JpaRepository<Syllabus, Integer> {
 
     Syllabus findByAssignedToClassesAndGrade(boolean isTrue, Grade grade);
 
-    Optional<Syllabus> findFirstByAssignedToClassesTrueAndGradeAndClassesList_AcademicYear(Grade grade, int academicYear);
-
+    Optional<Syllabus> findFirstByAssignedToClassesTrueAndGradeAndClassesList_AcademicYear(Grade grade, Integer academicYear);
 }

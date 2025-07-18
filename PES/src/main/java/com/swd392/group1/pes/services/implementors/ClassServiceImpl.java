@@ -3,7 +3,6 @@ package com.swd392.group1.pes.services.implementors;
 import com.swd392.group1.pes.dto.requests.AssignStudentsToClassRequest;
 import com.swd392.group1.pes.dto.requests.GenerateClassesRequest;
 import com.swd392.group1.pes.dto.requests.UnassignStudentsFromClassRequest;
-import com.swd392.group1.pes.dto.requests.ViewCurrentScheduleRequest;
 
 import com.swd392.group1.pes.dto.response.ResponseObject;
 import com.swd392.group1.pes.enums.Grade;
@@ -22,6 +21,7 @@ import com.swd392.group1.pes.models.Student;
 import com.swd392.group1.pes.models.StudentClass;
 import com.swd392.group1.pes.models.Syllabus;
 import com.swd392.group1.pes.models.SyllabusLesson;
+import com.swd392.group1.pes.models.TermItem;
 import com.swd392.group1.pes.repositories.AccountRepo;
 import com.swd392.group1.pes.repositories.ActivityRepo;
 import com.swd392.group1.pes.repositories.AdmissionFormRepo;
@@ -61,7 +61,6 @@ import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -88,8 +87,6 @@ public class ClassServiceImpl implements ClassService {
     private final ScheduleRepo scheduleRepo;
     private final ActivityRepo activityRepo;
     private final StudentRepo studentRepo;
-    private final EventParticipateRepo eventParticipateRepo;
-    private final EventRepo eventRepo;
 
     @Override
     public ResponseEntity<ResponseObject> generateClassesAuto(GenerateClassesRequest request) {
@@ -291,11 +288,13 @@ public class ClassServiceImpl implements ClassService {
                 }
             }
         }
-        List<AdmissionForm> approvedForms = admissionFormRepo.findByTermItem_AdmissionTerm_YearAndStatusAndTermItem_Grade(
-                Integer.parseInt(request.getYear()),
-                Status.APPROVED_PAID,
-                grade
+        List<TermItem> items = termItemRepo.findAllByAdmissionTerm_YearAndGrade(
+                Integer.parseInt(request.getYear()), grade
         );
+        List<AdmissionForm> approvedForms = items.stream()
+                .flatMap(item -> item.getAdmissionFormList().stream())
+                .filter(f -> f.getStatus() == Status.APPROVED_PAID)
+                .toList();
 
         List<Student> students = approvedForms.stream()
                 .map(AdmissionForm::getStudent)
@@ -395,7 +394,7 @@ public class ClassServiceImpl implements ClassService {
                         .classes(cls)
                         .student(student)
                         .build());
-                            }
+            }
             if (scList.isEmpty()) {
                 continue;
             }
@@ -485,6 +484,7 @@ public class ClassServiceImpl implements ClassService {
                         .build()
         );
     }
+
 
     private String validateCreate(GenerateClassesRequest request, List<Integer> validYears) {
 
@@ -798,11 +798,13 @@ public class ClassServiceImpl implements ClassService {
         }
 
 
-        List<AdmissionForm> approvedForms = admissionFormRepo.findByTermItem_AdmissionTerm_YearAndStatusAndTermItem_Grade(
-                Integer.parseInt(year),
-                Status.APPROVED_PAID,
-                getGradeFromName(grade)
+        List<TermItem> items = termItemRepo.findAllByAdmissionTerm_YearAndGrade(
+                Integer.parseInt(year), getGradeFromName(grade)
         );
+        List<AdmissionForm> approvedForms = items.stream()
+                .flatMap(item -> item.getAdmissionFormList().stream())
+                .filter(f -> f.getStatus() == Status.APPROVED_PAID)
+                .toList();
 
         List<Student> students = approvedForms.stream()
                 .map(AdmissionForm::getStudent)
@@ -1219,11 +1221,13 @@ public class ClassServiceImpl implements ClassService {
             );
         }
 
-        List<AdmissionForm> approvedForms = admissionFormRepo.findByTermItem_AdmissionTerm_YearAndStatusAndTermItem_Grade(
-                Integer.parseInt(year),
-                Status.APPROVED_PAID,
-                getGradeFromName(grade)
+        List<TermItem> items = termItemRepo.findAllByAdmissionTerm_YearAndGrade(
+                Integer.parseInt(year), getGradeFromName(grade)
         );
+        List<AdmissionForm> approvedForms = items.stream()
+                .flatMap(item -> item.getAdmissionFormList().stream())
+                .filter(f -> f.getStatus() == Status.APPROVED_PAID)
+                .toList();
 
         List<Student> students = approvedForms.stream()
                 .map(AdmissionForm::getStudent)
@@ -1565,54 +1569,54 @@ public class ClassServiceImpl implements ClassService {
         );
     }
 
-    @Override
-    public ResponseEntity<ResponseObject> viewCurrentSchedule(String classId, ViewCurrentScheduleRequest request) {
-        Optional<Classes> optionalClass = classRepo.findById(Integer.parseInt(classId));
-        Classes cls = optionalClass.get();
-
-        LocalDate monday = request.getDate();
-
-        while (monday.getDayOfWeek().getValue() != 1) { // 1 = Monday
-            monday = monday.minusDays(1);
-        }
-        LocalDate sunday = monday.plusDays(6); // Chủ nhật
-
-        // 4. Tìm schedule chứa ít nhất 1 activity nằm trong tuần đó
-        for (Schedule schedule : cls.getScheduleList()) {
-            if (schedule.getActivityList() == null || schedule.getActivityList().isEmpty()) continue;
-
-            LocalDate finalMonday = monday;
-            boolean hasActivityInWeek = schedule.getActivityList().stream()
-                    .anyMatch(act -> {
-                        LocalDate actDate = act.getDate();
-                        return !actDate.isBefore(finalMonday) && !actDate.isAfter(sunday);
-                    });
-
-            if (hasActivityInWeek) {
-                Map<String, Object> response = new LinkedHashMap<>();
-                response.put("scheduleId", schedule.getId());
-                response.put("scheduleName", schedule.getWeekName());
-
-                return ResponseEntity.ok(
-                        ResponseObject.builder()
-                                .success(true)
-                                .message("Schedule found for week: " + monday + " to " + sunday)
-                                .data(response)
-                                .build()
-                );
-            }
-        }
-
-        // 5. Không có schedule nào chứa activity trong tuần đó
-        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
-                ResponseObject.builder()
-                        .success(false)
-                        .message("No schedule found for week: " + monday + " to " + sunday)
-                        .data(null)
-                        .build()
-        );
-
-    }
+//    @Override
+//    public ResponseEntity<ResponseObject> viewCurrentSchedule(String classId, LocalDate date) {
+//        Optional<Classes> optionalClass = classRepo.findById(Integer.parseInt(classId));
+//        Classes cls = optionalClass.get();
+//
+//        LocalDate monday = date;
+//
+//        while (monday.getDayOfWeek().getValue() != 1) { // 1 = Monday
+//            monday = monday.minusDays(1);
+//        }
+//        LocalDate sunday = monday.plusDays(6); // Chủ nhật
+//
+//        // 4. Tìm schedule chứa ít nhất 1 activity nằm trong tuần đó
+//        for (Schedule schedule : cls.getScheduleList()) {
+//            if (schedule.getActivityList() == null || schedule.getActivityList().isEmpty()) continue;
+//
+//            LocalDate finalMonday = monday;
+//            boolean hasActivityInWeek = schedule.getActivityList().stream()
+//                    .anyMatch(act -> {
+//                        LocalDate actDate = act.getDate();
+//                        return !actDate.isBefore(finalMonday) && !actDate.isAfter(sunday);
+//                    });
+//
+//            if (hasActivityInWeek) {
+//                Map<String, Object> response = new LinkedHashMap<>();
+//                response.put("scheduleId", schedule.getId());
+//                response.put("scheduleName", schedule.getWeekName());
+//
+//                return ResponseEntity.ok(
+//                        ResponseObject.builder()
+//                                .success(true)
+//                                .message("Schedule found for week: " + monday + " to " + sunday)
+//                                .data(response)
+//                                .build()
+//                );
+//            }
+//        }
+//
+//        // 5. Không có schedule nào chứa activity trong tuần đó
+//        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
+//                ResponseObject.builder()
+//                        .success(false)
+//                        .message("No schedule found for week: " + monday + " to " + sunday)
+//                        .data(null)
+//                        .build()
+//        );
+//
+//    }
 
 
     @Override
