@@ -27,8 +27,6 @@ import com.swd392.group1.pes.repositories.ActivityRepo;
 import com.swd392.group1.pes.repositories.AdmissionFormRepo;
 import com.swd392.group1.pes.repositories.AdmissionTermRepo;
 import com.swd392.group1.pes.repositories.ClassRepo;
-import com.swd392.group1.pes.repositories.EventParticipateRepo;
-import com.swd392.group1.pes.repositories.EventRepo;
 import com.swd392.group1.pes.repositories.ScheduleRepo;
 import com.swd392.group1.pes.repositories.StudentClassRepo;
 import com.swd392.group1.pes.repositories.StudentRepo;
@@ -115,7 +113,7 @@ public class ClassServiceImpl implements ClassService {
         for (String raw : raws) {
             String[] parts = raw.split("-", 4);
             if (parts.length == 4) {
-                String token = parts[1];
+                String token = parts[1].trim();
                 if (!token.startsWith("LE_") && !validActivityNamePattern.matcher(token).matches()) {
                     return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                             .body(ResponseObject.builder()
@@ -295,7 +293,6 @@ public class ClassServiceImpl implements ClassService {
                 .flatMap(item -> item.getAdmissionFormList().stream())
                 .filter(f -> f.getStatus() == Status.APPROVED_PAID)
                 .toList();
-
         List<Student> students = approvedForms.stream()
                 .map(AdmissionForm::getStudent)
                 .toList();
