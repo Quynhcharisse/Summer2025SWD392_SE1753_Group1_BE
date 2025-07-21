@@ -1,5 +1,6 @@
 package com.swd392.group1.pes.utils.email;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
@@ -24,13 +25,23 @@ public class Format {
     /**
      * Fragment khi phụ huynh nộp đơn lần đầu
      */
-    public static String getAdmissionSubmittedBody(String parentName, String dateTime) {
+    public static String getAdmissionSubmittedBody(String parentName, String childName, LocalDate date) {
         return
                 "<p>Dear " + parentName + ",</p>\n" +
-                        "<p>We have received your admission form on <strong>" + dateTime + "</strong>.</p>" +
+                        "<p>We have received your admission form for <strong>" + childName + "</strong> on <strong>" + date + "</strong>.</p>" +
                         "<p>Please wait while our Admission Manager reviews your submission.</p>" +
-                        "<p>For any questions, feel free to contact us at <a href=\"mailto:info@sunshinepreschool.edu\">info@sunshinepreschool.edu</a> or (555) 123-4567.</p>" +
-                        "<p>Best regards,<br/>Sunshine Preschool</p>";
+                        "<p>For any questions, feel free to contact us at <a href=\"mailto:info@sunshinepreschool.edu\">info@sunshinepreschool.edu</a> or call (555) 123-4567.</p>" +
+                        "<p>Best regards,<br/>MerryStar Preschool</p>";
+    }
+
+    /** Fragment khi phụ huynh refill đơn (resubmit) */
+    public static String getAdmissionRefilledBody(String parentName, String childName, LocalDate dateTime) {
+        return
+                "<p>Dear " + parentName + ",</p>\n" +
+                        "<p>Your admission form for <strong>" + childName + "</strong> has been <strong>resubmitted</strong> on <strong>" + dateTime + "</strong>.</p>" +
+                        "<p>Our Admissions Team will review the updated information and get back to you shortly.</p>" +
+                        "<p>If you need further assistance, contact us at <a href=\"mailto:info@sunshinepreschool.edu\">info@sunshinepreschool.edu</a> or call (555) 123-4567.</p>" +
+                        "<p>Best regards,<br/>MerryStar Preschool</p>";
     }
 
     /**
@@ -92,20 +103,6 @@ public class Format {
     }
 
     /**
-     * Fragment khi phụ huynh đăng ký tài khoản thành công
-     */
-    public static String getParentRegisterFormat(String parentName, String email) {
-        return
-                "<p>Dear " + (parentName != null ? parentName : "Parent") + ",</p>\n" +
-                        "<p>Your account has been successfully registered with Sunshine Preschool.</p>" +
-                        "<ul style=\"padding-left:16px;\">" +
-                        "  <li><strong>Email:</strong> " + email + "</li>" +
-                        "</ul>" +
-                        "<p>For assistance, contact us at <a href=\"mailto:info@sunshinepreschool.edu\">info@sunshinepreschool.edu</a> or call (555) 123-4567.</p>" +
-                        "<p>Best regards,<br/>Sunshine Preschool</p>";
-    }
-
-    /**
      * Fragment cho email xác thực đăng ký tài khoản
      */
     public static String getEmailVerificationBody(String verificationLink) {
@@ -139,14 +136,6 @@ public class Format {
                         "<p>Your password has been renewed successfully.</p>" +
                         "<p>If you did not perform this action, please contact support immediately.</p>" +
                         "<p>Best regards,<br/>Sunshine Preschool</p>";
-    }
-
-    /**
-     * Fragment for registration OTP email
-     */
-    public static String getRegisterOtpBody(String otp, int expiryMinutes) {
-        return "<p>Your OTP code for registration is: <b>" + otp + "</b></p>"
-                + "<p>This code will expire in " + expiryMinutes + " minutes.</p>";
     }
 
     /**
@@ -267,23 +256,6 @@ public class Format {
                 "<p>Best regards,<br/>Sunshine Preschool</p>";
     }
 
-    /**
-     * Fragment cho email xác thực đăng ký tài khoản (đã sửa tham số và nội dung)
-     */
-    public static String getVerifyEmailBody(String verificationLink, String name) { // Đổi tên tham số từ expiryMinutes sang name
-        return "<p>Dear " + (name != null ? name : "User") + ",</p>" +
-                "<p>You have requested to register an account with Sunshine Preschool. Please click the link below to complete your registration:</p>" +
-                "<div style=\"background-color:#eef5f0;padding:20px;text-align:center;margin:20px 0;border-radius:6px;\">" +
-                "  <a href=\"" + verificationLink + "\" style=\"color:#1C5A2A;text-decoration:none;font-weight:bold;display:inline-block;padding:10px 20px;background-color:#4CAF50;color:white!important;border-radius:5px;\">Complete Registration</a>" +
-                "</div>" +
-                "<p><strong>Note:</strong> This link is valid for a limited time.</p>" + // Bỏ số phút cụ thể vì JWT tự quản lý
-                "<p>If you did not request this registration, please ignore this message.</p>" +
-                "<p>Best regards,<br/>Sunshine Preschool</p>";
-    }
-
-    /**
-     * Fragment khi đăng ký tài khoản thành công
-     */
     public static String getRegistrationSuccessBody(String name) {
         return "<p>Dear " + (name != null ? name : "User") + ",</p>" +
                 "<p>Congratulations! Your account has been successfully registered and activated with Sunshine Preschool.</p>" +
@@ -312,15 +284,14 @@ public class Format {
     /**
      * Fragment khi phụ huynh cập nhật thông tin con thành công
      */
-    public static String getChildUpdatedSuccessBody(String parentName, String childName, int remainingUpdates) {
+    public static String getChildUpdatedSuccessBody(String parentName, String childName) {
         return "<p>Dear " + parentName + ",</p>" +
                 "<p>We are pleased to confirm that the information for your child <strong>" + childName + "</strong> has been successfully updated.</p>" +
                 "<p><strong>Important Information:</strong></p>" +
                 "<ul style=\"padding-left:16px;\">" +
                 "  <li>Update completed on: " + LocalDateTime.now().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")) + "</li>" +
-                "  <li>Remaining updates allowed: <strong>" + remainingUpdates + " out of 5</strong></li>" +
                 "</ul>" +
-                "<p><strong>Please note:</strong> Child information can only be updated 5 times for security reasons. After submitting an admission form, updates will not be allowed.</p>" +
+                "<p><strong>Please note:</strong> After submitting an admission form, updates will not be allowed.</p>" +
                 "<p>For any questions, feel free to contact us at <a href=\"mailto:info@sunshinepreschool.edu\">info@sunshinepreschool.edu</a> or call (555) 123-4567.</p>" +
                 "<p>Best regards,<br/>Sunshine Preschool</p>";
     }
