@@ -61,10 +61,7 @@ public class Student {
 
     @Column(name = "`modified_date`")
     LocalDate modifiedDate;
-
-    @Column(name = "`update_count`")
-    Integer updateCount;
-
+    
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "`parent_id`")
     Parent parent;
