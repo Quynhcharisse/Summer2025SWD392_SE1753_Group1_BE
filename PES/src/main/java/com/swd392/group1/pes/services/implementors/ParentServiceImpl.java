@@ -259,9 +259,10 @@ public class ParentServiceImpl implements ParentService {
         String heading = "Admission Form Submitted";
         String bodyHtml = Format.getAdmissionSubmittedBody(
                 account.getName(),
-                LocalDate.now().toString()
+                form.getStudent().getName(),
+                LocalDate.now()
         );
-        //Gửi email
+
         try {
             mailService.sendMail(
                     account.getEmail(),
@@ -361,6 +362,18 @@ public class ParentServiceImpl implements ParentService {
 
     @Override
     public ResponseEntity<ResponseObject> refillForm(RefillFormRequest request, HttpServletRequest httpRequest) {
+        // Xác thực người dùng
+        Account account = jwtService.extractAccountFromCookie(httpRequest);
+        if (account == null || !account.getRole().equals(Role.PARENT)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(
+                    ResponseObject.builder()
+                            .message("Forbidden: Only parents can access this resource")
+                            .success(false)
+                            .data(null)
+                            .build()
+            );
+        }
+
         AdmissionForm form = admissionFormRepo.findById(request.getFormId()).orElse(null);
 
         if (form == null) {
@@ -373,8 +386,39 @@ public class ParentServiceImpl implements ParentService {
             );
         }
 
+        // Kiểm tra quyền truy cập form
+        if (!form.getParent().getId().equals(account.getParent().getId())) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(
+                    ResponseObject.builder()
+                            .message("You do not have permission to access this form")
+                            .success(false)
+                            .data(null)
+                            .build()
+            );
+        }
+
         form.setStatus(Status.REFILLED);
         admissionFormRepo.save(form);
+
+        // Gửi email notification cho refill
+        String subject = "[PES] Admission Form Refilled";
+        String heading = "Admission Form Refilled";
+        String bodyHtml = Format.getAdmissionRefilledBody(
+                account.getName(),
+                form.getStudent().getName(),
+                LocalDate.now()
+        );
+
+        try {
+            mailService.sendMail(
+                    account.getEmail(),
+                    subject,
+                    heading,
+                    bodyHtml
+            );
+        } catch (Exception e) {
+            System.err.println("Failed to send refill email notification: " + e.getMessage());
+        }
 
         SubmitAdmissionFormRequest submitRequest = SubmitAdmissionFormRequest.builder()
                 .studentId(request.getStudentId())
@@ -708,18 +752,6 @@ public class ParentServiceImpl implements ParentService {
                             .build());
         }
 
-        // tránh bị null
-        int count = student.getUpdateCount() == null ? 0 : student.getUpdateCount();
-        // Deny if update limit exceeded
-        if (count >= 5) {
-            return ResponseEntity.status(HttpStatus.CONFLICT).body(
-                    ResponseObject.builder()
-                            .message("This is critical information and can only be updated 5 times. You have reached the limit.")
-                            .success(false)
-                            .data(null)
-                            .build());
-        }
-
         boolean hasSubmittedForm = student.getAdmissionFormList()
                 .stream()
                 .anyMatch(
@@ -744,10 +776,7 @@ public class ParentServiceImpl implements ParentService {
         student.setBirthCertificateImg(request.getBirthCertificateImg());
         student.setHouseholdRegistrationImg(request.getHouseholdRegistrationImg());
         student.setModifiedDate(LocalDate.now());
-        student.setUpdateCount(count + 1); 
         Student updatedStudent = studentRepo.save(student);
-
-        int remaining = 5 - updatedStudent.getUpdateCount();
 
         // Gửi email confirmation
         try {
@@ -755,8 +784,7 @@ public class ParentServiceImpl implements ParentService {
             String heading = "Child Information Updated";
             String bodyHtml = Format.getChildUpdatedSuccessBody(
                     acc.getName(),
-                    updatedStudent.getName(),
-                    remaining
+                    updatedStudent.getName()
             );
             mailService.sendMail(
                     acc.getEmail(),
@@ -770,7 +798,7 @@ public class ParentServiceImpl implements ParentService {
 
         return ResponseEntity.status(HttpStatus.OK).body(
                 ResponseObject.builder()
-                        .message("Update successful. You have " + remaining + " update(s) remaining.")
+                        .message("Child information updated successfully.")
                         .success(true)
                         .data(null)
                         .build());
