@@ -24,11 +24,10 @@ public class PaymentTimeOutScheduler {
     private final TransactionRepo transactionRepo;
     private final MailService mailService;
 
-    @Scheduled(fixedDelay = 180000) //3 phút
+    @Scheduled(fixedDelay = 5000) //5 giây
     @Transactional
     public void rejectExpiredPaymentForms() {
         log.info("Running scheduled task: Checking expired payment forms at {}", LocalDateTime.now());
-
         List<AdmissionForm> formsToProcess = admissionFormRepo.findByStatusAndPaymentExpiryDateLessThanEqual(
                 Status.WAITING_PAYMENT,
                 LocalDateTime.now()
