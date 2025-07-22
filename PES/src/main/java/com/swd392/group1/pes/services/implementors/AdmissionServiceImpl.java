@@ -697,20 +697,22 @@ public class AdmissionServiceImpl implements AdmissionService {
 
     @Override
     public ResponseEntity<ResponseObject> getAllYear() {
-        List<Integer> years = admissionTermRepo.findAll()
-                .stream()
+        List<String> years = admissionTermRepo.findAllByParentTermIsNull().stream()
                 .map(AdmissionTerm::getYear)
                 .distinct()
-                .sorted()
+                .sorted(Comparator.reverseOrder())
+                .map(year -> year + "–" + (year + 1))
                 .toList();
-        return ResponseEntity.status(HttpStatus.OK).body(
+
+        return ResponseEntity.ok(
                 ResponseObject.builder()
-                        .message("")
+                        .message("Fetched academic years successfully")
                         .success(true)
                         .data(years)
                         .build()
         );
     }
+
 
     @Override
     public Map<String, Long> getAdmissionFormStatusSummary() {
