@@ -39,7 +39,7 @@ public class TermItem {
     Integer id;
 
     @Column(name = "`max_number_registration`")
-    int maxNumberRegistration; // tự gán tự động
+    int maxNumberRegistration;
 
     @Enumerated(EnumType.STRING)
     @Column(length = 50)

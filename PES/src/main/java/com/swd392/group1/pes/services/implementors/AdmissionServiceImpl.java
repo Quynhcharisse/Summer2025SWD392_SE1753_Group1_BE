@@ -102,7 +102,7 @@ public class AdmissionServiceImpl implements AdmissionService {
         for (CreateAdmissionTermRequest.TermItem termItem : termItemList) {
             termItemRepo.save(
                     TermItem.builder()
-                            .grade(Grade.valueOf(termItem.getGrade()))
+                            .grade(termItem.getGrade())
                             .studentsPerClass(StudentPerClass.MAX.getValue())
                             .expectedClasses(termItem.getExpectedClasses())
                             .maxNumberRegistration(calculateMaxRegistration(termItem.getExpectedClasses()))
@@ -123,65 +123,70 @@ public class AdmissionServiceImpl implements AdmissionService {
     }
 
     private String createTermValidate(CreateAdmissionTermRequest request, AdmissionTermRepo admissionTermRepo) {
+        LocalDateTime now = LocalDateTime.now();
+
         if (request.getStartDate() == null) {
-            return "Start date is required";
+            return "Please select a start date for the admission term.";
         }
 
         if (request.getEndDate() == null) {
-            return "End date is required";
+            return "Please select an end date for the admission term.";
         }
 
         if (request.getStartDate().isAfter(request.getEndDate())) {
-            return "Start date must be before the end date"; // hien thi tong bao : ngày tương lai  (lỡ tạo trong ngày hôm nay)
-        }           //block date da dc chon
+            return "The start date must be before or equal to the end date.";
+        }
 
-        if (request.getStartDate().isBefore(LocalDateTime.now())) {
-            return "Start date must be in the future (after today)";
+        if (request.getStartDate().isBefore(now)) {
+            return "The start date must be in the future (after today).";
         }
 
         if (request.getStartDate().getYear() != request.getEndDate().getYear()) {
-            return "Start date and end date must be in the same year";
+            return "Start and end dates must be in the same calendar year.";
         }
 
-        //tính năm học theo tháng bắt đầu
+        List<CreateAdmissionTermRequest.TermItem> termItemList = request.getTermItemList();
+        if (termItemList == null || termItemList.isEmpty()) {
+            return "Please select at least one grade for the admission term.";
+        }
+
         int calculatedYear = request.getStartDate().getMonthValue() >= 6
                 ? request.getStartDate().getYear()
                 : request.getStartDate().getYear() - 1;
 
-        for (CreateAdmissionTermRequest.TermItem termItem : request.getTermItemList()) {
-            Grade grade = Grade.valueOf(termItem.getGrade());
+        Set<Grade> gradeSet = new HashSet<>();
+
+        for (CreateAdmissionTermRequest.TermItem termItem : termItemList) {
+            Grade grade = termItem.getGrade();
 
             if (admissionTermRepo.existsByYearAndTermItemList_Grade(calculatedYear, grade)) {
-                return "Admission term already exists for academic year " +
-                        calculatedYear + "-" + (calculatedYear + 1) + " and grade " + grade.name();
+                String academicYear = calculatedYear + "–" + (calculatedYear + 1);
+                return "An admission term already exists for academic year " + academicYear +
+                        " and grade " + getGradeLabel(grade) + ".";
             }
-        }
 
-        //trong 1 term phai it nhat 1 grade trong create term do
-        if (request.getTermItemList() == null || request.getTermItemList().isEmpty()) {
-            return "At least one grade must be included in the term";
-        }
-
-        Set<String> grades = new HashSet<>();
-
-        for (CreateAdmissionTermRequest.TermItem termItem : request.getTermItemList()) {
-            //expectedClasses > 0
             if (termItem.getExpectedClasses() <= 0) {
-                return "Expected classes must be greater than 0 for grade: " + termItem.getGrade();
+                return "Expected classes for " + getGradeLabel(grade) + " must be greater than 0.";
             }
 
-            //hợp lệ enum
-            try {
-                Grade.valueOf(termItem.getGrade());
-            } catch (IllegalArgumentException e) {
-                return "Invalid grade: " + termItem.getGrade();
+            if (termItem.getExpectedClasses() > 1000) {
+                return "Expected classes for " + getGradeLabel(grade) + " is too large (maximum is 1000).";
             }
 
-            if (!grades.add(termItem.getGrade())) {
-                return "Duplicate grade found: " + termItem.getGrade();
+            if (!gradeSet.add(grade)) {
+                return "Duplicate grade detected: " + getGradeLabel(grade) + ".";
             }
         }
-        return "";
+
+        return ""; // valid
+    }
+
+    private String getGradeLabel(Grade grade) {
+        return switch (grade) {
+            case SEED -> "Seed Class (3 years old)";
+            case BUD -> "Bud Class (4 years old)";
+            case LEAF -> "Leaf Class (5 years old)";
+        };
     }
 
 
@@ -251,40 +256,47 @@ public class AdmissionServiceImpl implements AdmissionService {
         return StudentPerClass.MAX.getValue() * expectedClasses;
     }
 
-    @Override
-    public ResponseEntity<ResponseObject> getDefaultFeeByGrade(String grade) {
-        try {
-            Grade g = Grade.valueOf(grade.toUpperCase());
-            Map<String, Long> feeData = getFeeMapByGrade(g); // dùng chung
-            return ResponseEntity.ok(
-                    ResponseObject.builder()
-                            .message("Default fee fetched successfully")
-                            .success(true)
-                            .data(feeData)
-                            .build()
-            );
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(
-                    ResponseObject.builder()
-                            .message("Invalid grade: " + grade)
-                            .success(false)
-                            .data(null)
-                            .build()
-            );
+        @Override
+        public ResponseEntity<ResponseObject> getDefaultFeeByGrade(Grade grade) {
+            try {
+                Map<String, Long> feeData = getFeeMapByGrade(grade);
+                return ResponseEntity.ok(
+                        ResponseObject.builder()
+                                .message("Default fee fetched successfully")
+                                .success(true)
+                                .data(feeData)
+                                .build()
+                );
+            } catch (Exception e) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
+                        ResponseObject.builder()
+                                .message("Invalid grade: " + grade)
+                                .success(false)
+                                .data(null)
+                                .build()
+                );
+            }
         }
 
-    }
-
-    private Map<String, Long> getFeeMapByGrade(Grade grade) {
-        Fees fee = Fees.valueOf(grade.name());
-        return Map.of(
-                "learningMaterialFee", fee.getLearningMaterial(),
-                "reservationFee", fee.getReservation(),
-                "serviceFee", fee.getService(),
-                "uniformFee", fee.getUniform(),
-                "facilityFee", fee.getFacility()
+        private static final Map<Grade, Fees> gradeToFeesMap = Map.of(
+                Grade.SEED, Fees.SEED,
+                Grade.BUD, Fees.BUD,
+                Grade.LEAF, Fees.LEAF
         );
-    }
+
+        private Map<String, Long> getFeeMapByGrade(Grade grade) {
+            Fees fee = gradeToFeesMap.get(grade);
+            if (fee == null) {
+                throw new IllegalArgumentException("No fee defined for grade: " + grade);
+            }
+            return Map.of(
+                    "learningMaterialFee", fee.getLearningMaterial(),
+                    "reservationFee", fee.getReservation(),
+                    "serviceFee", fee.getService(),
+                    "uniformFee", fee.getUniform(),
+                    "facilityFee", fee.getFacility()
+            );
+        }
 
 
     @Override

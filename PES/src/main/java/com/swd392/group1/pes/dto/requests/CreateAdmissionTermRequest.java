@@ -1,5 +1,6 @@
 package com.swd392.group1.pes.dto.requests;
 
+import com.swd392.group1.pes.enums.Grade;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -27,7 +28,7 @@ public class CreateAdmissionTermRequest {
     @FieldDefaults(level = AccessLevel.PRIVATE)
     public static class TermItem {
         int expectedClasses; // Số lớp dự kiến
-        String grade;
+        Grade grade;
     }
 
 }
