@@ -6,12 +6,14 @@ import com.swd392.group1.pes.dto.requests.ProcessAdmissionFormRequest;
 import com.swd392.group1.pes.dto.requests.UpdateAdmissionTermRequest;
 import com.swd392.group1.pes.dto.response.ResponseObject;
 import com.swd392.group1.pes.dto.requests.DailyTotalTransactionRequest;
+import com.swd392.group1.pes.enums.Grade;
 import com.swd392.group1.pes.services.AdmissionService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -48,7 +50,7 @@ public class AdmissionController {
 
     @GetMapping("/default/fee")
     @PreAuthorize("hasRole('admission')")
-    public ResponseEntity<ResponseObject> getDefaultFeeByGrade(@RequestParam String grade) {
+    public ResponseEntity<ResponseObject> getDefaultFeeByGrade(@RequestParam Grade grade) {
         return admissionService.getDefaultFeeByGrade(grade);
     }
 
