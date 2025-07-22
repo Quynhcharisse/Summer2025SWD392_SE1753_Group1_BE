@@ -6,6 +6,7 @@ import com.swd392.group1.pes.dto.requests.ProcessAdmissionFormRequest;
 import com.swd392.group1.pes.dto.requests.UpdateAdmissionTermRequest;
 import com.swd392.group1.pes.dto.response.ResponseObject;
 import com.swd392.group1.pes.dto.requests.DailyTotalTransactionRequest;
+import com.swd392.group1.pes.enums.Grade;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.ResponseEntity;
 
@@ -22,7 +23,7 @@ public interface AdmissionService {
 
     ResponseEntity<ResponseObject> viewAdmissionFormList();
 
-    ResponseEntity<ResponseObject> getDefaultFeeByGrade(String grade);
+    ResponseEntity<ResponseObject> getDefaultFeeByGrade(Grade grade);
 
     ResponseEntity<ResponseObject> processAdmissionFormList(ProcessAdmissionFormRequest request);
 
