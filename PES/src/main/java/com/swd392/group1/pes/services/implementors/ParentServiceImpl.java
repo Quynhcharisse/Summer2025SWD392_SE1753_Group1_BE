@@ -165,6 +165,7 @@ public class ParentServiceImpl implements ParentService {
     }
 
     private Map<String, Object> getFormDetail(AdmissionForm form) {
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm dd/MM/yyyy");
         Map<String, Object> data = new HashMap<>();
         data.put("id", form.getId());
         data.put("studentId", form.getStudent().getId());
@@ -178,7 +179,7 @@ public class ParentServiceImpl implements ParentService {
         data.put("commitmentImg", form.getCommitmentImg());
         data.put("childCharacteristicsFormImg", form.getChildCharacteristicsFormImg());
         data.put("householdRegistrationAddress", form.getHouseholdRegistrationAddress());
-        data.put("submittedDate", form.getSubmittedDate());
+        data.put("submittedDate", form.getSubmittedDate().format(formatter));
         data.put("cancelReason", form.getCancelReason());
         data.put("totalFees", sumFee(form.getTermItem().getGrade()));
         data.put("note", form.getNote());
@@ -400,6 +401,14 @@ public class ParentServiceImpl implements ParentService {
         form.setStatus(Status.REFILLED);
         admissionFormRepo.save(form);
 
+        SubmitAdmissionFormRequest submitRequest = SubmitAdmissionFormRequest.builder()
+                .studentId(request.getStudentId())
+                .childCharacteristicsFormImg(request.getChildCharacteristicsFormImg())
+                .householdRegistrationAddress(request.getHouseholdRegistrationAddress())
+                .commitmentImg(request.getCommitmentImg())
+                .note(request.getNote())
+                .build();
+
         // Gửi email notification cho refill
         String subject = "[PES] Admission Form Refilled";
         String heading = "Admission Form Refilled";
@@ -420,13 +429,6 @@ public class ParentServiceImpl implements ParentService {
             System.err.println("Failed to send refill email notification: " + e.getMessage());
         }
 
-        SubmitAdmissionFormRequest submitRequest = SubmitAdmissionFormRequest.builder()
-                .studentId(request.getStudentId())
-                .childCharacteristicsFormImg(request.getChildCharacteristicsFormImg())
-                .householdRegistrationAddress(request.getHouseholdRegistrationAddress())
-                .commitmentImg(request.getCommitmentImg())
-                .note(request.getNote())
-                .build();
         return submitAdmissionForm(submitRequest, httpRequest);
     }
 

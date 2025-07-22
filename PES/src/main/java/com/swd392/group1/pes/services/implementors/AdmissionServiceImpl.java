@@ -570,6 +570,7 @@ public class AdmissionServiceImpl implements AdmissionService {
 
     @Override
     public ResponseEntity<ResponseObject> viewAdmissionFormList() {
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm dd/MM/yyyy");
         List<Map<String, Object>> formList = admissionFormRepo.findAll().stream()
                 .sorted(Comparator.comparing(AdmissionForm::getSubmittedDate).reversed()) // sort form theo ngày chỉnh sửa mới nhất
                 .map(form -> {
@@ -586,7 +587,7 @@ public class AdmissionServiceImpl implements AdmissionService {
                             data.put("birthCertificateImg", form.getStudent().getBirthCertificateImg());
                             data.put("commitmentImg", form.getCommitmentImg());
                             data.put("childCharacteristicsFormImg", form.getChildCharacteristicsFormImg());
-                            data.put("submittedDate", form.getSubmittedDate());
+                            data.put("submittedDate", form.getSubmittedDate().format(formatter));
                             data.put("cancelReason", form.getCancelReason());
                             data.put("note", form.getNote());
                             data.put("status", form.getStatus().getValue());
@@ -697,20 +698,22 @@ public class AdmissionServiceImpl implements AdmissionService {
 
     @Override
     public ResponseEntity<ResponseObject> getAllYear() {
-        List<Integer> years = admissionTermRepo.findAll()
-                .stream()
+        List<String> years = admissionTermRepo.findAllByParentTermIsNull().stream()
                 .map(AdmissionTerm::getYear)
                 .distinct()
-                .sorted()
+                .sorted(Comparator.reverseOrder())
+                .map(year -> year + "–" + (year + 1))
                 .toList();
-        return ResponseEntity.status(HttpStatus.OK).body(
+
+        return ResponseEntity.ok(
                 ResponseObject.builder()
-                        .message("")
+                        .message("Fetched academic years successfully")
                         .success(true)
                         .data(years)
                         .build()
         );
     }
+
 
     @Override
     public Map<String, Long> getAdmissionFormStatusSummary() {
