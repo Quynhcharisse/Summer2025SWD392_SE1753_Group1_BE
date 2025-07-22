@@ -722,6 +722,7 @@ public class AdmissionServiceImpl implements AdmissionService {
         summary.put("refilledCount", admissionFormRepo.countByStatus(Status.REFILLED));
         summary.put("approvedCount", admissionFormRepo.countByStatus(Status.APPROVED));
         summary.put("rejectedCount", admissionFormRepo.countByStatus(Status.REJECTED));
+        summary.put("waitingPaymentCount", admissionFormRepo.countByStatus(Status.WAITING_PAYMENT));
         summary.put("paymentCount", admissionFormRepo.countByStatus(Status.APPROVED_PAID));
         return summary;
     }
