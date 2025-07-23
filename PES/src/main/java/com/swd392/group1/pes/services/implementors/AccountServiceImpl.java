@@ -260,8 +260,8 @@ public class AccountServiceImpl implements AccountService {
             return "Gender is required.";
         }
         String gender = request.getGender().trim().toLowerCase();
-        if (!gender.equals("male") && !gender.equals("female")) {
-            return "Gender must be male or female.";
+        if (!gender.equals("male") && !gender.equals("female") && !gender.equals("other")) {
+            return "Gender must be male, female, or other";
         }
 
         return "";
