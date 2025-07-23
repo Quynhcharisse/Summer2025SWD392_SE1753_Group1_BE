@@ -23,12 +23,12 @@ services:
       - "8080:8080"
     environment:
       #DOCKER MYSQL
-        MYSQL_URL: jdbc:mysql://mysql_container:3306/pes_swd
-        MYSQL_USER: "root"
-        MYSQL_PASSWORD: "123456"
-#      MYSQL_URL: jdbc:mysql://171.244.198.239:3306/pesswd2025
-#      MYSQL_USER: "dbadmin"
-#      MYSQL_PASSWORD: "Huatrideptrai#1"
+#        MYSQL_URL: jdbc:mysql://mysql_container:3306/pes_swd
+#        MYSQL_USER: "root"
+#        MYSQL_PASSWORD: "123456"
+        MYSQL_URL: jdbc:mysql://171.244.198.239:3306/pesswd2025
+        MYSQL_USER: "dbadmin"
+        MYSQL_PASSWORD: "Huatrideptrai#1"
         TZ: Asia/Ho_Chi_Minh
         JAVA_TOOL_OPTIONS: "-Duser.timezone=Asia/Ho_Chi_Minh"
 #DOCKER MYSQL
