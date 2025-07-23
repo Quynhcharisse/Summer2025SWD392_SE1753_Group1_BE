@@ -456,7 +456,7 @@ public class ClassServiceImpl implements ClassService {
                     String parentName = parent.getAccount().getName();
                     String parentEmail = parent.getAccount().getEmail();
                     String studentName = student.getName();
-                    String subject = "Thông báo xếp lớp cho học sinh " + studentName;
+                    String subject = "Class Assignment For " + studentName;
                     String header = "Class Assignment Notification";
                     String body = Format.getAssignClassSuccessfulForParentBody(
                             parentName, studentName, className, teacherName, startDateStr
@@ -739,13 +739,13 @@ public class ClassServiceImpl implements ClassService {
                 .map(SyllabusLesson::getLesson)
                 .map(this::buildLessonDetail)
                 .toList();
-
+        int nextYear = classes.getAcademicYear() + 1;
         Map<String, Object> data = new HashMap<>();
         data.put("id", classes.getId());
         data.put("name", classes.getName());
         data.put("startDate", classes.getStartDate());
         data.put("endDate", classes.getEndDate());
-        data.put("year", classes.getAcademicYear());
+        data.put("year", classes.getAcademicYear() +"-"+ nextYear);
         data.put("teacherName", classes.getTeacher().getName());
         data.put("teacherPhoneNumber", classes.getTeacher().getPhone());
         data.put("teacherEmail", classes.getTeacher().getEmail());
@@ -937,7 +937,6 @@ public class ClassServiceImpl implements ClassService {
         cls.setNumberStudent(remaining);
         classRepo.save(cls);
 
-        // 8. Tạo thông báo
         StringBuilder message = new StringBuilder("Unassigned " + toRemove.size() + " students from class successfully.");
         if (!notExistIds.isEmpty()) {
             message.append(" The following student IDs do not exist in the system: ").append(notExistIds).append(".");
@@ -1309,7 +1308,7 @@ public class ClassServiceImpl implements ClassService {
                 String teacherName = cls.getTeacher() != null ? cls.getTeacher().getName() : "N/A";
                 String startDateStr = cls.getStartDate().toString();
 
-                String subject = "Thông báo xếp lớp cho học sinh " + studentName;
+                String subject = "Class Assignment Notification For " + studentName;
                 String header = "Class Assignment Notification";
                 String body = Format.getAssignClassSuccessfulForParentBody(
                         parentName, studentName, className, teacherName, startDateStr
@@ -1494,7 +1493,7 @@ public class ClassServiceImpl implements ClassService {
                 String teacherName = cls.getTeacher() != null ? cls.getTeacher().getName() : "N/A";
                 String startDateStr = cls.getStartDate().toString();
 
-                String subject = "Thông báo xếp lớp cho học sinh " + studentName;
+                String subject = "Class Assignment Notification For " + studentName;
                 String header = "Class Assignment Notification";
                 String body = Format.getAssignClassSuccessfulForParentBody(
                         parentName, studentName, className, teacherName, startDateStr
