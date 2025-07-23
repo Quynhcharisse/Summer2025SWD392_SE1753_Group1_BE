@@ -2,6 +2,7 @@ package com.swd392.group1.pes.services.implementors;
 
 import com.swd392.group1.pes.dto.requests.CreateAdmissionTermRequest;
 import com.swd392.group1.pes.dto.requests.CreateExtraTermRequest;
+import com.swd392.group1.pes.dto.requests.DailyTotalTransactionRequest;
 import com.swd392.group1.pes.dto.requests.ProcessAdmissionFormRequest;
 import com.swd392.group1.pes.dto.requests.UpdateAdmissionTermRequest;
 import com.swd392.group1.pes.dto.response.ResponseObject;
@@ -19,7 +20,6 @@ import com.swd392.group1.pes.repositories.AdmissionTermRepo;
 import com.swd392.group1.pes.repositories.StudentRepo;
 import com.swd392.group1.pes.repositories.TermItemRepo;
 import com.swd392.group1.pes.repositories.TransactionRepo;
-import com.swd392.group1.pes.dto.requests.DailyTotalTransactionRequest;
 import com.swd392.group1.pes.services.AdmissionService;
 import com.swd392.group1.pes.services.MailService;
 import com.swd392.group1.pes.utils.email.Format;
@@ -42,14 +42,14 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.ArrayList;
-import java.time.format.DateTimeFormatter;
 
 @Service
 @RequiredArgsConstructor
@@ -256,47 +256,47 @@ public class AdmissionServiceImpl implements AdmissionService {
         return StudentPerClass.MAX.getValue() * expectedClasses;
     }
 
-        @Override
-        public ResponseEntity<ResponseObject> getDefaultFeeByGrade(Grade grade) {
-            try {
-                Map<String, Long> feeData = getFeeMapByGrade(grade);
-                return ResponseEntity.ok(
-                        ResponseObject.builder()
-                                .message("Default fee fetched successfully")
-                                .success(true)
-                                .data(feeData)
-                                .build()
-                );
-            } catch (Exception e) {
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
-                        ResponseObject.builder()
-                                .message("Invalid grade: " + grade)
-                                .success(false)
-                                .data(null)
-                                .build()
-                );
-            }
-        }
-
-        private static final Map<Grade, Fees> gradeToFeesMap = Map.of(
-                Grade.SEED, Fees.SEED,
-                Grade.BUD, Fees.BUD,
-                Grade.LEAF, Fees.LEAF
-        );
-
-        private Map<String, Long> getFeeMapByGrade(Grade grade) {
-            Fees fee = gradeToFeesMap.get(grade);
-            if (fee == null) {
-                throw new IllegalArgumentException("No fee defined for grade: " + grade);
-            }
-            return Map.of(
-                    "learningMaterialFee", fee.getLearningMaterial(),
-                    "reservationFee", fee.getReservation(),
-                    "serviceFee", fee.getService(),
-                    "uniformFee", fee.getUniform(),
-                    "facilityFee", fee.getFacility()
+    @Override
+    public ResponseEntity<ResponseObject> getDefaultFeeByGrade(Grade grade) {
+        try {
+            Map<String, Long> feeData = getFeeMapByGrade(grade);
+            return ResponseEntity.ok(
+                    ResponseObject.builder()
+                            .message("Default fee fetched successfully")
+                            .success(true)
+                            .data(feeData)
+                            .build()
+            );
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
+                    ResponseObject.builder()
+                            .message("Invalid grade: " + grade)
+                            .success(false)
+                            .data(null)
+                            .build()
             );
         }
+    }
+
+    private static final Map<Grade, Fees> gradeToFeesMap = Map.of(
+            Grade.SEED, Fees.SEED,
+            Grade.BUD, Fees.BUD,
+            Grade.LEAF, Fees.LEAF
+    );
+
+    private Map<String, Long> getFeeMapByGrade(Grade grade) {
+        Fees fee = gradeToFeesMap.get(grade);
+        if (fee == null) {
+            throw new IllegalArgumentException("No fee defined for grade: " + grade);
+        }
+        return Map.of(
+                "learningMaterialFee", fee.getLearningMaterial(),
+                "reservationFee", fee.getReservation(),
+                "serviceFee", fee.getService(),
+                "uniformFee", fee.getUniform(),
+                "facilityFee", fee.getFacility()
+        );
+    }
 
 
     @Override
@@ -418,7 +418,7 @@ public class AdmissionServiceImpl implements AdmissionService {
     @Override
     public ResponseEntity<ResponseObject> createExtraTerm(CreateExtraTermRequest request) {
         //Validate các field cơ bản (ngày, số lượng, grade rỗng...)
-        String error = createExtraTerm(request, admissionTermRepo);
+        String error = createExtraTermValiadation(request, admissionTermRepo);
         if (!error.isEmpty()) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
                     ResponseObject.builder()
@@ -490,7 +490,7 @@ public class AdmissionServiceImpl implements AdmissionService {
         );
     }
 
-    private String createExtraTerm(CreateExtraTermRequest request, AdmissionTermRepo admissionTermRepo) {
+    private String createExtraTermValiadation(CreateExtraTermRequest request, AdmissionTermRepo admissionTermRepo) {
         AdmissionTerm parentTerm = admissionTermRepo.findById(request.getParentTermId()).orElse(null);
         if (parentTerm == null) {
             return "Parent term is required.";
