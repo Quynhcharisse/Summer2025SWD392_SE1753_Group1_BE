@@ -104,8 +104,8 @@ public class HRServiceImpl implements HRService {
                 : "Your Account Has Been Reactivated";
 
         String heading = action.equalsIgnoreCase("ban")
-                ? "🚫 Account Suspended"
-                : "✅ Account Reactivated";
+                ? "Account Suspended"
+                : "Account Reactivated";
 
         String bodyHtml = action.equalsIgnoreCase("ban")
                 ? Format.getAccountBannedBody(account.getName())
@@ -298,6 +298,13 @@ public class HRServiceImpl implements HRService {
         if (request.getAvatarUrl() != null && !request.getAvatarUrl().isBlank()) {
             teacher.setAvatarUrl(request.getAvatarUrl().trim());
         }
+        if (request.getAddress() != null && !request.getAddress().isBlank()) {
+            teacher.setAddress(request.getAddress().trim());
+        }
+        if (request.getIdentityNumber() != null && !request.getIdentityNumber().isBlank()) {
+            teacher.setIdentityNumber(request.getIdentityNumber().trim());
+        }
+
         accountRepo.save(teacher);
         return ResponseEntity.ok(
             ResponseObject.builder()
@@ -353,6 +360,9 @@ public class HRServiceImpl implements HRService {
                             data.put("gender", account.getGender());
                             data.put("role", account.getRole());
                             data.put("status", account.getStatus());
+                            data.put("phone", account.getPhone());
+                            data.put("address", account.getAddress());
+                            data.put("identityNumber", account.getIdentityNumber());
                             return data;
                         }
                 )

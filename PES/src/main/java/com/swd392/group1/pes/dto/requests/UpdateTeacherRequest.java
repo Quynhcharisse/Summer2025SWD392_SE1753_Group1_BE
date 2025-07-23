@@ -17,4 +17,6 @@ public class UpdateTeacherRequest {
     String phone;
     String gender;
     String avatarUrl;
+    String address;
+    String identityNumber;
 }
