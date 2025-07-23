@@ -10,7 +10,7 @@ import java.util.List;
 public interface EventRepo extends JpaRepository<Event, Integer> {
     boolean existsByName(String name);
 
-    List<Event> findByStartTimeBetween(LocalDateTime from, LocalDateTime to);
+    List<Event> findByStatusAndStartTimeBetween(Status status,LocalDateTime from, LocalDateTime to);
 
     List<Event> findByStatusAndRegistrationDeadlineLessThanEqual(Status status, LocalDateTime time);
 

@@ -1,5 +1,6 @@
 package com.swd392.group1.pes.repositories;
 
+import com.swd392.group1.pes.enums.Status;
 import com.swd392.group1.pes.models.EventParticipate;
 import org.springframework.data.jpa.repository.JpaRepository;
 
@@ -16,5 +17,5 @@ public interface EventParticipateRepo extends JpaRepository<EventParticipate, In
 
     List<EventParticipate> findAllByEventId(Integer eventId);
 
-    List<EventParticipate> findByEvent_StartTimeBetween(LocalDateTime startTime, LocalDateTime endTime);
+    List<EventParticipate> findByEvent_StatusAndEvent_StartTimeBetween(Status status, LocalDateTime startTime, LocalDateTime endTime);
 }

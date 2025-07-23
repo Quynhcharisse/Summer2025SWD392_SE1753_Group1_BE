@@ -620,11 +620,11 @@ public class EventServiceImpl implements EventService {
         LocalDateTime endTime = request.getEndDate().atTime(23, 59, 59);
 
         // 1. Lấy tất cả sự kiện trong khoảng thời gian
-        List<Event> events = eventRepo.findByStartTimeBetween(startTime, endTime);
+        List<Event> events = eventRepo.findByStatusAndStartTimeBetween(Status.EVENT_REGISTRATION_CLOSED,startTime, endTime);
 
         // 2. Lấy tất cả lượt tham gia (EventParticipate) trong cùng thời gian
         List<EventParticipate> participations =
-                eventParticipateRepo.findByEvent_StartTimeBetween(startTime, endTime);
+                eventParticipateRepo.findByEvent_StatusAndEvent_StartTimeBetween(Status.EVENT_REGISTRATION_CLOSED, startTime, endTime);
 
         // 3. Gom nhóm theo eventId
         Map<Integer, List<EventParticipate>> groupedByEvent = participations.stream()
