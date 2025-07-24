@@ -78,10 +78,9 @@ public class EventServiceImpl implements EventService {
         List<String> requestEmails = request.getEmails();
         List<Account> validTeachers = new ArrayList<>();
 
-        List<String> statuses = List.of(Status.ACCOUNT_ACTIVE.getValue(), Status.ACCOUNT_UNBAN.getValue());
 
         for (String email : requestEmails) {
-            accountRepo.findByRoleAndEmailAndStatusIn(Role.TEACHER, email, statuses)
+            accountRepo.findByRoleAndEmailAndStatus(Role.TEACHER, email, Status.ACCOUNT_ACTIVE.getValue())
                     .ifPresent(validTeachers::add);
         }
 
