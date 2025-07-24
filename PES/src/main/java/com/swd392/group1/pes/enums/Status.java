@@ -8,9 +8,7 @@ import lombok.RequiredArgsConstructor;
 public enum Status {
 
     ACCOUNT_ACTIVE("active"),
-    PENDING_VERIFICATION("pending verification"),
     ACCOUNT_BAN("ban"),
-    ACCOUNT_UNBAN("unban"),
 
     DRAFT("draft"),
     REFILLED("refilled"),
