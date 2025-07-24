@@ -19,5 +19,4 @@ public interface ClassRepo extends JpaRepository<Classes, Integer> {
     int countByAcademicYear(int year);
 
     boolean existsByName(String name);
-
 }

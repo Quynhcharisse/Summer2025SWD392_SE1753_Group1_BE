@@ -43,4 +43,6 @@ public interface ClassService {
 //     ResponseEntity<ResponseObject> viewCurrentSchedule(String classId, LocalDate date);
 
     ResponseEntity<ResponseObject> reportNumberOfClassesByTermYear(String year);
+
+    ResponseEntity<ResponseObject> getDashBoardStatistic();
 }
