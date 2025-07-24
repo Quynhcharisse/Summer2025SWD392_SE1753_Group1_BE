@@ -150,14 +150,6 @@ public class ClassServiceImpl implements ClassService {
 
         LocalDate start = request.getStartDate();
         LocalDate end = start.plusWeeks(syllabus.getNumberOfWeek()).minusDays(1);
-        if (start.getYear() != end.getYear()) {
-            return ResponseEntity.status(HttpStatus.CONFLICT).body(ResponseObject.builder()
-                    .message("Start date and end date must be within the same calendar year")
-                    .success(false)
-                    .data(null)
-                    .build());
-        }
-
         Optional<Syllabus> existingOpt = syllabusRepo
                 .findFirstByAssignedToClassesTrueAndGradeAndClassesList_AcademicYear(grade, Integer.parseInt(request.getYear()));
 
