@@ -27,9 +27,11 @@ import com.swd392.group1.pes.repositories.ActivityRepo;
 import com.swd392.group1.pes.repositories.AdmissionFormRepo;
 import com.swd392.group1.pes.repositories.AdmissionTermRepo;
 import com.swd392.group1.pes.repositories.ClassRepo;
+import com.swd392.group1.pes.repositories.EventRepo;
 import com.swd392.group1.pes.repositories.ScheduleRepo;
 import com.swd392.group1.pes.repositories.StudentClassRepo;
 import com.swd392.group1.pes.repositories.StudentRepo;
+import com.swd392.group1.pes.repositories.SyllabusLessonRepo;
 import com.swd392.group1.pes.repositories.SyllabusRepo;
 import com.swd392.group1.pes.repositories.TermItemRepo;
 import com.swd392.group1.pes.services.ClassService;
@@ -85,6 +87,8 @@ public class ClassServiceImpl implements ClassService {
     private final ScheduleRepo scheduleRepo;
     private final ActivityRepo activityRepo;
     private final StudentRepo studentRepo;
+    private final SyllabusLessonRepo syllabusLessonRepo;
+    private final EventRepo eventRepo;
 
     @Override
     public ResponseEntity<ResponseObject> generateClassesAuto(GenerateClassesRequest request) {
@@ -1678,8 +1682,30 @@ public class ClassServiceImpl implements ClassService {
         );
     }
 
-
-
+    @Override
+    public ResponseEntity<ResponseObject> getDashBoardStatistic() {
+        long totalClasses = classRepo.count();
+        List<SyllabusLesson> syllabusLessonList = syllabusLessonRepo.findAll();
+        long totalEvents = eventRepo.count();
+        long countDistinctSyllabusAssigned = syllabusLessonList.stream()
+                .map(sl -> sl.getSyllabus().getId())
+                .distinct().count();
+        long countDistinctLessonAssigned = syllabusLessonList.stream()
+                .map(sl -> sl.getLesson().getId())
+                .distinct().count();
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("totalClasses", totalClasses);
+        result.put("totalEvents", totalEvents);
+        result.put("totalSyllabusAssigned", countDistinctSyllabusAssigned);
+        result.put("totalLessonAssigned", countDistinctLessonAssigned);
+        return ResponseEntity.ok(
+                ResponseObject.builder()
+                        .success(true)
+                        .message("Educational Dashboard Statistics")
+                        .data(result)
+                        .build()
+        );
+    }
 
     private Grade getGradeFromName(String name) {
         for (Grade grade : Grade.values()) {

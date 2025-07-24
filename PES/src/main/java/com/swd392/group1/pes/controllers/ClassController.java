@@ -124,6 +124,12 @@ public class ClassController {
         return classService.exportStudentListOfClassToExcel(classId);
     }
 
+    @GetMapping("/dashboard")
+    @PreAuthorize("hasRole('education')")
+    public ResponseEntity<ResponseObject> getDashBoardStatistic() {
+        return classService.getDashBoardStatistic();
+    }
+
 //    @GetMapping("/schedule/current")
 //    @PreAuthorize("hasRole('parent')")
 //    public ResponseEntity<ResponseObject> viewCurrentSchedule(@RequestParam String classId, @RequestParam LocalDate date) {
