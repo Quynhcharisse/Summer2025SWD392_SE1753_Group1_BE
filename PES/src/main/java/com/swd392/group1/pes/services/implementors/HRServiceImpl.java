@@ -72,7 +72,7 @@ public class HRServiceImpl implements HRService {
         if (action.equalsIgnoreCase("ban")) {
             newStatus = Status.ACCOUNT_BAN.getValue();
         } else if (action.equalsIgnoreCase("unban")) {
-            newStatus = Status.ACCOUNT_UNBAN.getValue();
+            newStatus = Status.ACCOUNT_ACTIVE.getValue();
         } else {
             log.error("Invalid action {} for account {}", action, request.getEmail());
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
