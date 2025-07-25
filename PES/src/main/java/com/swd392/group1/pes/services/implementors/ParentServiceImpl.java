@@ -754,16 +754,19 @@ public class ParentServiceImpl implements ParentService {
                             .build());
         }
 
-        boolean hasSubmittedForm = student.getAdmissionFormList()
+        // Chỉ cấm update nếu có form ở trạng thái không phải DRAFT/CANCELLED/REJECTED
+        boolean hasActiveForm = student.getAdmissionFormList()
                 .stream()
-                .anyMatch(
-                        form -> !form.getStatus().equals(Status.DRAFT)
+                .anyMatch(form ->
+                        !(form.getStatus().equals(Status.DRAFT)
+                        || form.getStatus().equals(Status.CANCELLED)
+                        || form.getStatus().equals(Status.REJECTED))
                 );
 
-        if (student.isStudent() || hasSubmittedForm) {
+        if (student.isStudent() || hasActiveForm) {
             return ResponseEntity.status(HttpStatus.CONFLICT).body(
                     ResponseObject.builder()
-                            .message("Cannot update child info after submitting admission form")
+                            .message("Cannot update child info while there is an active admission form (pending/approved)")
                             .success(false)
                             .data(null)
                             .build());
