@@ -65,6 +65,7 @@ import java.util.TimeZone;
 import java.util.TreeMap;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+
 import static com.swd392.group1.pes.services.implementors.EventServiceImpl.validateRegisterEvent;
 
 @Service
@@ -187,7 +188,7 @@ public class ParentServiceImpl implements ParentService {
         return data;
     }
 
-    private List<Map<String, Object>> getFormListByStudent (Student student) {
+    private List<Map<String, Object>> getFormListByStudent(Student student) {
         return student.getAdmissionFormList().stream()
                 .sorted(Comparator.comparing(AdmissionForm::getSubmittedDate).reversed())
                 .map(this::getFormDetail)
@@ -627,8 +628,8 @@ public class ParentServiceImpl implements ParentService {
                         .birthCertificateImg(request.getBirthCertificateImg())
                         .householdRegistrationImg(request.getHouseholdRegistrationImg())
                         .modifiedDate(LocalDate.now())
-                        .isStudent(false)        
-                        .parent(parent)           
+                        .isStudent(false)
+                        .parent(parent)
                         .build());
 
         // Gửi email confirmation
@@ -757,11 +758,7 @@ public class ParentServiceImpl implements ParentService {
         // Chỉ cấm update nếu có form ở trạng thái không phải DRAFT/CANCELLED/REJECTED
         boolean hasActiveForm = student.getAdmissionFormList()
                 .stream()
-                .anyMatch(form ->
-                        !(form.getStatus().equals(Status.DRAFT)
-                        || form.getStatus().equals(Status.CANCELLED)
-                        || form.getStatus().equals(Status.REJECTED))
-                );
+                .anyMatch(form -> !(form.getStatus().equals(Status.DRAFT) || form.getStatus().equals(Status.CANCELLED) || form.getStatus().equals(Status.REJECTED) || form.getStatus().equals(Status.REFILLED)));
 
         if (student.isStudent() || hasActiveForm) {
             return ResponseEntity.status(HttpStatus.CONFLICT).body(
@@ -868,7 +865,7 @@ public class ParentServiceImpl implements ParentService {
         return "";
     }
 
-   
+
     private boolean isValidGender(String gender) {
         return gender != null && (
                 gender.equalsIgnoreCase("Male") ||
@@ -1032,7 +1029,7 @@ public class ParentServiceImpl implements ParentService {
                 account.getEmail(),
                 "[PES] EVENT REGISTRATION CONFIRMATION",
                 "Event Registration Confirmation",
-                Format.getRegisterEventBody(account.getName(), event.getName(), event.getStartTime(), registered )
+                Format.getRegisterEventBody(account.getName(), event.getName(), event.getStartTime(), registered)
         );
         eventParticipateRepo.saveAll(toSave);
         String successMsg = "All students registered successfully: " + registered;
