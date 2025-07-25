@@ -37,6 +37,7 @@ import java.io.IOException;
 import java.time.DayOfWeek;
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.time.Period;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
@@ -211,6 +212,43 @@ public class EventServiceImpl implements EventService {
             return "Event duration must be at least 15 minutes";
         }
 
+        LocalDateTime newStart = request.getStartTime()
+                .atZone(ZoneOffset.UTC)
+                .withZoneSameInstant(ZoneId.of("Asia/Ho_Chi_Minh"))
+                .toLocalDateTime();
+
+        LocalDateTime newEnd = request.getEndTime()
+                .atZone(ZoneOffset.UTC)
+                .withZoneSameInstant(ZoneId.of("Asia/Ho_Chi_Minh"))
+                .toLocalDateTime();
+
+        // [R1] EndTime phải cùng ngày với StartTime
+        if (!newStart.toLocalDate().equals(newEnd.toLocalDate())) {
+            return "End time must be on the same day as start time.";
+        }
+
+        // [R2] EndTime phải trước 21h
+        if (newEnd.getHour() >= 21) {
+            return "End time must be before 21:00 (9 PM).";
+        }
+
+        // Xác định ngày trong tuần
+        DayOfWeek day = newStart.getDayOfWeek();
+        int dayValue = day.getValue(); // Monday = 1, ..., Sunday = 7
+
+        LocalTime startTime = newStart.toLocalTime();
+        boolean isWeekday = dayValue >= 1 && dayValue <= 5;
+        boolean isWeekend = dayValue == 6 || dayValue == 7;
+
+        // [R3] Nếu là thứ 2–6 thì StartTime phải sau 17:00
+        if (isWeekday && startTime.isBefore(LocalTime.of(17, 0))) {
+            return "On weekdays (Mon–Fri), events must start after 17:00 (5 PM).";
+        }
+
+        // [R6] Nếu là thứ 7 hoặc CN, thì StartTime không được trước 7:00
+        if (isWeekend && startTime.isBefore(LocalTime.of(7, 0))) {
+            return "On weekends (Sat–Sun), events must start at or after 07:00.";
+        }
         if (request.getLocation() == null || request.getLocation().trim().isEmpty()) {
             return "Location is required";
         }
