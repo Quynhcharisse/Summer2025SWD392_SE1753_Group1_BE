@@ -363,6 +363,7 @@ public class HRServiceImpl implements HRService {
                             data.put("phone", account.getPhone());
                             data.put("address", account.getAddress());
                             data.put("identityNumber", account.getIdentityNumber());
+                            data.put("createAt", account.getCreatedAt());
                             return data;
                         }
                 )
