@@ -775,16 +775,22 @@ public class AdmissionServiceImpl implements AdmissionService {
 
     @Override
     public ResponseEntity<ResponseObject> getTransactionList() {
+        // Get current year start and end dates
+        int currentYear = LocalDate.now().getYear();
+        LocalDate yearStart = LocalDate.of(currentYear, 1, 1);
+        LocalDate yearEnd = LocalDate.of(currentYear, 12, 31);
 
-        List<Map<String, Object>> transactionList = transactionRepo.findAllByPaymentDateAndStatus(LocalDate.now(), Status.APPROVED_PAID).stream()
+        List<Map<String, Object>> transactionList = transactionRepo
+                .findAllByPaymentDateBetweenAndStatus(yearStart, yearEnd, Status.APPROVED_PAID)
+                .stream()
                 .sorted(Comparator.comparing(Transaction::getPaymentDate).reversed())
                 .map(this::getTransactionDetail)
                 .toList();
-
+        .
 
         return ResponseEntity.status(HttpStatus.OK).body(
                 ResponseObject.builder()
-                        .message("Successfully queried transaction from VNPAY")
+                        .message("Successfully queried transactions for year " + currentYear)
                         .success(true)
                         .data(transactionList)
                         .build()
@@ -802,6 +808,7 @@ public class AdmissionServiceImpl implements AdmissionService {
         data.put("txnRef", transaction.getTxnRef());
         return data;
     }
+
 
     @Override
     public ResponseEntity<ResponseObject> getDailyTotal(DailyTotalTransactionRequest request) {

@@ -16,5 +16,8 @@ public interface TransactionRepo extends JpaRepository<Transaction, Integer> {
 
     List<Transaction> findAllByPaymentDateAndStatus(LocalDate paymentDate, Status status);
 
+    // New method to find transactions by year and status
+    List<Transaction> findAllByPaymentDateBetweenAndStatus(LocalDate startDate, LocalDate endDate, Status status);
+
     int countByStatusAndPaymentDateBetween(Status status, LocalDate startDate, LocalDate endDate);
 }
