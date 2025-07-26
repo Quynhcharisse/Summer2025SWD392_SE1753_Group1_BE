@@ -786,7 +786,6 @@ public class AdmissionServiceImpl implements AdmissionService {
                 .sorted(Comparator.comparing(Transaction::getPaymentDate).reversed())
                 .map(this::getTransactionDetail)
                 .toList();
-        .
 
         return ResponseEntity.status(HttpStatus.OK).body(
                 ResponseObject.builder()
